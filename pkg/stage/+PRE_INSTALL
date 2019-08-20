@@ -1,0 +1,45 @@
+if [ -n "${PKG_ROOTDIR}" ] && [ "${PKG_ROOTDIR}" != "/" ]; then
+  PW="/usr/sbin/pw -R ${PKG_ROOTDIR}"
+else
+  PW=/usr/sbin/pw
+fi
+
+echo "===> Creating groups."
+if ! ${PW} groupshow darwin >/dev/null 2>&1; then
+  echo "Creating group 'darwin'."
+  ${PW} groupadd -n darwin
+else
+  echo "Using existing group 'darwin'."
+fi
+if ! ${PW} groupshow daemon >/dev/null 2>&1; then
+  echo "Creating group 'daemon'."
+  ${PW} groupadd -n daemon
+else
+  echo "Using existing group 'daemon'."
+fi
+if ! ${PW} groupshow redis >/dev/null 2>&1; then
+  echo "Creating group 'redis'."
+  ${PW} groupadd -n redis
+else
+  echo "Using existing group 'redis'."
+fi
+if ! ${PW} groupshow vlt-conf >/dev/null 2>&1; then
+  echo "Creating group 'vlt-conf'."
+  ${PW} groupadd -n vlt-conf
+else
+  echo "Using existing group 'vlt-conf'."
+fi
+if ! ${PW} groupshow vlt-web >/dev/null 2>&1; then
+  echo "Creating group 'vlt-web'."
+  ${PW} groupadd -n vlt-web
+else
+  echo "Using existing group 'vlt-web'."
+fi
+
+echo "===> Creating users"
+if ! ${PW} usershow darwin >/dev/null 2>&1; then
+  echo "Creating user 'darwin'."
+  ${PW} useradd -n darwin -G darwin -G daemon,redis,vlt-conf,vlt-web -w no -s /bin/csh -m
+else
+  echo "Using existing user 'darwin'."
+fi
