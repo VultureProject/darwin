@@ -59,7 +59,7 @@ void UserAgentTask::operator()() {
             hash = GenerateHash();
 
             if (GetCacheResult(hash, certitude)) {
-                if (is_log){
+                if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
@@ -69,7 +69,7 @@ void UserAgentTask::operator()() {
         }
 
         certitude = Predict(user_agent);
-        if (is_log){
+        if (is_log && (certitude>=_threshold)){
             _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
         }
         _certitudes.push_back(certitude);
@@ -228,7 +228,7 @@ bool UserAgentTask::ParseBody() {
 
             if (items.Size() != 1) {
                 DARWIN_LOG_ERROR(
-                    "UserAgentTask:: ParseBody: You must provide exactly one argument per request: the user agent"
+                        "UserAgentTask:: ParseBody: You must provide exactly one argument per request: the user agent"
                 );
 
                 return false;

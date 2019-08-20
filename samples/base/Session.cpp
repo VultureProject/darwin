@@ -114,6 +114,14 @@ namespace darwin {
         if(_connected) _filter_socket.close();
     }
 
+    void Session::SetThreshold(std::size_t const& threshold) {
+        //If the threshold is negative, we keep the actual default threshold
+        if(threshold>100){
+           return;
+        }
+        _threshold = threshold;
+    }
+
     void Session::SetNextFilterSocketPath(std::string const& path){
         _next_filter_path = path;
     }

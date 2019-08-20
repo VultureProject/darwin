@@ -83,10 +83,10 @@ void ContentInspectionTask::operator()() {
                 yaraMeta.Accept(writer);
 
                 certitude = 100;
-                if(is_log) {
+                if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() +
                              R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
-                            std::string(buffer.GetString()) +
+                             std::string(buffer.GetString()) +
                              "}\n";
                 }
             }
@@ -149,7 +149,7 @@ bool ContentInspectionTask::ParseBody() {
             _packetList.push_back(getImpcapData(
                     body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
                     body.substr(packetData + 1, packetDataEnd - packetData)
-                    ));
+            ));
         } while(true);
 
     } catch (...) {

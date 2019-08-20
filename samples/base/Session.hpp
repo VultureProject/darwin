@@ -52,6 +52,11 @@ namespace darwin {
         /// Stop the session and close the socket.
         virtual void Stop() final;
 
+        /// Set the filter's threshold
+        ///
+        /// \param threshold The threshold wanted.
+        virtual  void SetThreshold(std::size_t const& threshold) final;
+
         /// Set the path to the associated decision module UNIX socket
         ///
         /// \param path Path to the UNIX socket.
@@ -190,6 +195,7 @@ namespace darwin {
         //!< Cache received from the Generator
         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
         bool _is_cache = false;
+        std::size_t _threshold = 80; //!<Default threshold
     };
 
     /// Definition of a session's self-managing pointer.

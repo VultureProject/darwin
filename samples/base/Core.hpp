@@ -75,6 +75,7 @@ namespace darwin {
         std::string _output;
         std::size_t _nbThread;
         std::size_t _cacheSize;
+        std::size_t _threshold;
 
     public:
         // TODO Maybe a getter is a better idea...
