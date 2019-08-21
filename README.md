@@ -13,10 +13,7 @@ Darwin is still in an alpha stage, so few filters are available at this time.
 Using the provided documentation and SDK you can develop your own Darwin Filters.
 We are seeking help! Testers and volunteers are welcome!
 
-Advens (www.advens.fr) also provides commercial filters for Darwin:
- - A **domain generation algorithms (DGA) detector** filter, which uses [TensorFlow](https://www.tensorflow.org/)
- - A **bad user agent detector** filter, which uses [TensorFlow](https://www.tensorflow.org/)
- - Many others to come...
+Advens (www.advens.fr) also provides commercial filters for Darwin !
 
 ## Filters
 
@@ -39,7 +36,6 @@ make -j4
 ```
 
 You can choose a filter from the following list:
- - **INJECTION**
  - **USER_AGENT**
  - **HOSTLOOKUP**
  - **SESSION**
