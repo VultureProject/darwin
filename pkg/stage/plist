@@ -36,7 +36,7 @@ usr/local/etc/rc.d/darwin
 home/darwin/conf/darwin.conf
 home/darwin/conf/fconnection/fconnection.conf
 home/darwin/conf/fcontent_inspection/fcontent_inspection.conf
-home/darwin/conf/fcontent_inspection/VultureDefaultRules.yar
+home/darwin/conf/fcontent_inspection/exampleRule.yar
 home/darwin/conf/fdga/fdga.conf.example
 home/darwin/conf/flogs/flogs.conf
 home/darwin/conf/ftanomaly/ftanomaly.conf
