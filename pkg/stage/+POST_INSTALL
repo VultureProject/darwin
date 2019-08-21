@@ -2,14 +2,8 @@
 
 root_path='/home/darwin/conf/'
 finjection_folder='finjection'
-yara_default_rules='/home/darwin/conf/fcontent_inspection/rules-default/'
 
 if [ -d "$root_path$finjection_folder" ]; then
     echo "Folder \"$finjection_folder\" exists. Removing it..."
     rm -R "$root_path$finjection_folder"
-fi
-
-if [ ! -d "$yara_default_rules" ]; then
-    echo "Default Yara rules not present, downloading them..."
-    /usr/local/bin/sudo -u darwin /home/darwin/scripts/update_yara_rules.sh
 fi
