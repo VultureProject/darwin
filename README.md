@@ -144,8 +144,7 @@ The config file is JSON formatted and contains the filters information. They *MU
   }
 }
 ```
-See the [Wiki](https://github.com/VultureProject/darwin/wiki) for more filters' configuration informations.
-
+You will find more information in the [Wiki](https://github.com/VultureProject/darwin/wiki/Darwin-configuration) 
 
 ## The Service
 
