@@ -14,6 +14,7 @@
 #include "Session.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
+#include "../toolkit/rapidjson/document.h"
 
 class Generator {
 public:
@@ -29,6 +30,9 @@ public:
                darwin::Manager& manager) noexcept;
 
 private:
+    bool SetUpClassifier(const std::string &configuration_file_path);
+    bool LoadClassifier(const rapidjson::Document &configuration);
+
     tsl::hopscotch_map<std::string, int> _database; //The "bad" hostname database
     // The cache for already processed request
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;

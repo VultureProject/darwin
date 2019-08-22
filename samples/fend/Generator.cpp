@@ -18,9 +18,59 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("End:: Generator:: Configuring...");
 
-    _redis_socket_path = configFile;
+    if (!SetUpClassifier(configFile)) return false;
 
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Configured");
+    DARWIN_LOG_DEBUG("End:: Generator:: Configured");
+    return true;
+}
+
+bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
+    DARWIN_LOGGER;
+    DARWIN_LOG_DEBUG("End:: Generator:: Setting up classifier...");
+    DARWIN_LOG_DEBUG("End:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+
+    std::ifstream conf_file_stream;
+    conf_file_stream.open(configuration_file_path, std::ifstream::in);
+
+    if (!conf_file_stream.is_open()) {
+        DARWIN_LOG_ERROR("End:: Generator:: Could not open the configuration file");
+
+        return false;
+    }
+
+    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
+                                  (std::istreambuf_iterator<char>()));
+
+    rapidjson::Document configuration;
+    configuration.Parse(raw_configuration.c_str());
+
+    DARWIN_LOG_DEBUG("End:: Generator:: Reading configuration...");
+
+    if (!LoadClassifier(configuration)) {
+        return false;
+    }
+
+    conf_file_stream.close();
+
+    return true;
+}
+
+bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+    DARWIN_LOGGER;
+    DARWIN_LOG_DEBUG("End:: Generator:: Loading classifier...");
+
+    if (!configuration.HasMember("redis_socket_path")) {
+        DARWIN_LOG_CRITICAL("End:: Generator:: Missing parameter: \"redis_socket_path\"");
+        return false;
+    }
+
+    if (!configuration["redis_socket_path"].IsString()) {
+        DARWIN_LOG_CRITICAL("End:: Generator:: \"redis_socket_path\" needs to be a string");
+        return false;
+    }
+
+    _redis_socket_path = configuration["redis_socket_path"].GetString();
+
     return true;
 }
 
