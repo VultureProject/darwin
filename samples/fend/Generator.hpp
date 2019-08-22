@@ -28,6 +28,8 @@ public:
                darwin::Manager& manager) noexcept;
 
 private:
+    bool SetUpClassifier(const std::string &configuration_file_path);
+    bool LoadClassifier(const rapidjson::Document &configuration);
 
     std::string _redis_socket_path;
     // The cache for already processed request

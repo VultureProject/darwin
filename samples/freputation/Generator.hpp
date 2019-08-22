@@ -11,6 +11,10 @@ extern "C" {
 #include <maxminddb.h>
 }
 
+#include <iostream>
+#include <string>
+
+#include "../toolkit/rapidjson/document.h"
 #include "Session.hpp"
 
 class Generator {
@@ -21,6 +25,8 @@ public:
 public:
     // The config file is the database here
     bool Configure(std::string const& configFile, const std::size_t cache_size);
+    bool SetUpClassifier(const std::string &configuration_file_path);
+    bool LoadClassifier(const rapidjson::Document &configuration);
 
     darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,

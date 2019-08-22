@@ -13,7 +13,9 @@ extern "C" {
 
 #include <mutex>
 #include <thread>
+#include <string>
 
+#include "../toolkit/rapidjson/document.h"
 #include "Session.hpp"
 
 class Generator {
@@ -35,6 +37,9 @@ public:
     void KeepConnectionAlive();
 
 private:
+    bool SetUpClassifier(const std::string &configuration_file_path);
+    bool LoadClassifier(const rapidjson::Document &configuration);
+
     redisContext *_redis_connection = nullptr; // The redis handler
     std::mutex _redis_mutex; // hiredis is not thread safe
     std::thread _send_ping_requests; // necessary to keep connection alive from Redis
