@@ -396,41 +396,45 @@ class Services:
 
                     logger.debug('No next filter provided')
 
-                c['extension'] = '.1'
-                c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
+                try:
+                    c['extension'] = '.1'
+                    c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
 
-                c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                    next_filter=c['next_filter']
-                )
+                    c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                        next_filter=c['next_filter']
+                    )
 
-                c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
-                c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
+                    c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
+                    c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
 
-                c['monitoring'] = '/var/sockets/darwin/{filter}_mon{extension}.sock'.format(
-                    filter=f, extension=c['extension']
-                )
+                    c['monitoring'] = '/var/sockets/darwin/{filter}_mon{extension}.sock'.format(
+                        filter=f, extension=c['extension']
+                    )
 
-                if 'config_file' not in c:
-                    logger.warning('Field "config_file" not found for {filter}: setting default'.format(filter=f))
-                    c['config_file'] = '/home/vlt-sys/darwin/conf/{filter}.conf'.format(filter=f)
+                    if 'config_file' not in c:
+                        logger.warning('Field "config_file" not found for {filter}: setting default'.format(filter=f))
+                        c['config_file'] = '/home/vlt-sys/darwin/conf/{filter}.conf'.format(filter=f)
 
-                if 'cache_size' not in c:
-                    c['cache_size'] = 0
+                    if 'cache_size' not in c:
+                        c['cache_size'] = 0
 
-                    logger.info('No cache size provided. Setting it to {cache_size}'.format(
-                        cache_size=c['cache_size']
-                    ))
+                        logger.info('No cache size provided. Setting it to {cache_size}'.format(
+                            cache_size=c['cache_size']
+                        ))
 
-                if 'output' not in c:
-                    c['output'] = 'NONE'
-                    logger.info('No output type provided. Setting it to {output}'.format(output=c['output']))
+                    if 'output' not in c:
+                        c['output'] = 'NONE'
+                        logger.info('No output type provided. Setting it to {output}'.format(output=c['output']))
 
-                if 'nb_thread' not in c:
-                    c['nb_thread'] = 5
+                    if 'nb_thread' not in c:
+                        c['nb_thread'] = 5
 
-                    logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
-                        nb_thread=c['nb_thread']
-                    ))
+                        logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
+                            nb_thread=c['nb_thread']
+                        ))
+                except KeyError as e:
+                logger.critical("Missing parameter: {}".format(e))
+                raise e
 
     def print_conf(self):
         """
