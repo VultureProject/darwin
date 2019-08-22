@@ -111,6 +111,7 @@ class Services:
             filt['output'],
             filt['next_filter_unix_socket'],
             str(filt['nb_thread']),
+            str(filt['threshold']),
             str(filt['cache_size']),
         ]
 
@@ -435,6 +436,11 @@ class Services:
                 except KeyError as e:
                     logger.critical("Missing parameter: {}".format(e))
                     raise e
+
+                if 'threshold' not in c:
+                    c['threshold'] = 101
+
+                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
 
     def print_conf(self):
         """

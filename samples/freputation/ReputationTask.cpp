@@ -55,7 +55,7 @@ void ReputationTask::operator()() {
             hash = GenerateHash();
 
             if (GetCacheResult(hash, certitude)) {
-                if (is_log){
+                if (is_log && (certitude>=_threshold)){
                     bool tag_found = false;
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
 
@@ -77,7 +77,7 @@ void ReputationTask::operator()() {
         }
 
         certitude = GetReputation(_current_ip_address);
-        if (is_log){
+        if (is_log && (certitude>=_threshold)){
             bool tag_found = false;
             _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
 

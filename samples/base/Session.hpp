@@ -17,6 +17,7 @@
 #include "../../toolkit/xxhash.hpp"
 
 #define DARWIN_SESSION_BUFFER_SIZE 2048
+#define DARWIN_DEFAULT_THRESHOLD 80
 
 namespace darwin {
 
@@ -51,6 +52,11 @@ namespace darwin {
 
         /// Stop the session and close the socket.
         virtual void Stop() final;
+
+        /// Set the filter's threshold
+        ///
+        /// \param threshold The threshold wanted.
+        virtual  void SetThreshold(std::size_t const& threshold) final;
 
         /// Set the path to the associated decision module UNIX socket
         ///
@@ -190,6 +196,7 @@ namespace darwin {
         //!< Cache received from the Generator
         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
         bool _is_cache = false;
+        std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD; //!<Default threshold
     };
 
     /// Definition of a session's self-managing pointer.

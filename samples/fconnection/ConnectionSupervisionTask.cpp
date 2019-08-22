@@ -54,7 +54,7 @@ void ConnectionSupervisionTask::operator()() {
             hash = GenerateHash();
 
             if (GetCacheResult(hash, certitude)) {
-                if (is_log && certitude){
+                if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
                              R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
