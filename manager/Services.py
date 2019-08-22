@@ -433,8 +433,8 @@ class Services:
                             nb_thread=c['nb_thread']
                         ))
                 except KeyError as e:
-                logger.critical("Missing parameter: {}".format(e))
-                raise e
+                    logger.critical("Missing parameter: {}".format(e))
+                    raise e
 
     def print_conf(self):
         """
