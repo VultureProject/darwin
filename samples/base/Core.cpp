@@ -45,7 +45,7 @@ namespace darwin {
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
         DARWIN_ACCESS_LOGGER;
-        if (ac < 10) {
+        if (ac < 11) {
             DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
