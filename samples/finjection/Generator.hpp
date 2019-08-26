@@ -9,15 +9,17 @@
 
 #include <set>
 #include <xgboost/c_api.h>
+#include <string>
 
 #include "Session.hpp"
+#include "../toolkit/rapidjson/document.h"
 
 class Generator {
 public:
     Generator() = default;
     ~Generator();
     void LoadKeywords();
-    bool LoadClassifier(const std::string &model_path);
+    bool LoadClassifier(const std::string &config_file);
 
 public:
     // The config file is the database here
@@ -28,6 +30,8 @@ public:
                darwin::Manager& manager) noexcept;
 
 private:
+    bool SetUpClassifier(const std::string &configuration_file_path);
+
     BoosterHandle _booster = nullptr; // The XGBoost classifier
     std::set<std::string> _keywords; // The keywords used to classify the requests
     // The cache for already processed request

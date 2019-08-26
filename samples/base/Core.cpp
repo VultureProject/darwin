@@ -23,7 +23,7 @@ namespace darwin {
     int Core::run() {
         DARWIN_LOGGER;
 
-        Generator gen{};
+       Generator gen{};
         if (!gen.Configure(_modConfigPath, _cacheSize)) {
             DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
             return 1;
@@ -33,7 +33,7 @@ namespace darwin {
         Monitor monitor{_monSocketPath};
         std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
 
-        Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, gen};
+        Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
         server.Run();
 
         if (t.joinable())
@@ -45,7 +45,7 @@ namespace darwin {
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
         DARWIN_ACCESS_LOGGER;
-        if (ac < 10) {
+        if (ac < 11) {
             DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
@@ -63,20 +63,22 @@ namespace darwin {
             return false;
         if (!GetULArg(_cacheSize, av[9]))
             return false;
-        if (ac > 10) {
-            if (!strncmp("-d", av[10], 2)) {
+        if (!GetULArg(_threshold, av[10]))
+            return false;
+        if (ac > 11) {
+            if (!strncmp("-d", av[11], 2)) {
                 log.setLevel(logger::Debug);
                 DARWIN_LOG_DEBUG("Debug mode activated");
                 daemon = false;
-            } else if (!strncmp("-i", av[10], 2)) {
+            } else if (!strncmp("-i", av[11], 2)) {
                 log.setLevel(logger::Info);
-            } else if (!strncmp("-n", av[10], 2)) {
+            } else if (!strncmp("-n", av[11], 2)) {
                 log.setLevel(logger::Notice);
-            } else if (!strncmp("-w", av[10], 2)) {
+            } else if (!strncmp("-w", av[11], 2)) {
                 log.setLevel(logger::Warning);
-            } else if (!strncmp("-e", av[10], 2)) {
+            } else if (!strncmp("-e", av[11], 2)) {
                 log.setLevel(logger::Error);
-            } else if (!strncmp("-c", av[10], 2)) {
+            } else if (!strncmp("-c", av[11], 2)) {
                 log.setLevel(logger::Critical);
             }
         }
@@ -104,11 +106,12 @@ namespace darwin {
         std::cout
                 << "  next_filter_socket_path\tSpecify the path to the next filter unix socket\n";
         std::cout
-                << "  max_thread\tInteger specifying the maximum number of thread for this process (working & available)\n";
+                << "  nb_thread\tInteger specifying the number of thread used\n";
         std::cout
-                << "  min_spare_thread\tInteger specifying the minimum number of available (spare) thread for this process\n";
+                << "  cache_size\tInteger specifying the cache's size\n";
         std::cout
-                << "  max_spare_thread\tInteger specifying the maximum number of available (spare) thread for this process\n";
+                << "  threshold\tInteger specifying the minimum certitude at which the filter will output a log."
+                   "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
         std::cout
                 << "  -d\tDebug mode, does not create a daemon, set log level to debug"

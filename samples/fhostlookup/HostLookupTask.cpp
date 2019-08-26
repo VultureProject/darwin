@@ -51,7 +51,7 @@ void HostLookupTask::operator()() {
             hash = GenerateHash();
 
             if (GetCacheResult(hash, certitude)) {
-                if (is_log){
+                if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "host": ")" + host +
                              R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
@@ -62,7 +62,7 @@ void HostLookupTask::operator()() {
         }
 
         certitude = DBLookup(host);
-        if (is_log){
+        if (is_log && (certitude>=_threshold)){
             _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "host": ")" + host +
                      R"(", "certitude": )" + std::to_string(certitude) + "}\n";
         }
@@ -154,7 +154,7 @@ bool HostLookupTask::ParseBody() {
 
             if (items.Size() != 1) {
                 DARWIN_LOG_ERROR(
-                    "HostLookupTask:: ParseBody: You must provide exactly one argument per request: the host"
+                        "HostLookupTask:: ParseBody: You must provide exactly one argument per request: the host"
                 );
 
                 return false;

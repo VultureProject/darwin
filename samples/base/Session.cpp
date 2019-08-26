@@ -114,6 +114,16 @@ namespace darwin {
         if(_connected) _filter_socket.close();
     }
 
+    void Session::SetThreshold(std::size_t const& threshold) {
+        DARWIN_LOGGER;
+        //If the threshold is negative, we keep the actual default threshold
+        if(threshold>100){
+            DARWIN_LOG_DEBUG("Session::SetThreshold:: Default threshold " + std::to_string(_threshold) + "applied");
+            return;
+        }
+        _threshold = threshold;
+    }
+
     void Session::SetNextFilterSocketPath(std::string const& path){
         _next_filter_path = path;
     }
@@ -210,11 +220,11 @@ namespace darwin {
 
         if (!e) {
             body.append(_buffer.data(), size);
-          DARWIN_LOG_DEBUG("Session::ReadBodyCallback:: Body len (" +
-              std::to_string(body.length()) +
-                  ") - Header body size (" +
-              std::to_string(header.body_size) +
-                  ")");
+            DARWIN_LOG_DEBUG("Session::ReadBodyCallback:: Body len (" +
+                             std::to_string(body.length()) +
+                             ") - Header body size (" +
+                             std::to_string(header.body_size) +
+                             ")");
             unsigned int bodyLength = body.length();
             unsigned int totalBodyLength = header.body_size;
             if (bodyLength < totalBodyLength) {
@@ -227,7 +237,7 @@ namespace darwin {
                 }
                 if (header.body_size <= 0) {
                     DARWIN_LOG_ERROR(
-                        "Session::ReadBodyCallback Body is not empty, but the header appears to be invalid"
+                            "Session::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
 
                     return;
@@ -327,7 +337,7 @@ namespace darwin {
 
         if (!_connected) {
             DARWIN_LOG_DEBUG("Session::SendToFilter:: Trying to connect to: " +
-                      _next_filter_path);
+                             _next_filter_path);
             try {
                 _filter_socket.connect(
                         boost::asio::local::stream_protocol::endpoint(
@@ -335,8 +345,8 @@ namespace darwin {
                 _connected = true;
             } catch (std::exception const& e) {
                 DARWIN_LOG_ERROR(std::string("Session::SendToFilter:: "
-                                      "Unable to connect to next filter: ") +
-                          e.what());
+                                             "Unable to connect to next filter: ") +
+                                 e.what());
                 return;
             }
         }
@@ -350,8 +360,8 @@ namespace darwin {
                                boost::asio::buffer(&hdr, sizeof(hdr)));
         } catch (boost::system::system_error const& e) {
             DARWIN_LOG_ERROR(std::string(
-                    "Session::SendToFilter:: Error sending header to filter: ") +
-                      e.what());
+                                     "Session::SendToFilter:: Error sending header to filter: ") +
+                                     e.what());
             _filter_socket.close();
             _connected = false;
             return;
@@ -371,8 +381,8 @@ namespace darwin {
                                    boost::asio::buffer(data, hdr.body_size));
             } catch (boost::system::system_error const& e) {
                 DARWIN_LOG_ERROR(std::string(
-                        "Session::SendToFilter:: Error sending body to filter: ") +
-                          e.what());
+                                         "Session::SendToFilter:: Error sending body to filter: ") +
+                                         e.what());
                 _filter_socket.close();
                 _connected = false;
                 return;

@@ -10,14 +10,12 @@
 #include "Generator.hpp"
 #include "InjectionTask.hpp"
 
-bool Generator::Configure(const std::string &model_path, const std::size_t cache_size) {
+bool Generator::Configure(const std::string &configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Injection:: Generator:: Configuring...");
 
     LoadKeywords();
-    if (!LoadClassifier(model_path)) {
-        return false;
-    }
+    if (!SetUpClassifier(configFile)) return false;
 
     DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
     if (cache_size > 0) {
@@ -25,6 +23,37 @@ bool Generator::Configure(const std::string &model_path, const std::size_t cache
     }
 
     DARWIN_LOG_DEBUG("Injection:: Generator:: Configured");
+    return true;
+}
+
+bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
+    DARWIN_LOGGER;
+    DARWIN_LOG_DEBUG("Injection:: Generator:: Setting up classifier...");
+    DARWIN_LOG_DEBUG("Injection:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+
+    std::ifstream conf_file_stream;
+    conf_file_stream.open(configuration_file_path, std::ifstream::in);
+
+    if (!conf_file_stream.is_open()) {
+        DARWIN_LOG_ERROR("Injection:: Generator:: Could not open the configuration file");
+
+        return false;
+    }
+
+    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
+                                  (std::istreambuf_iterator<char>()));
+
+    rapidjson::Document configuration;
+    configuration.Parse(raw_configuration.c_str());
+
+    DARWIN_LOG_DEBUG("Injection:: Generator:: Reading configuration...");
+
+    if (!LoadClassifier(configuration)) {
+        return false;
+    }
+
+    conf_file_stream.close();
+
     return true;
 }
 
@@ -61,21 +90,34 @@ void Generator::LoadKeywords() {
     _keywords.insert(malicious_xss.begin(), malicious_xss.end());
 }
 
-bool Generator::LoadClassifier(const std::string &model_path) {
+bool Generator::LoadClassifier(const std::string &config_file) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Generator:: LoadClassifier:: Loading classifier at '" + model_path + "'...");
+    DARWIN_LOG_DEBUG("Injection:: LoadClassifier:: Loading classifier at '" + config_file + "'...");
+    std::string model_path;
+
+    if (!configuration.HasMember("model_path")) {
+        DARWIN_LOG_CRITICAL("Injection:: LoadClassifier:: Missing parameter: \"model_path\"");
+        return false;
+    }
+
+    if (!configuration["model_path"].IsString()) {
+        DARWIN_LOG_CRITICAL("Injection:: LoadClassifier:: \"model_path\" needs to be a string");
+        return false;
+    }
+
+    model_path = configuration["model_path"].GetString();
 
     if (XGBoosterCreate(0, 0, &_booster) == -1) {
-        DARWIN_LOG_CRITICAL("Generator:: LoadClassifier:: XGBoosterCreate:: '" + std::string(XGBGetLastError()) + "'");
+        DARWIN_LOG_CRITICAL("Injection:: LoadClassifier:: XGBoosterCreate:: '" + std::string(XGBGetLastError()) + "'");
     }
 
 
     if (XGBoosterLoadModel(_booster, model_path.c_str()) == -1) {
-        DARWIN_LOG_CRITICAL("Generator:: LoadClassifier:: XGBoosterLoadModel:: '" + std::string(XGBGetLastError()) + "'");
+        DARWIN_LOG_CRITICAL("Injection:: LoadClassifier:: XGBoosterLoadModel:: '" + std::string(XGBGetLastError()) + "'");
 
         return false;
     }
-    DARWIN_LOG_DEBUG("Generator:: LoadClassifier:: Classifier loaded");
+    DARWIN_LOG_DEBUG("Injection:: LoadClassifier:: Classifier loaded");
 
     return true;
 }
@@ -99,7 +141,7 @@ Generator::~Generator() {
 
     if (XGBoosterFree(_booster) == -1) {
         DARWIN_LOG_DEBUG("Injection:: ~Generator:: Booster could not be freed: '" +
-                  std::string(XGBGetLastError()) + "'");
+                         std::string(XGBGetLastError()) + "'");
     } else {
         DARWIN_LOG_DEBUG("Injection:: ~Generator:: Booster freed");
         _booster = nullptr;

@@ -61,7 +61,7 @@ void DGATask::operator()() {
             hash = GenerateHash();
 
             if (GetCacheResult(hash, certitude)) {
-                if (is_log){
+                if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
@@ -71,7 +71,7 @@ void DGATask::operator()() {
         }
 
         certitude = Predict();
-        if (is_log){
+        if (is_log && (certitude>=_threshold)){
             _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": "+std::to_string(certitude) + "}\n";
         }
         _certitudes.push_back(certitude);
