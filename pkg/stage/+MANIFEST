@@ -1,8 +1,8 @@
 name: darwin
 version:"0.1"
 origin: "security/darwin"
-comment: "Generic filtering engine"
-desc: "Generic filter engine running as a service and containing filters"
+comment: "Artificial Intelligence Framework for Cyber Security"
+desc: "High Speed C++ threads running specific AI algorithms"
 maintainer: contact@vultureproject.org
 www: https://www.vultureproject.org
 prefix: /
