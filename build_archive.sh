@@ -58,15 +58,3 @@ done
 
 echo "All filters built in directory:" ${dest}
 
-cp -r manager pkg/stage/home/darwin/
-
-cd ./pkg/stage
-find ./ -type f ! -name "plist" ! -name "+MANIFEST" ! -name "+POST_DEINSTALL" ! -name "+PRE_INSTALL" ! -name "+POST_INSTALL" ! -name ".gitkeep" >> plist
-cd ../../
-
-echo 'Package content right before creation:'
-ls -R ./pkg/
-
-pkg create -m pkg/stage -r pkg/stage -p pkg/stage/plist -o .
-
-echo "Package created."
