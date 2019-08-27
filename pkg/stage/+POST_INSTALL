@@ -7,3 +7,5 @@ if [ -d "$root_path$finjection_folder" ]; then
     echo "Folder \"$finjection_folder\" exists. Removing it..."
     rm -R "$root_path$finjection_folder"
 fi
+
+ldconfig /usr/local/lib/darwin/
