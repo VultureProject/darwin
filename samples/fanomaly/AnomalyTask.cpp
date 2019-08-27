@@ -21,11 +21,14 @@ AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
         : Session{socket, manager, cache}{}
 
 void AnomalyTask::operator()() {
+    DARWIN_LOGGER;
+    SetStartingTime();
     for (size_t i = 0; i < _matrixies.size(); ++i)
     {
         Detection(_matrixies[i], _ips[i]);
     }
 
+    DARWIN_LOG_DEBUG("AnomalyTask:: processed task in " + std::to_string(GetDurationMs()));
     Workflow();
     _matrixies = std::vector<arma::mat>();
     _ips = std::vector<std::vector<std::string>>();

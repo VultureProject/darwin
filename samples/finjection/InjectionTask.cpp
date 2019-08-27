@@ -34,7 +34,7 @@ xxh::hash64_t InjectionTask::GenerateHash() {
 }
 
 void InjectionTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
 
     // We have a generic hash function, which takes no arguments as these can be of very different types depending
     // on the nature of the filter
@@ -51,7 +51,8 @@ void InjectionTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_request.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("InjectionTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -62,8 +63,8 @@ void InjectionTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_request.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("InjectionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

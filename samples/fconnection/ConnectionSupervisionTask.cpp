@@ -37,7 +37,7 @@ long ConnectionSupervisionTask::GetFilterCode() noexcept {
 }
 
 void ConnectionSupervisionTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     for (const std::string &connection : _connections) {
@@ -75,7 +75,8 @@ void ConnectionSupervisionTask::operator()() {
             SaveToCache(hash, certitude);
         }
 
-        DARWIN_LOG_ACCESS(_current_connection.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: processed entry in "
+                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

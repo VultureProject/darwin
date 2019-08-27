@@ -42,7 +42,7 @@ long UserAgentTask::GetFilterCode() noexcept {
 }
 
 void UserAgentTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     for (const std::string &user_agent : _user_agents) {
@@ -63,7 +63,8 @@ void UserAgentTask::operator()() {
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_user_agent.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("UserAgentTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -77,8 +78,8 @@ void UserAgentTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_user_agent.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("UserAgentTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

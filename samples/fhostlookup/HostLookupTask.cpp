@@ -34,7 +34,7 @@ long HostLookupTask::GetFilterCode() noexcept {
 }
 
 void HostLookupTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     // We have a generic hash function, which takes no arguments as these can be of very different types depending
@@ -56,7 +56,8 @@ void HostLookupTask::operator()() {
                              R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_host.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -71,8 +72,8 @@ void HostLookupTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_host.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

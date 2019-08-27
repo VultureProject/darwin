@@ -50,7 +50,6 @@ home/darwin/conf/fuser_agent/fuser_agent.conf.example
 
 @mode 644
 var/log/darwin/darwin.log
-var/log/darwin/access.log
 var/log/darwin/darwin_manager.log
 home/darwin/.faup/mozilla.tlds
 

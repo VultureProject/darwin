@@ -44,7 +44,7 @@ long DGATask::GetFilterCode() noexcept {
 }
 
 void DGATask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     for (const std::string &domain : _domains) {
@@ -65,7 +65,8 @@ void DGATask::operator()() {
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_domain.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -78,7 +79,8 @@ void DGATask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-        DARWIN_LOG_ACCESS(_current_domain.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
