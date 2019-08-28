@@ -54,11 +54,8 @@ namespace darwin {
             if(keepAlive) {
                 KeepConnectionAlive();
             }
-
-            std::this_thread::sleep_for(std::chrono::seconds(10));
-
+            
             DARWIN_LOG_DEBUG("RedisManager::ConnectToRedis:: Connected to Redis");
-
             return true;
         }
 
