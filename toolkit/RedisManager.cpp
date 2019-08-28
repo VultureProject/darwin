@@ -123,12 +123,12 @@ namespace darwin {
                 return -1;
             }
 
-            if(strcmp("slave", reply->element[0]->str) == 0){
+            if(strncmp("slave", reply->element[0]->str, 5) == 0){
                 masterIp = reply->element[1]->str;
                 masterPort = reply->element[2]->integer;
                 freeReplyObject(reply);
                 return 0;
-            } else if (strcmp("master", reply->element[0]->str) == 0){
+            } else if (strncmp("master", reply->element[0]->str, 6) == 0){
                 freeReplyObject(reply);
                 return 1;
             }
