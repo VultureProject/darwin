@@ -64,19 +64,21 @@ void ConnectionSupervisionTask::operator()() {
         }
 
         certitude = REDISLookup(connection);
-        if (is_log && certitude){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
-                    R"(", "certitude": )" + std::to_string(certitude) + "}\n";
-        }
+        if(certitude<=100){
+            if (is_log && (certitude>=_threshold)){
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
+                         R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+            }
 
-        _certitudes.push_back(certitude);
+            _certitudes.push_back(certitude);
 
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
+            if (_is_cache) {
+                SaveToCache(hash, certitude);
+            }
         }
 
         DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: processed entry in "
-                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
@@ -145,7 +147,7 @@ bool ConnectionSupervisionTask::ParseBody() {
             for (auto& s: request.GetArray()) {
                 if (!s.IsString()) {
                     DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: The connection sent must be a string");
-                return false;
+                    return false;
                 }
                 connection+=s.GetString();
             }
