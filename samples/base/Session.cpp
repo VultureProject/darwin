@@ -95,7 +95,7 @@ namespace darwin {
         starting_time = std::chrono::high_resolution_clock::now();
     }
 
-    double Session::GetDuration() {
+    double Session::GetDurationMs() {
         return std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::high_resolution_clock::now() - starting_time
         ).count() / ((double)1000);

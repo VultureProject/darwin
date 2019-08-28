@@ -44,14 +44,12 @@ namespace darwin {
 
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
-        DARWIN_ACCESS_LOGGER;
         if (ac < 11) {
             DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
         }
         log.setName(av[1]);
-        access_log.setName(av[1]);
         _name = av[1];
         _socketPath = av[2];
         _modConfigPath = av[3];

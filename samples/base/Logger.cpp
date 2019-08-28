@@ -90,51 +90,5 @@ namespace darwin {
                 _fileMutex.unlock();
             }
         }
-
-        AccessLogger::AccessLogger() {
-            _file = std::ofstream(DARWIN_ACCESS_FILE, std::ios::out | std::ios::app);
-            if (!_file.is_open())
-                std::clog << "Can't open access log file " << DARWIN_ACCESS_FILE << std::endl;
-        }
-
-        AccessLogger::~AccessLogger() {
-            _file.close();
-        }
-
-        void AccessLogger::log(const std::size_t &size, const unsigned int &certitude, const double &duration) {
-            if (!_file.is_open())
-                return;
-
-            std::time_t time;
-            time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-            std::stringstream fmt{};
-            fmt << '{';
-            fmt << "\"time\":\"" << std::put_time(std::localtime(&time), "%Y-%m-%dT%H:%M:%S%Z") << "\",";
-            fmt << "\"filter\":\"" << _name << "\",";
-            fmt << "\"size\":" << size << ",";
-            fmt << "\"certitude\":" << certitude << ",";
-            fmt << "\"elapsed\":" << duration;
-            fmt << '}';
-            _fileMutex.lock();
-            _file << fmt.str().c_str() << std::endl;
-            _fileMutex.unlock();
-        }
-
-        void AccessLogger::setName(std::string const& name) {
-            _name = name;
-        }
-
-        void AccessLogger::RotateLogs() {
-            if (access(DARWIN_ACCESS_FILE, F_OK) != 0) {
-                _fileMutex.lock();
-                _file.close();
-                _file = std::ofstream(DARWIN_ACCESS_FILE, std::ios::out | std::ios::app);
-                if (!_file.is_open())
-                    std::clog << "Can't open log file " << DARWIN_ACCESS_FILE
-                              << std::endl;
-                _fileMutex.unlock();
-            }
-        }
     }
 }

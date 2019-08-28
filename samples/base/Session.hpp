@@ -105,7 +105,7 @@ namespace darwin {
         void SetStartingTime();
 
         /// Get total time elapsed since the starting time
-        double GetDuration();
+        double GetDurationMs();
 
         /// Get the filter's output type
         ///

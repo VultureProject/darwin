@@ -37,6 +37,7 @@ void ContentInspectionTask::operator()() {
 
     for(Packet *pkt : _packetList) {
         unsigned int certitude = 0;
+        SetStartingTime();
 
         pkt->enterTime = std::time(NULL);
         pkt->hash = calculatePacketFlowHash(pkt);
@@ -93,6 +94,8 @@ void ContentInspectionTask::operator()() {
         }
 
         _certitudes.push_back(certitude);
+        DARWIN_LOG_DEBUG("ContentInspectionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         freePacket(pkt);
     }
 

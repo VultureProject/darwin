@@ -24,7 +24,7 @@ xxh::hash64_t PythonExampleTask::GenerateHash() {
 }
 
 void PythonExampleTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
 
     // We have a generic hash function, which takes no arguments as these can be of very different types depending
     // on the nature of the filter
@@ -41,7 +41,8 @@ void PythonExampleTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(std::to_string(_current_fahrenheit_temp).size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("PythonExampleTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -52,8 +53,8 @@ void PythonExampleTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(std::to_string(_current_fahrenheit_temp).size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("PythonExampleTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

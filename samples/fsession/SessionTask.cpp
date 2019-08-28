@@ -43,7 +43,7 @@ xxh::hash64_t SessionTask::GenerateHash() {
 }
 
 void SessionTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
 
     for (std::size_t index = 0; index < _tokens.size(); ++index) {
         SetStartingTime();
@@ -61,7 +61,8 @@ void SessionTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_repo_ids.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -72,8 +73,8 @@ void SessionTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_repo_ids.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
