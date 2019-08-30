@@ -438,7 +438,7 @@ namespace darwin {
     std::string Session::Evt_idToString(){
         char str[37] = {};
         sprintf(str,
-                "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+                "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                 header.evt_id[0], header.evt_id[1], header.evt_id[2], header.evt_id[3],
                 header.evt_id[4], header.evt_id[5], header.evt_id[6], header.evt_id[7],
                 header.evt_id[8], header.evt_id[9], header.evt_id[10], header.evt_id[11],
