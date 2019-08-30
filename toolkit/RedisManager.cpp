@@ -104,7 +104,7 @@ namespace darwin {
 
         int RedisManager::IsMaster(std::string &masterIp, long long int &masterPort){
             DARWIN_LOGGER;
-            DARWIN_LOG_ERROR("RedisManager::IsMaster:: Begin...");
+            DARWIN_LOG_DEBUG("RedisManager::IsMaster:: Begin...");
 
             redisReply *reply = nullptr;
 
