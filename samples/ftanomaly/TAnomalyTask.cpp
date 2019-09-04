@@ -134,9 +134,9 @@ bool AnomalyTask::ParseData(const rapidjson::Value& data){
                 "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
                 "(([0-9]+;(17|6))|([0-9]*;*1))")))
         {
-            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored."
+            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored. "
                                                                                "Format expected : "
-                                                                               "[\"[ip4]\",\"[ip4]\",((\"[port]\","
+                                                                               "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
                                                                                "\"[ip_protocol udp or tcp]\")|"
                                                                                "\"[ip_protocol icmp]\")]");
             continue;
