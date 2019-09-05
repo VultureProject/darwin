@@ -20,7 +20,7 @@ DecisionTask::DecisionTask(boost::asio::local::stream_protocol::socket& socket,
                            std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                            request_data_map_t* data,
                            std::mutex* mut)
-        : Session{socket, manager, cache}, _data{data}, _data_mutex{mut} {
+        : Session{"decision", socket, manager, cache}, _data{data}, _data_mutex{mut} {
     _is_cache = _cache != nullptr;
 }
 

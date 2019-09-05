@@ -22,7 +22,7 @@ EndTask::EndTask(boost::asio::local::stream_protocol::socket& socket,
                                                      darwin::Manager& manager,
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                                      std::string redis_socket_path)
-        : Session{socket, manager, cache}, _redis_manager{redis_socket_path}{
+        : Session{"end", socket, manager, cache}, _redis_manager{redis_socket_path}{
     _is_cache = _cache != nullptr;
     _redis_manager.ConnectToRedis();
 }

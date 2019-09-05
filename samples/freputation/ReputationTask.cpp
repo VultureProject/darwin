@@ -24,7 +24,7 @@ ReputationTask::ReputationTask(boost::asio::local::stream_protocol::socket& sock
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                MMDB_s* db)
-        : Session{socket, manager, cache}, _database{db} {
+        : Session{"reputation", socket, manager, cache}, _database{db} {
     _is_cache = _cache != nullptr;
 }
 
@@ -57,7 +57,8 @@ void ReputationTask::operator()() {
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
                     bool tag_found = false;
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
 
                     for (auto const& tag: _current_tags) {
                         _logs += "\"" + tag + "\",";
@@ -80,7 +81,8 @@ void ReputationTask::operator()() {
         certitude = GetReputation(_current_ip_address);
         if (is_log && (certitude>=_threshold)){
             bool tag_found = false;
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
 
             for (auto const& tag: _current_tags) {
                 _logs += "\"" + tag + "\",";

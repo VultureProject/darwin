@@ -22,7 +22,7 @@ AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                              std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
                              std::shared_ptr<AnomalyThreadManager> vat,
                              std::string redis_list_name)
-        : Session{socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
+        : Session{"tanomaly", socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
           _redis_manager{std::move(redis_manager)}, _anomaly_thread_manager{std::move(vat)}
 {
 }

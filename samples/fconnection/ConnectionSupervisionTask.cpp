@@ -24,7 +24,7 @@ ConnectionSupervisionTask::ConnectionSupervisionTask(boost::asio::local::stream_
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                                      std::shared_ptr<darwin::toolkit::RedisManager> rm,
                                                      unsigned int expire)
-        : Session{socket, manager, cache}, _redis_expire{expire}, _redis_manager{rm} {
+        : Session{"connection", socket, manager, cache}, _redis_expire{expire}, _redis_manager{rm} {
     _is_cache = _cache != nullptr;
 }
 
@@ -55,8 +55,8 @@ void ConnectionSupervisionTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "connection": ")" + connection +
-                             R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                            R"(", "connection": ")" + connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
                 continue;
@@ -66,8 +66,8 @@ void ConnectionSupervisionTask::operator()() {
         certitude = REDISLookup(connection);
         if(certitude<=100){
             if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "connection": ")" + connection +
-                         R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                        R"(", "connection": ")" + connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
             }
 
             _certitudes.push_back(certitude);

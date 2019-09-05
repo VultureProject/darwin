@@ -19,7 +19,7 @@ ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                Configurations configurations)
-        : Session{socket, manager, cache} {
+        : Session{"content_inspection", socket, manager, cache} {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
 }
@@ -86,7 +86,7 @@ void ContentInspectionTask::operator()() {
                 certitude = 100;
                 if (is_log && (certitude>=_threshold)){
                     _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                             R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
+                             R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
                              std::string(buffer.GetString()) +
                              "}\n";
                 }

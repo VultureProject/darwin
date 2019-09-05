@@ -108,7 +108,8 @@ bool AnomalyThreadManager::WriteLogs(arma::uvec index_anomalies, arma::mat alert
     }
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
-        logFile << R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "anomaly": {)"
+        logFile << R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "filter": "tanomaly", )"
+                << R"("anomaly": {)"
                 << R"("ip": ")" + _ips[index_anomalies(i)] + "\","
                 << R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ","
                 << R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ","

@@ -25,7 +25,7 @@ LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
                    std::string log_file_path,
                    std::string redis_list_name,
                    std::shared_ptr<darwin::toolkit::RedisManager> redis_manager)
-        : Session{socket, manager, cache},
+        : Session{"logs", socket, manager, cache},
           _log{log}, _redis{redis},
           _log_file_path{log_file_path}, _redis_list_name{redis_list_name},
           _redis_manager{redis_manager}{}
