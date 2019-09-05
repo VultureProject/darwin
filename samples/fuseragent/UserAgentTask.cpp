@@ -60,7 +60,7 @@ void UserAgentTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
                 DARWIN_LOG_DEBUG("UserAgentTask:: processed entry in "
@@ -71,7 +71,7 @@ void UserAgentTask::operator()() {
 
         certitude = Predict(user_agent);
         if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
         }
         _certitudes.push_back(certitude);
 
@@ -84,20 +84,6 @@ void UserAgentTask::operator()() {
 
     Workflow();
     _user_agents = std::vector<std::string>();
-}
-
-std::string UserAgentTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }
 
 void UserAgentTask::Workflow() {

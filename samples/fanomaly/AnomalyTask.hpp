@@ -53,10 +53,6 @@ private:
     /// The anomaly detection function
     bool Detection(arma::mat matrix, const std::vector<std::string> &ips);
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     // Indices of values in matrix (see variable "_data" below)
     static constexpr int UDP_NB_HOST  = 0;

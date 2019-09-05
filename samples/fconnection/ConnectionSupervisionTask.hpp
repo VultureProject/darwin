@@ -53,10 +53,6 @@ private:
     /// \return true on success, false otherwise.
     unsigned int REDISLookup(const std::string& connection) noexcept;
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     unsigned int _redis_expire;
     std::string _current_connection; // The current connection to process

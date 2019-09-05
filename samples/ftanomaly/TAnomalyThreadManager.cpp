@@ -12,6 +12,7 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "TAnomalyThreadManager.hpp"
 #include "Logger.hpp"
+#include "Time.hpp"
 #include "protocol.h"
 
 AnomalyThreadManager::AnomalyThreadManager(std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
@@ -107,7 +108,7 @@ bool AnomalyThreadManager::WriteLogs(arma::uvec index_anomalies, arma::mat alert
     }
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
-        logFile << R"({"time": ")" + GetTime() + R"(", "anomaly": {)"
+        logFile << R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "anomaly": {)"
                 << R"("ip": ")" + _ips[index_anomalies(i)] + "\","
                 << R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ","
                 << R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ","
@@ -122,20 +123,6 @@ bool AnomalyThreadManager::WriteLogs(arma::uvec index_anomalies, arma::mat alert
 
     return true;
 };
-
-std::string AnomalyThreadManager::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
-}
 
 void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){
     DARWIN_LOGGER;

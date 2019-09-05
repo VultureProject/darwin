@@ -52,7 +52,7 @@ void HostLookupTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "host": ")" + host +
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "host": ")" + host +
                              R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
@@ -64,7 +64,7 @@ void HostLookupTask::operator()() {
 
         certitude = DBLookup(host);
         if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "host": ")" + host +
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "host": ")" + host +
                      R"(", "certitude": )" + std::to_string(certitude) + "}\n";
         }
         _certitudes.push_back(certitude);
@@ -78,20 +78,6 @@ void HostLookupTask::operator()() {
 
     Workflow();
     _hosts = std::vector<std::string>();
-}
-
-std::string HostLookupTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }
 
 void HostLookupTask::Workflow() {

@@ -85,7 +85,7 @@ void ContentInspectionTask::operator()() {
 
                 certitude = 100;
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() +
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                              R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
                              std::string(buffer.GetString()) +
                              "}\n";
@@ -161,18 +161,4 @@ bool ContentInspectionTask::ParseBody() {
     }
 
     return true;
-}
-
-std::string ContentInspectionTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }

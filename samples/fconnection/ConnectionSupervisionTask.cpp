@@ -55,7 +55,7 @@ void ConnectionSupervisionTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "connection": ")" + connection +
                              R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
@@ -66,7 +66,7 @@ void ConnectionSupervisionTask::operator()() {
         certitude = REDISLookup(connection);
         if(certitude<=100){
             if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "connection": ")" + connection +
                          R"(", "certitude": )" + std::to_string(certitude) + "}\n";
             }
 
@@ -83,20 +83,6 @@ void ConnectionSupervisionTask::operator()() {
 
     Workflow();
     _connections = std::vector<std::string>();
-}
-
-std::string ConnectionSupervisionTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }
 
 void ConnectionSupervisionTask::Workflow() {

@@ -38,20 +38,6 @@ long AnomalyTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_ANOMALY;
 }
 
-std::string AnomalyTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
-}
-
 void AnomalyTask::Workflow() {
     switch (header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
@@ -123,7 +109,7 @@ bool AnomalyTask::Detection(arma::mat matrix, const std::vector<std::string> &ip
 void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts){
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
-        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "anomaly": {)";
+        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "anomaly": {)";
         _logs += R"("ip": ")" + ips[index_anomalies(i)] + "\",";
         _logs += R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ",";
         _logs += R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ",";

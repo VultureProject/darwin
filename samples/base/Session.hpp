@@ -15,6 +15,7 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
+#include "Time.hpp"
 
 #define DARWIN_SESSION_BUFFER_SIZE 2048
 #define DARWIN_DEFAULT_THRESHOLD 80

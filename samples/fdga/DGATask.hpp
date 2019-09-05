@@ -71,9 +71,6 @@ private:
     /// \param to_predict The DGA to be predicted.
     void DomainTokenizer(std::vector<std::size_t> &domain_tokens, const std::string &to_predict);
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
 
 private:
     unsigned int _max_tokens = 75;
