@@ -74,7 +74,7 @@ namespace darwin {
         }
 
         packet->type = DARWIN_PACKET_FILTER;
-        packet->response = header.response;
+        packet->response = header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : header.response;
         packet->certitude_size = certitude_size;
         packet->filter_code = GetFilterCode();
         packet->body_size = data.size();
@@ -197,7 +197,12 @@ namespace darwin {
             ReadBody(header.body_size);
             return;
         }
-        DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
+
+        if (boost::asio::error::eof == e) {
+            DARWIN_LOG_INFO("Session::ReadHeaderCallback:: " + e.message());
+        } else {
+            DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
+        }
 
         header_callback_stop_session:
         _manager.Stop(shared_from_this());
