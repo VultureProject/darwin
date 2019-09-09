@@ -100,6 +100,14 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         }
         _log_file_path = configuration["log_file_path"].GetString();
 
+        // Try to open file to check permissions (and create file if not existing)
+        std::ofstream logFile(_log_file_path, std::ios::out | std::ios::app);
+        if(!logFile.is_open() or logFile.fail()) {
+            DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+                         "maybe too low space disk or wrong permission");
+            return false;
+        }
+        logFile.close();
     }
 
     return true;
