@@ -82,6 +82,7 @@ set(
         toolkit/Validators.cpp toolkit/Validators.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
+        toolkit/Time.cpp toolkit/Time.hpp
 )
 
 find_package(Boost)

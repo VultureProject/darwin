@@ -135,6 +135,11 @@ fabric.properties
 
 .idea/
 
+### VsCode
+# Ignores the whole vscode folder
+
+.vscode/
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

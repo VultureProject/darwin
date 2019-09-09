@@ -29,7 +29,7 @@ SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                          redisContext* db, std::mutex *mtx)
-        : Session{socket, manager, cache}, _redis_connection{db},
+        : Session{"session", socket, manager, cache}, _redis_connection{db},
           _redis_mutex{mtx} {
     _is_cache = _cache != nullptr;
 }

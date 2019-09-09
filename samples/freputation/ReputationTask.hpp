@@ -72,10 +72,6 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     MMDB_s* _database; // The Reputation database
     std::string _current_ip_address; // The IP address to check

@@ -21,10 +21,10 @@
 #include "../../toolkit/xxhash.hpp"
 
 namespace darwin {
-    Session::Session(boost::asio::local::stream_protocol::socket& socket,
+    Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
-            : _socket{std::move(socket)}, _manager{manager},
+            : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
               _filter_socket{socket.get_executor()}, _connected{false}, _cache{cache} {}
 
     void Session::SendResToSession() noexcept {
@@ -435,7 +435,7 @@ namespace darwin {
         return false;
     }
 
-    std::string Session::Evt_idToString(){
+    std::string Session::Evt_idToString() {
         char str[37] = {};
         sprintf(str,
                 "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
@@ -448,5 +448,7 @@ namespace darwin {
         return res;
     }
 
-
+    std::string Session::GetFilterName() {
+        return _filter_name;
+    }
 }

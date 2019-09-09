@@ -24,7 +24,7 @@ InjectionTask::InjectionTask(boost::asio::local::stream_protocol::socket& socket
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                              BoosterHandle booster, std::set<std::string> *keywords,
                              std::size_t additional_features_length, std::size_t features_length)
-        : Session{socket, manager, cache}, _additional_features_length{additional_features_length},
+        : Session{"injection", socket, manager, cache}, _additional_features_length{additional_features_length},
           _features_length{features_length}, _booster{booster}, _keywords{keywords} {
     _is_cache = _cache != nullptr;
 }

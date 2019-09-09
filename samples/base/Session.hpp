@@ -15,6 +15,7 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
+#include "Time.hpp"
 
 #define DARWIN_SESSION_BUFFER_SIZE 2048
 #define DARWIN_DEFAULT_THRESHOLD 80
@@ -25,7 +26,8 @@ namespace darwin {
 
     class Session : public std::enable_shared_from_this<Session> {
     public:
-        Session(boost::asio::local::stream_protocol::socket& socket,
+        Session(std::string name,
+                boost::asio::local::stream_protocol::socket& socket,
                 Manager& manager,
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
 
@@ -130,6 +132,10 @@ namespace darwin {
         /// \return evt_di as string
         std::string Evt_idToString();
 
+
+        /// Get the name of the filter
+        std::string GetFilterName();
+
     private:
 
         /// Called when data is sent using Send() method.
@@ -176,6 +182,7 @@ namespace darwin {
 
         // Not accessible by children
     private:
+        std::string _filter_name; //!< name of the filter
         boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
         Manager& _manager; //!< The associated connection manager.
         boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
