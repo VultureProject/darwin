@@ -318,9 +318,12 @@ class Services:
 
                 new[n]['output'] = new[n]['output']
 
-                new[n]['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                    next_filter=new[n]['next_filter']
-                )
+                if not new[n]['next_filter']:
+                    new[n]['next_filter_unix_socket'] = 'no'
+                else:
+                    new[n]['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                        next_filter=new[n]['next_filter']
+                    )
 
                 new[n]['socket'] = '/var/sockets/darwin/{name}{extension}.sock'.format(
                     name=n, extension=new[n]['extension']
@@ -401,9 +404,12 @@ class Services:
                     c['extension'] = '.1'
                     c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
 
-                    c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                        next_filter=c['next_filter']
-                    )
+                    if not c['next_filter']:
+                        c['next_filter_unix_socket'] = 'no'
+                    else:
+                        c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                            next_filter=c['next_filter']
+                        )
 
                     c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
                     c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
