@@ -57,6 +57,12 @@ namespace darwin {
 
     void Session::SendToDarwin() noexcept {
         DARWIN_LOGGER;
+
+        if (!_next_filter_path.compare("no")) {
+            DARWIN_LOG_NOTICE("Session:: SendToDarwin: No next filter provided. Ignoring...");
+            return ;
+        }
+
         std::string data = GetDataToSendToFilter();
 
         const std::size_t certitude_size = _certitudes.size();
@@ -65,7 +71,7 @@ namespace darwin {
         packet = (darwin_filter_packet_t *) malloc(offsetof(darwin_filter_packet_t, certitude_list[certitude_size]));
 
         if (!packet) {
-            DARWIN_LOG_CRITICAL("Session:: SendResToSession: Could not create a Darwin packet");
+            DARWIN_LOG_CRITICAL("Session:: SendToDarwin: Could not create a Darwin packet");
             return;
         }
 
