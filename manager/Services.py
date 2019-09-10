@@ -339,6 +339,29 @@ class Services:
                     logger.warning("Field 'config_file' not found for {}: setting default.".format(n))
                     new[n]['config_file'] = '/home/darwin/conf/{name}.conf'.format(name=n)
 
+                if 'cache_size' not in new[n]:
+                    new[n]['cache_size'] = 0
+
+                    logger.info('No cache size provided. Setting it to {cache_size}'.format(
+                        cache_size=new[n]['cache_size']
+                    ))
+
+                if 'output' not in new[n]:
+                    new[n]['output'] = 'NONE'
+                    logger.info('No output type provided. Setting it to {output}'.format(output=new[n]['output']))
+
+                if 'nb_thread' not in new[n]:
+                    new[n]['nb_thread'] = 5
+
+                    logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
+                        nb_thread=new[n]['nb_thread']
+                    ))
+
+                if 'threshold' not in new[n]:
+                    new[n]['threshold'] = 101
+
+                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
+
             for n, c in new.items():
                 cmd = self._build_cmd(c, n)
                 logger.info("Starting updated filter")
