@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <climits>
 #include <cstring>
+#include <exception>
 
 #include "Generator.hpp"
 #include "Logger.hpp"
@@ -22,6 +23,7 @@ namespace darwin {
 
     int Core::run() {
         DARWIN_LOGGER;
+        int ret{0};
 
        Generator gen{};
         if (!gen.Configure(_modConfigPath, _cacheSize)) {
@@ -30,16 +32,26 @@ namespace darwin {
         }
         DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
-        Monitor monitor{_monSocketPath};
-        std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
+        try {
+            Monitor monitor{_monSocketPath};
+            std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
 
-        Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
-        server.Run();
+            try {
+                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
+                server.Run();
+            } catch (const std::exception& e) {
+                DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
+                ret = 1;
+            }
 
-        if (t.joinable())
-            t.join();
+            if (t.joinable())
+                t.join();
+        } catch (const std::exception& e) {
+            DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open monitoring socket: ") + e.what());
+            return 1;
+        }
 
-        return 0;
+        return ret;
     }
 
     bool Core::Configure(int ac, char** av) {
@@ -144,6 +156,8 @@ namespace darwin {
     }
 
     void Core::ClearPID() {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Core::ClearPID:: Removing PID file");
         std::string name{_pidPath};
         unlink(name.c_str());
     }

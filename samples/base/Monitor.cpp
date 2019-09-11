@@ -43,6 +43,9 @@ namespace darwin {
         // The server is stopped by cancelling all outstanding asynchronous
         // operations. Once all operations have finished the io_context::run()
         // call will exit.
+        DARWIN_LOGGER;
+
+        DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
         _connection.close();
     }
