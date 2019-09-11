@@ -257,8 +257,6 @@ tags
 .idea*
 cmake-build-debug*
 
-test*
-
 !*.model
 !*.pb
 !pkg/**/lib/
