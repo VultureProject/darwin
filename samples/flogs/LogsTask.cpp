@@ -85,6 +85,7 @@ bool LogsTask::WriteLogs() {
         DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
                         "will retry " + std::to_string(retry) + " times");
         _log_file.open(_log_file_path, std::ios::out | std::ios::app);
+        fail = !_log_file.is_open() or _log_file.fail();
         retry--;
     }
 
