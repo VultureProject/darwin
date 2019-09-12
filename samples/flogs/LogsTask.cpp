@@ -78,21 +78,20 @@ bool LogsTask::WriteLogs() {
     DARWIN_LOG_DEBUG("WriteLogsTask::Write:: Starting writing in log file: \""
                      + _log_file_path + "\"...");
     unsigned int retry = RETRY;
+    bool fail;
 
-    // Open file and check permissions (and create file if not existing)
-    while(retry){
-        if(!_log_file.is_open() or _log_file.fail()) {
-            DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                            "will retry " + std::to_string(retry) + " times");
-            _log_file.open(_log_file_path, std::ios::out | std::ios::app);
-        }
+    fail = !_log_file.is_open() or _log_file.fail();
+    while(retry and fail){
+        DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+                        "will retry " + std::to_string(retry) + " times");
+        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
         retry--;
     }
 
-    if(!_log_file.is_open() or _log_file.fail()) {
+    if(fail) {
         DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                         "too low space disk or wrong permission");
-
+                         "too many retry, "
+                         "may due to low space disk or wrong permission");
         return false;
     }
 
