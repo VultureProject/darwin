@@ -29,37 +29,26 @@ link_directories(
         ${LIBEVENT_PTHREADS_LIBRARY_DIRS}
 )
 
-pkg_check_modules(HIREDIS REQUIRED hiredis)
-include_directories( ${HIREDIS_INCLUDE_DIRS} )
 include_directories(/usr/local/include)
-link_directories(
-        ${HIREDIS_LIBRARY_DIRS}
-)
 
-find_path(MLPACK_INCLUDE_DIRS
-  NAMES mlpack/core.hpp mlpack/prereqs.hpp
-  PATHS ./mlpack/build/include/
-)
+pkg_check_modules(HIREDIS REQUIRED hiredis)
+include_directories(${HIREDIS_INCLUDE_DIRS})
+link_directories(${HIREDIS_LIBRARY_DIRS})
+find_library(HIREDIS_LIBRARY hiredis PATHS ${HIREDIS_LIBRARY_DIRS})
 
-find_library(MLPACK_LIBRARY
-  NAMES mlpack
-  PATHS ./mlpack/build/lib ./mlpack/build/include
-)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+find_library(ARMADILLO_LIBRARY armadillo PATHS ${ARMADILLO_LIBRARY_DIRS})
 
-if(NOT DEFINED MLPACK_LIBRARY)
-    message("Mlpack library not found")
-endif(NOT DEFINED MLPACK_LIBRARY)
+include_directories(${MLPACK_INCLUDE_DIRS})
+find_library(MLPACK_LIBRARY mlpack PATHS ${MLPACK_LIBRARY_DIRS})
 
-find_library(ARMADILLO_LIBRARY
-  NAMES armadillo
-  PATHS ./armadillo-code/include/lib /usr/local/lib
-)
+if(NOT ARMADILLO_LIBRARY)
+message(WARNING "Did not find lib armadillo, will not be able to compile filters anomaly/tanomaly")
+endif()
 
-set(ARMADILLO_INCLUDE_DIRS ./armadillo-code/include/)
-
-if(NOT DEFINED ARMADILLO_LIBRARY)
-    message("Armadillo library not found")
-endif(NOT DEFINED ARMADILLO_LIBRARY)
+if(NOT MLPACK_LIBRARY)
+message(WARNING "Did not find lib mlpack, will not be able to compile filters anomaly/tanomaly")
+endif()
 
 ####################
 #   !CONNECTORS    #
