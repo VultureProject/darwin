@@ -111,8 +111,8 @@ class Services:
             filt['output'],
             filt['next_filter_unix_socket'],
             str(filt['nb_thread']),
-            str(filt['threshold']),
             str(filt['cache_size']),
+            str(filt['threshold']),
         ]
 
         try:
