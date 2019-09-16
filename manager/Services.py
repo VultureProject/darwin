@@ -128,6 +128,8 @@ class Services:
                 cmd.append('-e')
             elif log_level == "critical":
                 cmd.append('-c')
+            elif log_level == "developer":
+                cmd.append('-z')
             else:
                 logger.warning(
                     'Invalid log level argument provided: "{log_level}". Ignoring'.format(log_level)

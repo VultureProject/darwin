@@ -78,8 +78,6 @@ namespace darwin {
         if (ac > 11) {
             if (!strncmp("-d", av[11], 2)) {
                 log.setLevel(logger::Debug);
-                DARWIN_LOG_DEBUG("Debug mode activated");
-                daemon = false;
             } else if (!strncmp("-i", av[11], 2)) {
                 log.setLevel(logger::Info);
             } else if (!strncmp("-n", av[11], 2)) {
@@ -90,6 +88,10 @@ namespace darwin {
                 log.setLevel(logger::Error);
             } else if (!strncmp("-c", av[11], 2)) {
                 log.setLevel(logger::Critical);
+            } else if (!strncmp("-z", av[11], 2)) {
+                log.setLevel(logger::Debug);
+                DARWIN_LOG_DEBUG("Developer mode activated");
+                daemon = false;
             }
         }
 
@@ -124,8 +126,9 @@ namespace darwin {
                    "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
         std::cout
-                << "  -d\tDebug mode, does not create a daemon, set log level to debug"
+                << "  -z\tDeveloper mode, does not create a daemon, set log level to debug"
                 << std::endl;
+        std::cout << "  -d\tSet log level to debug" << std::endl;
         std::cout << "  -i\tSet log level to info" << std::endl;
         std::cout << "  -n\tSet log level to notice" << std::endl;
         std::cout << "  -w\tSet log level to warning (DEFAULT)" << std::endl;
