@@ -5,15 +5,17 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include "base/Logger.hpp"
 #include "Generator.hpp"
+#include "base/Logger.hpp"
 #include "ConnectionSupervisionTask.hpp"
 
-#include <fstream>
+#include <regex>
 #include <string>
+#include <fstream>
 
-#include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/lru_cache.hpp"
+#include "../../toolkit/RedisManager.hpp"
+
 
 bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;
@@ -66,7 +68,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("DGA:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
-    std::string init_data_path;
+    std::string init_data_path = "";
 
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: \"redis_socket_path\"");
@@ -80,17 +82,13 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     redis_socket_path = configuration["redis_socket_path"].GetString();
 
-    if (!configuration.HasMember("init_data_path")) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: \"init_data_path\"");
-        return false;
+    if (configuration.HasMember("init_data_path")) {
+        if (!configuration["init_data_path"].IsString()) {
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: \"init_data_path\" needs to be a string");
+            return false;
+        }
+        init_data_path = configuration["init_data_path"].GetString();
     }
-
-    if (!configuration["init_data_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: \"init_data_path\" needs to be a string");
-        return false;
-    }
-
-    init_data_path = configuration["init_data_path"].GetString();
 
     if (!configuration.HasMember("redis_expire")) {
         _redis_expire = 0;
@@ -125,6 +123,8 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
 
     if (!_redis_manager->ConnectToRedis(true)) return false;
 
+    if(init_data_path.empty()) return true;
+
     DARWIN_LOG_DEBUG("ConnectionSupervision:: ConfigRedis:: Loading initial "
                      "data from \"" + init_data_path + "\" for redis...");
 
@@ -137,6 +137,20 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
 
     // For each line in the file, we APPEND as a key in the redis, with a whatever value
     while (!init_data_stream.eof() && std::getline(init_data_stream, current_line)) {
+
+        if (!std::regex_match (current_line, std::regex(
+                "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
+                "(([0-9]+;(17|6))|([0-9]*;*1))")))
+        {
+            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ current_line +", isn't valid, ignored. "
+                                                                               "Format expected : "
+                                                                               "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
+                                                                               "\"[ip_protocol udp or tcp]\")|"
+                                                                               "\"[ip_protocol icmp]\")]");
+            continue;
+        }
+
         arguments.clear();
         if(_redis_expire){
             arguments.emplace_back("SETEX");
@@ -151,7 +165,7 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
         if (!_redis_manager->REDISQuery(&reply, arguments)) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::ConfigRedis:: "
                              "Error when trying to add line \"" + current_line + "\" from initial data for redis, line "
-                             "not added");
+                                                                                 "not added");
         }
     }
 

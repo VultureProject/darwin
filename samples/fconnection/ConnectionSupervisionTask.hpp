@@ -11,8 +11,9 @@
 #include "protocol.h"
 #include "Session.hpp"
 
-#include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/lru_cache.hpp"
+#include "../../toolkit/RedisManager.hpp"
+#include "../toolkit/rapidjson/document.h"
 
 #define DARWIN_FILTER_CONNECTION 0x636E7370
 
@@ -34,8 +35,6 @@ public:
     void operator()() override;
 
 protected:
-    /// Get the result from the cache
-    xxh::hash64_t GenerateHash() override;
     /// Return filter code
     long GetFilterCode() noexcept override;
 
@@ -46,6 +45,9 @@ private:
 
     /// Parse the body received.
     bool ParseBody() override;
+
+    /// Parse the data received in the body.
+    bool ParseData(const rapidjson::Value& data);
 
     /// Read a connection description from the session and
     /// perform a redis lookup.
