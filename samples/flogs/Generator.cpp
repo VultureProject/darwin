@@ -5,8 +5,8 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include <fstream>
 #include <string>
+#include <fstream>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
@@ -100,14 +100,13 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         }
         _log_file_path = configuration["log_file_path"].GetString();
 
-        // Try to open file to check permissions (and create file if not existing)
-        std::ofstream logFile(_log_file_path, std::ios::out | std::ios::app);
-        if(!logFile.is_open() or logFile.fail()) {
+        // Open file and check permissions (and create file if not existing)
+        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
+        if(!_log_file.is_open() or _log_file.fail()) {
             DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
                          "maybe too low space disk or wrong permission");
             return false;
         }
-        logFile.close();
     }
 
     return true;
@@ -137,8 +136,10 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<LogsTask>(socket, manager, _cache,
                                        _log, _redis,
-                                       _log_file_path, _redis_list_name,
-                                       _redis_manager));
+                                       _log_file_path, _log_file,
+                                       _redis_list_name, _redis_manager));
 }
 
-Generator::~Generator() = default;
+Generator::~Generator(){
+    _log_file.close();
+};
