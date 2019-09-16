@@ -26,9 +26,9 @@ import json
 import socket
 from threading import Lock
 from copy import deepcopy
-from subprocess import Popen, call
+from subprocess import Popen, call, TimeoutExpired
 from os import kill, remove, access, F_OK
-from signal import SIGTERM, SIGINT, SIGUSR1
+from signal import SIGTERM, SIGUSR1
 from pprint import pprint
 from JsonSocket import JsonSocket
 from HeartBeat import HeartBeat
@@ -51,7 +51,6 @@ class Services:
         """
         self._config_file = config_file
         self._filters = {}
-        self._processes = {}
         self._lock = Lock()
         self.load_conf()
 
@@ -149,21 +148,16 @@ class Services:
             pid = f.readline()
         kill(int(pid), SIGUSR1)
 
-    def _kill_by_name(self, name):
+    @staticmethod
+    def _kill_with_pid_file(file):
         """
-        Send SIGTERM signal to a program listed in the managed processes.
-        Remove it from processes.
+        Send SIGTERM signal to a program having his PID in file.
 
-        :param name: the name of the program to terminate.
+        :param file: The file containing the PID a a program.
         """
-        proc = self._processes.pop(name)
-        proc.terminate()
-        try:
-            proc.wait()
-        except TimeoutExpired as e:
-            logging.error("Cannot terminate {}. Purging it.")
-            proc.kill()
-            # TODO
+        with open(file) as f:
+            pid = f.readline()
+        kill(int(pid), SIGTERM)
 
     def start_one(self, name, no_lock=False):
         """
@@ -185,7 +179,17 @@ class Services:
 
         # start process
         logger.debug("Starting {}".format(" ".join(cmd)))
-        self._processes[name] = Popen(cmd)
+        p = Popen(cmd)
+        try:
+            p.wait(timeout=1)
+        except TimeoutExpired:
+            if self._filters[name]['log_level'].lower() == "debug":
+                logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+            else:
+                logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                p.kill()
+                p.wait()
+
 
     @staticmethod
     def rotate_logs(name, pid_file):
@@ -215,7 +219,8 @@ class Services:
         if not no_lock:
             self._lock.release()
 
-    def stop(self, name, socket_link=None):
+    @staticmethod
+    def stop(name, pid_file, socket_link=None):
         """
         Stop the filter based on his pid_file and
         remove the associated socket symlink (if provided).
@@ -225,7 +230,7 @@ class Services:
         :param socket_link: The symlink to the filter socket (Optional).
         """
         try:
-            self._kill_by_name(name)
+            Services._kill_with_pid_file(pid_file)
         except FileNotFoundError as e:
             logger.warning("Filter {} not running (no pid file found). Did the filter start/crash?".format(name))
         except Exception as e:
@@ -250,7 +255,8 @@ class Services:
         if not no_lock:
             self._lock.acquire()
 
-        self.stop(name, socket_link=self._filters[name]['socket_link'])
+        self.stop(name, self._filters[name]['pid_file'],
+                  self._filters[name]['socket_link'])
 
         if not no_lock:
             self._lock.release()
@@ -271,7 +277,7 @@ class Services:
         try:
             self.clean_one(name, no_lock=no_lock)
         except Exception as e:
-            logger.error("Cannot clean {}: {}", name, e)
+            logger.error("Cannot clean {}: {}".format(name, e))
 
         try:
             self.start_one(name, no_lock=no_lock)
@@ -306,6 +312,7 @@ class Services:
                 except KeyError:
                     try:
                         self.stop_one(n, no_lock=True)
+                        self.clean_one(n, no_lock=True)
                     except KeyError:
                         errors.append({"filter": n,
                                        "error": 'Filter not existing'})
@@ -369,15 +376,25 @@ class Services:
             for n, c in new.items():
                 cmd = self._build_cmd(c, n)
                 logger.info("Starting updated filter")
-                Popen(cmd)
-                sleep(0.1)
+                p = Popen(cmd)
+                try:
+                    p.wait(timeout=1)
+                except TimeoutExpired:
+                    if self._filters[n]['log_level'].lower() == "debug":
+                        logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+                    else:
+                        logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                        p.kill()
+                        p.wait()
+                sleep(0.1) # TODO: Find a better way with monitoring socket
                 ret = self._update_check_process(c)
                 if ret:
                     logger.error("Unable to update filter {}: {}".format(n, ret))
                     # Then there is an error
                     errors.append({"filter": n, "error": ret})
                     try:
-                        self.stop(n)
+                        self.stop(n, c['pid_file'])
+                        self.clean_one(n)
                     except Exception:
                         pass
                     continue
@@ -390,22 +407,18 @@ class Services:
                     logger.error("Unable to link new filter {}: {}".format(n, e))
                     errors.append({"filter": n, "error": "{0}".format(e)})
                     try:
-                        self.stop(n)
+                        self.stop(n, c['pid_file'])
+                        self.clean_one(n)
                     except Exception:
                         pass
                     continue
 
                 try:
                     logger.info("Killing older filter...")
-                    logger.debug("Trying to kill {}".format(n))
-                    self._kill_by_name(n)
-                except FileNotFoundError as e:
-                    logger.warning("Filter {} not running (no pid file found). Did the filter start/crash?".format(name))
+                    self._kill_with_pid_file(self._filters[n]['pid_file'])
+                    self.clean_one(n)
                 except KeyError:
                     pass
-                except Exception as e:
-                    logger.error("Cannot stop filter {}: {}".format(n, e))
-
                 self._filters[n] = deepcopy(c)
 
         return errors

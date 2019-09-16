@@ -48,6 +48,7 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
         _connection.close();
+        unlink(_socket_path.c_str());
     }
 
     void Monitor::Accept() {

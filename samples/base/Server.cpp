@@ -73,6 +73,7 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
         _manager.StopAll();
+        unlink(_socket_path.c_str());
     }
 
     void Server::Accept() {
