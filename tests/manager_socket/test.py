@@ -4,10 +4,10 @@ import manager_socket.update_test as update_test
 from tools.output import print_results
 
 def run():
-    results = monitor_test.run()
-    results.extend(update_test.run())
-
     print('Management Socket Results:')
-    print_results(results)
+
+    monitor_test.run()
+    update_test.run()
+
     print()
     print()

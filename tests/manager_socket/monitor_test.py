@@ -1,5 +1,6 @@
-from manager_socket.utils import requests
+from manager_socket.utils import requests, CONF_EMPTY, CONF_FLOGS, CONF_ONE, CONF_THREE, REQ_MONITOR, RESP_EMPTY, RESP_ONE, RESP_THREE, PATH_CONF_FLOGS
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
+from tools.output import print_result
 
 
 def run():
@@ -9,106 +10,53 @@ def run():
         no_filter,
     ]
 
-    results = []
-
     for i in tests:
-        results.append(("Monitor: " + i.__name__, i()))
+        print_result("Monitoring: " + i.__name__, i())
 
-    return results
 
 def multiple_filters_running():
-    conf = """{
-  "logs_1": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file":"/tmp/logs.conf",
-        "output": "NONE",
-        "next_filter": "",
-        "nb_thread": 1,
-        "log_level": "DEBUG",
-        "cache_size": 0
-    },
-    "logs_2": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file":"/tmp/logs.conf",
-        "output": "NONE",
-        "next_filter": "",
-        "nb_thread": 1,
-        "log_level": "DEBUG",
-        "cache_size": 0
-    },
-    "logs_3": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file":"/tmp/logs.conf",
-        "output": "NONE",
-        "next_filter": "",
-        "nb_thread": 1,
-        "log_level": "DEBUG",
-        "cache_size": 0
-    }
-}
-"""
-
-    log_conf = """{
-  "log_file_path": "/tmp/logs_test.log"
-}"""
 
     ret = False
 
-    darwin_configure(conf)
-    darwin_configure(log_conf, path="/tmp/logs.conf")
+    darwin_configure(CONF_THREE)
+    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
     process = darwin_start()
 
-    resp = requests(b'{"type": "monitor"}')
-    if resp == '{"logs_1": {}, "logs_2": {}, "logs_3": {}}':
+    resp = requests(REQ_MONITOR)
+    if resp == RESP_THREE:
         ret = True
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path="/tmp/logs.conf")
+    darwin_remove_configuration(path=PATH_CONF_FLOGS)
     return ret
 
-def one_filters_running():
-    conf = """{
-  "logs_1": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file":"/tmp/logs.conf",
-        "output": "NONE",
-        "next_filter": "",
-        "nb_thread": 1,
-        "log_level": "DEBUG",
-        "cache_size": 0
-    }
-}
-"""
 
-    log_conf = """{
-  "log_file_path": "/tmp/logs_test.log"
-}"""
+def one_filters_running():
 
     ret = False
 
-    darwin_configure(conf)
-    darwin_configure(log_conf, path="/tmp/logs.conf")
+    darwin_configure(CONF_ONE)
+    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
     process = darwin_start()
 
-    resp = requests(b'{"type": "monitor"}')
-    if resp == '{"logs_1": {}}':
+    resp = requests(REQ_MONITOR)
+    if resp == RESP_ONE:
         ret = True
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path="/tmp/logs.conf")
+    darwin_remove_configuration(path=PATH_CONF_FLOGS)
     return ret
 
 def no_filter():
-    conf = "{}"
     ret = False
 
-    darwin_configure(conf)
+    darwin_configure(CONF_EMPTY)
     process = darwin_start()
 
-    resp = requests(b'{"type": "monitor"}')
-    if resp == '{}':
+    resp = requests(REQ_MONITOR)
+    if resp == RESP_EMPTY:
         ret = True
 
     darwin_stop(process)
