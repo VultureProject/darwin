@@ -6,9 +6,8 @@ def print_results(results):
         else:
             print("ERROR | " + i[0])
 
-def print_result(name, function):
-    print(name, end='')
-    if function() is True:
-        print(" | OK")
+def print_result(name, result):
+    if result is True:
+        print("OK | " + name)
     else:
-        print(" | ERROR")
+        print("ERROR | " + name)

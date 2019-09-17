@@ -86,6 +86,7 @@ REQ_UPDATE_EMPTY = b'{"type": "update_filters", "filters": []}'
 REQ_UPDATE_ONE   = b'{"type": "update_filters", "filters": ["logs_1"]}'
 REQ_UPDATE_TWO   = b'{"type": "update_filters", "filters": ["logs_2", "logs_3"]}'
 REQ_UPDATE_THREE = b'{"type": "update_filters", "filters": ["logs_1", "logs_2", "logs_3"]}'
+REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata"]}'
 
 # Responses
 
@@ -93,3 +94,4 @@ RESP_EMPTY     = '{}'
 RESP_ONE       = '{"logs_1": {}}'
 RESP_THREE     = '{"logs_1": {}, "logs_2": {}, "logs_3": {}}'
 RESP_STATUS_OK = '{"status": "OK"}'
+RESP_FILTER_NOT_EXISTING = '{"status": "KO", "errors": [{"filter": "tototititata", "error": "Filter not existing"}]}'
