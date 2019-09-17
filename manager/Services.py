@@ -157,9 +157,12 @@ class Services:
 
         :param file: The file containing the PID a a program.
         """
+        logger.debug("Entering kill_with_pid_file")
         with open(file) as f:
             pid = f.readline()
+        logger.debug("Pid read : {}".format(pid))
         kill(int(pid), SIGTERM)
+        logger.debug("SIGTERM sent")
 
     def start_one(self, name, no_lock=False):
         """
@@ -396,7 +399,7 @@ class Services:
                     errors.append({"filter": n, "error": ret})
                     try:
                         self.stop(n, c['pid_file'])
-                        self.clean_one(n)
+                        self.clean_one(n, no_lock=True)
                     except Exception:
                         pass
                     continue
@@ -410,7 +413,7 @@ class Services:
                     errors.append({"filter": n, "error": "{0}".format(e)})
                     try:
                         self.stop(n, c['pid_file'])
-                        self.clean_one(n)
+                        self.clean_one(n, no_lock=True)
                     except Exception:
                         pass
                     continue
@@ -418,8 +421,11 @@ class Services:
                 try:
                     logger.info("Killing older filter...")
                     self._kill_with_pid_file(self._filters[n]['pid_file'])
-                    self.clean_one(n)
+                    logger.debug("Killed with PID")
+                    self.clean_one(n, no_lock=True)
+                    logger.debug("Cleaned filter")
                 except KeyError:
+                    logger.debug("Key error when trying to kill with PID")
                     pass
                 self._filters[n] = deepcopy(c)
 
