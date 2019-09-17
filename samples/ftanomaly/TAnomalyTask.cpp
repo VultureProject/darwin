@@ -144,7 +144,8 @@ bool AnomalyTask::ParseData(const rapidjson::Value& data){
         values.emplace_back(line);
     }
 
-    REDISAdd(values);
+    if (!values.empty())    REDISAdd(values);
+
     return true;
 }
 

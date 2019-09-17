@@ -67,7 +67,7 @@ You will find compilation and dependencies informations for each filters in the 
 
 ### Usage
 
-Usage: `./darwin filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread  cache_size [OPTION]`
+Usage: `./darwin filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread cache_size threshold[OPTION]`
 
 Positional arguments:
 - `filter_name` Specify the name of this filter in the logs
@@ -75,10 +75,11 @@ Positional arguments:
 - `config_file` Specify the path to the configuration file
 - `monitoring_socket_path` Specify the path to the monitoring unix socket
 - `pid_file` Specify the path to the file containing the pid of the process
-- `output` Specify the filter's output\n";
-- `next_filter_socket_path` Specify the path to the next filter unix socket\
+- `output` Specify the filter's output
+- `next_filter_socket_path` Specify the path to the next filter unix socket
 - `nb_thread` Integer specifying the number of treatment thread for this process
 - `cache_size` Integer specifying cache's size
+- `threshold` Integer specifying the filter's threshold (if behind 100, take the filter's default threshold)
 
 OPTIONS:
 - `-d` Debug mode, does not create a daemon, set log level to debug
@@ -87,7 +88,7 @@ OPTIONS:
 - `-e` Set log level to error
 - `-c` Set log level to critical
 
-*Note: The only option taken is the one set after `cache_size`.*
+*Note: The only option taken is the one set after `threshold`.*
 
 *Note: All filter currently log in the same file `/var/log/darwin/darwin.log`*
 
@@ -126,6 +127,7 @@ The config file is JSON formatted and contains the filters information. They *MU
     "output": "LOG",
     "next_filter": "",
     "nb_thread": 5,
+    "threshold": 80,
     "log_level": "DEBUG",
     "cache_size": 0
   },
