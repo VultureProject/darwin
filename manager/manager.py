@@ -112,9 +112,10 @@ if __name__ == '__main__':
         exit(1)
 
     t = Thread(target=server.constant_heartbeat, args=(services,))
+    logger.info("launching HeartBeat thread...")
+    t.start()
     logger.info("Running server...")
     server.run(services)
-    t.start()
 
     logger.info("Stopping services...")
     logger.debug("Joining...")
