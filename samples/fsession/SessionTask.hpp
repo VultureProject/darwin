@@ -18,9 +18,11 @@ extern "C" {
 #include <thread>
 #include <vector>
 
-#include "../../toolkit/lru_cache.hpp"
 #include "protocol.h"
 #include "Session.hpp"
+#include "../../toolkit/lru_cache.hpp"
+#include "../../toolkit/RedisManager.hpp"
+
 
 #define DARWIN_FILTER_SESSION 0x73657373
 
@@ -34,7 +36,7 @@ public:
     explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
                        darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                       redisContext* db, std::mutex *mtx);
+                         std::shared_ptr<darwin::toolkit::RedisManager> redis_manager);
     ~SessionTask() override = default;
 
 
@@ -62,11 +64,6 @@ private:
     /// \return true on success, false otherwise.
     bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
 
-    /// Execute a query in Redis.
-    ///
-    /// \return true on success, false otherwise.
-    bool REDISQuery(redisReply **reply_ptr, const std::vector<std::string> &arguments) noexcept;
-
     /// Read a session number (from Cookie or HTTP header) from the session and
     /// perform a redis lookup.
     ///
@@ -82,12 +79,11 @@ private:
     bool ParseBody() override;
 
 private:
-    redisContext *_redis_connection; // The Redis Handler
-    std::mutex *_redis_mutex; // hiredis is not thread safe
-
     // Session_status in Redis
     std::string _current_token; // The token to check
     std::vector<std::string> _tokens;
     std::vector<std::string> _current_repo_ids; // The associated repository IDs to check
     std::vector<std::vector<std::string>> _repo_ids_list;
+
+    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

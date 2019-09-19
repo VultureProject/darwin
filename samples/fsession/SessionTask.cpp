@@ -28,9 +28,9 @@ extern "C" {
 SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         redisContext* db, std::mutex *mtx)
-        : Session{"session", socket, manager, cache}, _redis_connection{db},
-          _redis_mutex{mtx} {
+                         std::shared_ptr<darwin::toolkit::RedisManager> redis_manager)
+        : Session{"session", socket, manager, cache},
+          _redis_manager{redis_manager}{
     _is_cache = _cache != nullptr;
 }
 
@@ -114,42 +114,6 @@ bool SessionTask::ReadFromSession(const std::string &token, const std::vector<st
     return REDISLookup(token, repo_ids);
 }
 
-bool SessionTask::REDISQuery(redisReply **reply_ptr, const std::vector<std::string> &arguments) noexcept {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("SessionTask::REDISQuery:: Querying Redis...");
-
-    int arguments_number = (int)arguments.size();
-    std::vector<const char*> c_arguments;
-
-    for (const auto &argument : arguments) {
-        c_arguments.push_back(argument.c_str());
-    }
-
-    const char** formatted_arguments = &c_arguments[0];
-
-    *reply_ptr = nullptr;
-    bool result = false;
-    _redis_mutex->lock();
-
-    if ((*reply_ptr = (redisReply *)redisCommandArgv(
-            _redis_connection, arguments_number, formatted_arguments, nullptr)
-       ) != nullptr) {
-        if ((*reply_ptr)->type != REDIS_REPLY_ERROR) {
-            result = true;
-        } else {
-            DARWIN_LOG_ERROR("SessionTask::REDISQuery:: Error while executing command: " +
-                             std::string((*reply_ptr)->str));
-
-            freeReplyObject(*reply_ptr);
-            *reply_ptr = nullptr;
-        }
-    }
-
-    _redis_mutex->unlock();
-
-    return result;
-}
-
 std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
     std::string parsed_repo_ids;
 
@@ -182,7 +146,8 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
         KEY                 HMAP
         sess_<SHA256>       login, authenticated
     */
-    if (!REDISQuery(&reply, arguments)) {
+
+    if (!_redis_manager->REDISQuery(&reply, arguments)) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: Something went wrong while querying Redis");
         freeReplyObject(reply);
         return 101;
@@ -260,8 +225,8 @@ bool SessionTask::ParseBody() {
 
             if (items.Size() != 2) {
                 DARWIN_LOG_ERROR(
-                    "SessionTask:: ParseBody: You must provide exactly two arguments per request: the token and"
-                    " repository IDs"
+                        "SessionTask:: ParseBody: You must provide exactly two arguments per request: the token and"
+                        " repository IDs"
                 );
 
                 return false;
