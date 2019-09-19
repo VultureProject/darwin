@@ -56,7 +56,7 @@ You will find compilation and dependencies informations for each filters in the 
 
 ### Usage
 
-Usage: `./darwin_filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread cache_size threshold[OPTION]`
+Usage: `./darwin filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread cache_size threshold[OPTION]`
 
 Positional arguments:
 - `filter_name` Specify the name of this filter in the logs
