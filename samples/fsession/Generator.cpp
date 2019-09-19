@@ -108,5 +108,3 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<SessionTask>(socket, manager, _cache, _redis_manager));
 }
-
-Generator::~Generator() = default;

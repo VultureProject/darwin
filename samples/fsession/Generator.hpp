@@ -22,7 +22,7 @@ extern "C" {
 class Generator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
     // The config file is the Redis UNIX Socket here
