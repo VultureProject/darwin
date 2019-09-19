@@ -26,7 +26,7 @@ import json
 import socket
 from threading import Lock
 from copy import deepcopy
-from subprocess import Popen, call
+from subprocess import Popen, call, TimeoutExpired
 from os import kill, remove, access, F_OK
 from signal import SIGTERM, SIGUSR1
 from pprint import pprint
@@ -128,6 +128,8 @@ class Services:
                 cmd.append('-e')
             elif log_level == "critical":
                 cmd.append('-c')
+            elif log_level == "developer":
+                cmd.append('-z')
             else:
                 logger.warning(
                     'Invalid log level argument provided: "{log_level}". Ignoring'.format(log_level)
@@ -155,9 +157,12 @@ class Services:
 
         :param file: The file containing the PID a a program.
         """
+        logger.debug("Entering kill_with_pid_file")
         with open(file) as f:
             pid = f.readline()
+        logger.debug("Pid read : {}".format(pid))
         kill(int(pid), SIGTERM)
+        logger.debug("SIGTERM sent")
 
     def start_one(self, name, no_lock=False):
         """
@@ -179,7 +184,17 @@ class Services:
 
         # start process
         logger.debug("Starting {}".format(" ".join(cmd)))
-        Popen(cmd)
+        p = Popen(cmd)
+        try:
+            p.wait(timeout=1)
+        except TimeoutExpired:
+            if self._filters[name]['log_level'].lower() == "debug":
+                logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+            else:
+                logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                p.kill()
+                p.wait()
+
 
     @staticmethod
     def rotate_logs(name, pid_file):
@@ -267,7 +282,7 @@ class Services:
         try:
             self.clean_one(name, no_lock=no_lock)
         except Exception as e:
-            logger.error("Cannot clean {}: {}", name, e)
+            logger.error("Cannot clean {}: {}".format(name, e))
 
         try:
             self.start_one(name, no_lock=no_lock)
@@ -302,6 +317,7 @@ class Services:
                 except KeyError:
                     try:
                         self.stop_one(n, no_lock=True)
+                        self.clean_one(n, no_lock=True)
                     except KeyError:
                         errors.append({"filter": n,
                                        "error": 'Filter not existing'})
@@ -339,11 +355,43 @@ class Services:
                     logger.warning("Field 'config_file' not found for {}: setting default.".format(n))
                     new[n]['config_file'] = '/home/darwin/conf/{name}.conf'.format(name=n)
 
+                if 'cache_size' not in new[n]:
+                    new[n]['cache_size'] = 0
+
+                    logger.info('No cache size provided. Setting it to {cache_size}'.format(
+                        cache_size=new[n]['cache_size']
+                    ))
+
+                if 'output' not in new[n]:
+                    new[n]['output'] = 'NONE'
+                    logger.info('No output type provided. Setting it to {output}'.format(output=new[n]['output']))
+
+                if 'nb_thread' not in new[n]:
+                    new[n]['nb_thread'] = 5
+
+                    logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
+                        nb_thread=new[n]['nb_thread']
+                    ))
+
+                if 'threshold' not in new[n]:
+                    new[n]['threshold'] = 101
+
+                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
+
             for n, c in new.items():
                 cmd = self._build_cmd(c, n)
                 logger.info("Starting updated filter")
-                Popen(cmd)
-                sleep(0.1)
+                p = Popen(cmd)
+                try:
+                    p.wait(timeout=1)
+                except TimeoutExpired:
+                    if self._filters[n]['log_level'].lower() == "debug":
+                        logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+                    else:
+                        logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                        p.kill()
+                        p.wait()
+                sleep(0.1) # TODO: Find a better way with monitoring socket
                 ret = self._update_check_process(c)
                 if ret:
                     logger.error("Unable to update filter {}: {}".format(n, ret))
@@ -351,6 +399,7 @@ class Services:
                     errors.append({"filter": n, "error": ret})
                     try:
                         self.stop(n, c['pid_file'])
+                        self.clean_one(n, no_lock=True)
                     except Exception:
                         pass
                     continue
@@ -364,6 +413,7 @@ class Services:
                     errors.append({"filter": n, "error": "{0}".format(e)})
                     try:
                         self.stop(n, c['pid_file'])
+                        self.clean_one(n, no_lock=True)
                     except Exception:
                         pass
                     continue
@@ -371,7 +421,11 @@ class Services:
                 try:
                     logger.info("Killing older filter...")
                     self._kill_with_pid_file(self._filters[n]['pid_file'])
+                    logger.debug("Killed with PID")
+                    self.clean_one(n, no_lock=True)
+                    logger.debug("Cleaned filter")
                 except KeyError:
+                    logger.debug("Key error when trying to kill with PID")
                     pass
                 self._filters[n] = deepcopy(c)
 
