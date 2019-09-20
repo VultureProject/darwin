@@ -35,18 +35,7 @@ cmake . -DFILTER=FILTER_NAME
 make -j4
 ```
 
-You can choose a filter from the following list:
- - **USER_AGENT**
- - **HOSTLOOKUP**
- - **SESSION**
- - **REPUTATION**
- - **DGA**
- - **ANOMALY**
- - **TANOMALY**
- - **LOGS**
- - **END**
- - **CONNECTION**
- - **CONTENT_INSPECTION**
+You can choose a filter from this [list](https://github.com/VultureProject/darwin/wiki/Filters-Summary)
 
 You can also set a filter list:
 

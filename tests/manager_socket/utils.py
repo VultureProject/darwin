@@ -3,7 +3,8 @@ import os
 import socket
 import subprocess
 from time import sleep
-from conf import MANAGEMENT_SOCKET_PATH, DEFAULT_FILTER_PATH
+from conf import MANAGEMENT_SOCKET_PATH, DEFAULT_FILTER_PATH, FILTER_SOCKETS_DIR, FILTER_PIDS_DIR
+from os import access, F_OK
 
 
 def requests(request):
@@ -21,10 +22,56 @@ def requests(request):
         print("Error: Could not send the request: " + str(e), file=sys.stderr)
         return None
 
-    response = sock.recv(4096).decode()
+    try:
+        response = sock.recv(4096).decode()
+    except Exception as e:
+        print("Error: could not get the response: " + str(e), file=sys.stderr)
+        return None
 
     return response
 
+def check_pid_file(file):
+    if access(file, F_OK):
+        with open(file, 'r') as f:
+            if f.read():
+                return True
+    print("Error: PID file check failed", file=sys.stderr)
+    return False
+
+def check_socket_file(socket_path):
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+    if access(socket_path, F_OK):
+        try:
+            sock.connect(socket_path)
+        except socket.error as e:
+            print(e, file=sys.stderr)
+            return False
+        sock.close()
+        return True
+
+    print("Error: could not access socket {}".format(socket_path), file=sys.stderr)
+    return False
+
+def check_filter_files(filter_name, extension=".1"):
+
+    # Check PID file
+    if not check_pid_file(FILTER_PIDS_DIR + filter_name + extension + ".pid"):
+        return False
+
+    # Check main socket file
+    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + ".sock"):
+        return False
+
+    # Check real socket file
+    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + extension + ".sock"):
+        return False
+
+    #Check monitoring socket
+    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + "_mon" + extension + ".sock"):
+        return False
+
+    return True
 
 # Configurations paths
 
@@ -76,7 +123,11 @@ CONF_THREE = """{{
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_FLOGS = """{
-  "log_file_path": "/tmp/logs_test.log"
+    "log_file_path": "/tmp/logs_test.log"
+}"""
+
+CONF_FLOGS_WRONG_CONF = """{
+    "hello": "world"
 }"""
 
 # Requests

@@ -1,12 +1,12 @@
 import subprocess
 import os
 from time import sleep
-from conf import DEFAULT_MANAGER_PATH, DEFAULT_CONFIGURATION_PATH
+from conf import DEFAULT_MANAGER_PATH, DEFAULT_CONFIGURATION_PATH, DEFAULT_PYTHON_EXEC
 
 
 def darwin_start(darwin_manager_path=DEFAULT_MANAGER_PATH, config_path=DEFAULT_CONFIGURATION_PATH):
     process = subprocess.Popen([
-        'python3',
+        DEFAULT_PYTHON_EXEC,
         darwin_manager_path,
         '-l',
         'DEBUG',
