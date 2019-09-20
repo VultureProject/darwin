@@ -1,0 +1,4 @@
+from conf import DEFAULT_FILTER_PATH
+
+
+DEFAULT_PATH = DEFAULT_FILTER_PATH + "darwin_logs"
