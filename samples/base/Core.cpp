@@ -100,9 +100,9 @@ namespace darwin {
 
     void Core::Usage() {
         std::cout << "Usage: ./darwin filter_name socket_path config_file" <<
-                  " monitoring_socket_path pid_file output next_filter_socket_path max_thread "
+                  " monitoring_socket_path pid_file output next_filter_socket_path nb_thread "
                   <<
-                  "min_spare_thread max_spare_thread [OPTIONS]\n";
+                  "cache_size threshold [OPTIONS]\n";
         std::cout
                 << "  filter_name\tSpecify the name of this filter in the logs\n";
         std::cout
