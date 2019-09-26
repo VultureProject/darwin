@@ -23,7 +23,6 @@ class Filter:
         self.clean_files()
 
     def start(self):
-        print(self.cmd)
         self.process = subprocess.Popen(self.cmd)
         sleep(1)
 

@@ -9,16 +9,15 @@ class Connection(Filter):
         super().__init__(filter_name="connection")
         self.init_data_path = "/tmp/init_data_path.txt".format(self.filter_name)
 
-    def write_conf(self):
+    def configure(self):
         content = '{{\n' \
                   '"redis_socket_path": "/var/sockets/redis/redis.sock",\n' \
                   '"init_data_path": "{init_data_path}",\n' \
                   '"redis_expire": 300\n' \
                   '}}'.format(init_data_path=self.init_data_path)
-        with open(self.config, mode='w') as file:
-            file.write(content)
+        super(Connection, self).configure(content)
 
-    def write_init_data(self, data):
+    def init_data(self, data):
         with open(self.init_data_path, mode='w') as file:
             for d in data:
                 file.write(d+"\n")
@@ -43,7 +42,6 @@ def run():
         print_result("connection: " + i.__name__, i())
 
 
-
 """
 We give a new connection
 """
@@ -52,9 +50,9 @@ def new_connection_test():
 
     # CONFIG
     connection_filter = Connection()
-    connection_filter.write_init_data(["42.42.42.1;42.42.42.2;1",
+    connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;43;17"])
-    connection_filter.write_conf()
+    connection_filter.configure()
 
     # START FILTER
     connection_filter.start()
@@ -108,9 +106,9 @@ def known_connection_test():
 
     # CONFIG
     connection_filter = Connection()
-    connection_filter.write_init_data(["42.42.42.1;42.42.42.2;1",
+    connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;42;6"])
-    connection_filter.write_conf()
+    connection_filter.configure()
 
     # START FILTER
     connection_filter.start()
@@ -163,9 +161,9 @@ def new_connection_to_known_test():
 
     # CONFIG
     connection_filter = Connection()
-    connection_filter.write_init_data(["42.42.42.1;42.42.42.2;1",
+    connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;42;6"])
-    connection_filter.write_conf()
+    connection_filter.configure()
 
     # START FILTER
     connection_filter.start()
