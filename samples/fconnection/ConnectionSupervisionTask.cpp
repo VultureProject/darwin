@@ -5,95 +5,58 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include <config.hpp>
+#include <regex>
 #include <string>
-#include <string.h>
 #include <thread>
+#include <string.h>
+#include <config.hpp>
 
-#include "../toolkit/rapidjson/document.h"
-#include "../../toolkit/RedisManager.hpp"
-#include "../../toolkit/lru_cache.hpp"
-#include "../../toolkit/xxhash.h"
-#include "../../toolkit/xxhash.hpp"
-#include "ConnectionSupervisionTask.hpp"
 #include "Logger.hpp"
 #include "protocol.h"
+#include "../../toolkit/xxhash.h"
+#include "../../toolkit/xxhash.hpp"
+#include "../../toolkit/lru_cache.hpp"
+#include "ConnectionSupervisionTask.hpp"
+#include "../../toolkit/RedisManager.hpp"
+#include "../toolkit/rapidjson/document.h"
+
 
 ConnectionSupervisionTask::ConnectionSupervisionTask(boost::asio::local::stream_protocol::socket& socket,
                                                      darwin::Manager& manager,
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                                      std::shared_ptr<darwin::toolkit::RedisManager> rm,
                                                      unsigned int expire)
-        : Session{socket, manager, cache}, _redis_expire{expire}, _redis_manager{rm} {
-    _is_cache = _cache != nullptr;
-}
-
-xxh::hash64_t ConnectionSupervisionTask::GenerateHash() {
-    return xxh::xxhash<64>(_current_connection);
-}
+        : Session{"connection", socket, manager, cache},
+          _redis_expire{expire}, _redis_manager{std::move(rm)} {}
 
 long ConnectionSupervisionTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_CONNECTION;
 }
 
 void ConnectionSupervisionTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
+    unsigned int certitude;
 
     for (const std::string &connection : _connections) {
         SetStartingTime();
-        // We have a generic hash function, which takes no arguments as these can be of very different types depending
-        // on the nature of the filter
-        // So instead, we set an attribute corresponding to the current connection being processed, to compute the hash
-        // accordingly
+
         _current_connection = connection;
-        unsigned int certitude;
-        xxh::hash64_t hash;
-
-        if (_is_cache) {
-            hash = GenerateHash();
-
-            if (GetCacheResult(hash, certitude)) {
-                if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
-                             R"(", "certitude": )" + std::to_string(certitude) + "}\n";
-                }
-                _certitudes.push_back(certitude);
-                continue;
-            }
-        }
 
         certitude = REDISLookup(connection);
-        if (is_log && certitude){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + R"(", "connection": ")" + connection +
-                    R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+
+        if(is_log && certitude>=_threshold){
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                     R"(", "connection": ")" + connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
         }
 
         _certitudes.push_back(certitude);
-
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
-        }
-
-        DARWIN_LOG_ACCESS(_current_connection.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
     _connections = std::vector<std::string>();
-}
-
-std::string ConnectionSupervisionTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }
 
 void ConnectionSupervisionTask::Workflow() {
@@ -127,33 +90,56 @@ bool ConnectionSupervisionTask::ParseBody() {
             return false;
         }
 
-        auto values = document.GetArray();
-
-        if (values.Size() <= 0) {
-            DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: The list provided is empty");
+        if(!ParseData(document)){
+            DARWIN_LOG_CRITICAL("ConnectionSupervisionTask:: ParseBody:: Error when parsing data");
             return false;
-        }
-
-        for (auto &request : values) {
-            connection="";
-            if (!request.IsArray()) {
-                DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: For each request, you must provide a list");
-                return false;
-            }
-
-            for (auto& s: request.GetArray()) {
-                if (!s.IsString()) {
-                    DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: The connection sent must be a string");
-                return false;
-                }
-                connection+=s.GetString();
-            }
-            _connections.push_back(connection);
-            DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseBody: Parsed element: " + connection);
         }
     } catch (...) {
         DARWIN_LOG_CRITICAL("ConnectionSupervisionTask:: ParseBody: Unknown Error");
         return false;
+    }
+
+    return true;
+}
+
+bool ConnectionSupervisionTask::ParseData(const rapidjson::Value& data){
+    DARWIN_LOGGER;
+    std::string arg, line;
+    std::vector<std::string> values;
+
+    for (auto& d: data.GetArray()){
+        line = "";
+
+        if (!d.IsArray()) {
+            DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: Not array type encounter in data, ignored");
+            continue;
+        }
+
+        for (auto& a: d.GetArray()){
+            if (!a.IsString()) {
+                DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: Not string type encounter in data, ignored");
+                continue;
+            }
+            line += a.GetString();
+            line += ";";
+        }
+
+        if(!line.empty()) line.pop_back();
+
+        if (!std::regex_match (line, std::regex(
+                "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
+                "(([0-9]+;(17|6))|([0-9]*;*1))")))
+        {
+            DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored. "
+                                                                                           "Format expected : "
+                                                                                           "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
+                                                                                           "\"[ip_protocol udp or tcp]\")|"
+                                                                                           "\"[ip_protocol icmp]\")]");
+            continue;
+        }
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseBody: Parsed element: " + line);
+        _connections.push_back(line);
     }
 
     return true;
@@ -165,7 +151,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
 
     redisReply *reply = nullptr;
 
-    std::vector<std::string> arguments;
+    std::vector<std::string> arguments{};
     arguments.emplace_back("EXISTS");
     arguments.emplace_back(connection);
 

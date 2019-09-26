@@ -63,10 +63,6 @@ private:
     /// \param ua_tokens The user agent tokens to be used.
     void UserAgentTokenizer(const std::string &user_agent, std::vector<std::size_t> &ua_tokens);
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     unsigned int _max_tokens = 50;
     boost::char_separator<char> _separator {" ());,:-~?!{}/[]"};

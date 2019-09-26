@@ -22,7 +22,7 @@ AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                              std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
                              std::shared_ptr<AnomalyThreadManager> vat,
                              std::string redis_list_name)
-        : Session{socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
+        : Session{"tanomaly", socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
           _redis_manager{std::move(redis_manager)}, _anomaly_thread_manager{std::move(vat)}
 {
 }
@@ -134,9 +134,9 @@ bool AnomalyTask::ParseData(const rapidjson::Value& data){
                 "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
                 "(([0-9]+;(17|6))|([0-9]*;*1))")))
         {
-            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored."
+            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored. "
                                                                                "Format expected : "
-                                                                               "[\"[ip4]\",\"[ip4]\",((\"[port]\","
+                                                                               "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
                                                                                "\"[ip_protocol udp or tcp]\")|"
                                                                                "\"[ip_protocol icmp]\")]");
             continue;
@@ -144,7 +144,8 @@ bool AnomalyTask::ParseData(const rapidjson::Value& data){
         values.emplace_back(line);
     }
 
-    REDISAdd(values);
+    if (!values.empty())    REDISAdd(values);
+
     return true;
 }
 

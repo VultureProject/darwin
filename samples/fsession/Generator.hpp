@@ -15,18 +15,16 @@ extern "C" {
 #include <thread>
 #include <string>
 
-#include "../toolkit/rapidjson/document.h"
 #include "Session.hpp"
+#include "../../toolkit/RedisManager.hpp"
+#include "../toolkit/rapidjson/document.h"
 
 class Generator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
-    static constexpr int PING_INTERVAL = 4;
-    static constexpr int MAX_RETRIES = 2;
-
     // The config file is the Redis UNIX Socket here
     bool Configure(std::string const& configFile, const std::size_t cache_size);
 
@@ -34,19 +32,14 @@ public:
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
                darwin::Manager& manager) noexcept;
 
-    void KeepConnectionAlive();
-
 private:
     bool SetUpClassifier(const std::string &configuration_file_path);
     bool LoadClassifier(const rapidjson::Document &configuration);
+    bool ConfigRedis(std::string redis_socket_path);
 
-    redisContext *_redis_connection = nullptr; // The redis handler
-    std::mutex _redis_mutex; // hiredis is not thread safe
-    std::thread _send_ping_requests; // necessary to keep connection alive from Redis
     std::string _redis_socket_path; // Redis UNIX socket path
-    bool _is_stop; // whether the filter has to be stopped or not
+    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
+
     // The cache for already processed request
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
-
-    bool ConnectToRedis();
 };

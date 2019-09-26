@@ -6,8 +6,9 @@
 #include <locale>
 #include <thread>
 #include <signal.h>
+#include <string.h>
+#include <stdio.h>
 #include "base/Logger.hpp"
-
 
 /// \namespace darwin
 namespace darwin {
@@ -45,14 +46,97 @@ namespace darwin {
                 return false;
             }
 
+            if(!ConnectToRedisMaster()){
+                DARWIN_LOG_CRITICAL("RedisManager::ConnectToRedis:: Configure:: Cannot connect to Redis master");
+                return false;
+            }
+
             if(keepAlive) {
                 KeepConnectionAlive();
             }
-
+            
             DARWIN_LOG_DEBUG("RedisManager::ConnectToRedis:: Connected to Redis");
-
             return true;
         }
+
+        bool RedisManager::ConnectToRedisMaster() {
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("RedisManager::ConnectToRedisMaster:: Begin...");
+
+            std::string master_ip;
+            long long int master_port;
+            int is_master_res;
+
+            is_master_res = IsMaster(master_ip, master_port);
+            if (is_master_res == 0) {
+                DARWIN_LOG_DEBUG("RedisManager::ConnectToRedisMaster:: Connection was slave, now connect to master : "
+                                 + master_ip + ", " + std::to_string(master_port));
+                return ConnectWithIp(master_ip , master_port);
+            } else if (is_master_res == 1) {
+                DARWIN_LOG_DEBUG("RedisManager::ConnectToRedisMaster:: Already master");
+                return true;
+            } else {
+                DARWIN_LOG_ERROR("RedisManager::ConnectToRedisMaster:: "
+                                 "Error when trying to be master");
+                return false;
+            }
+        }
+
+        bool RedisManager::ConnectWithIp(std::string ip, int port){
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("RedisManager::ConnectWithIp:: Begin...");
+
+            DARWIN_LOG_DEBUG("RedisManager::ConnectWithIp:: Connection to host " + ip +
+                             " and port " + std::to_string(port));
+
+            _redis_connection = redisConnect(ip.c_str(), port);
+
+            if (_redis_connection == nullptr || _redis_connection->err) {
+                if (_redis_connection) {
+                    redisFree(_redis_connection);
+                }
+                DARWIN_LOG_CRITICAL("RedisManager::ConnectWithIp:: "
+                                 "Error when trying to connect");
+                return false;
+            }
+            return true;
+        }
+
+        int RedisManager::IsMaster(std::string &masterIp, long long int &masterPort){
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("RedisManager::IsMaster:: Begin...");
+
+            redisReply *reply = nullptr;
+
+            std::vector<std::string> arguments;
+            arguments.emplace_back("ROLE");
+
+            if (!REDISQuery(&reply, arguments)) {
+                DARWIN_LOG_ERROR("RedisManager::IsMaster:: Something went wrong while querying Redis' role");
+                freeReplyObject(reply);
+                return -1;
+            }
+
+            if (!reply || reply->type != REDIS_REPLY_ARRAY) {
+                DARWIN_LOG_ERROR("RedisManager::IsMaster:: Not the expected Redis response");
+                freeReplyObject(reply);
+                return -1;
+            }
+
+            if(strncmp("slave", reply->element[0]->str, 5) == 0){
+                masterIp = reply->element[1]->str;
+                masterPort = reply->element[2]->integer;
+                freeReplyObject(reply);
+                return 0;
+            } else if (strncmp("master", reply->element[0]->str, 6) == 0){
+                freeReplyObject(reply);
+                return 1;
+            }
+
+            freeReplyObject(reply);
+            return -1;
+        }
+
 
         void RedisManager::KeepConnectionAlive() {
             DARWIN_LOGGER;
@@ -124,9 +208,29 @@ namespace darwin {
             });
         }
 
-        bool RedisManager::REDISQuery(redisReply **reply_ptr, const std::vector<std::string> &arguments) noexcept {
+        bool RedisManager::REDISSendArgs(redisReply **reply_ptr,
+                                         const char **formatted_arguments,
+                                         int arguments_number){
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("RedisManager::REDISSendArgs:: Locking Redis...");
+            _redis_mutex.lock();
+            DARWIN_LOG_DEBUG("RedisManager::REDISSendArgs:: Redis locked");
+            *reply_ptr  = (redisReply *) redisCommandArgv(_redis_connection,
+                                                          arguments_number,
+                                                          formatted_arguments,
+                                                          nullptr);
+            DARWIN_LOG_DEBUG("RedisManager::REDISSendArgs:: Unlocking Redis...");
+            _redis_mutex.unlock();
+            DARWIN_LOG_DEBUG("RedisManager::REDISSendArgs:: Redis unlocked");
+            return *reply_ptr != nullptr;
+        }
+
+
+        bool RedisManager::REDISQuery(redisReply **reply_ptr,
+                                      const std::vector<std::string> &arguments) noexcept {
             DARWIN_LOGGER;
             DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Querying Redis...");
+            unsigned int retry = 0;
 
             if (!_redis_connection) {
                 DARWIN_LOG_ERROR("RedisManager::REDISQuery:: Not connected to Redis, cannot execute Query");
@@ -141,31 +245,47 @@ namespace darwin {
                 c_arguments.push_back(argument.c_str());
             }
 
-            const char **formatted_arguments = &c_arguments[0];
-
-            *reply_ptr = nullptr;
-            bool result = false;
-            DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Locking Redis...");
-            _redis_mutex.lock();
-            DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Redis locked");
-
-            if ((*reply_ptr = (redisReply *) redisCommandArgv(_redis_connection, arguments_number, formatted_arguments,
-                                                              nullptr)) != nullptr) {
-                if ((*reply_ptr)->type != REDIS_REPLY_ERROR) {
-                    result = true;
-                } else {
-                    DARWIN_LOG_ERROR("RedisManager::REDISQuery:: Error while executing command: " +
-                                     std::string((*reply_ptr)->str));
-                    freeReplyObject(*reply_ptr);
-                    *reply_ptr = nullptr;
+            while(retry<=MAX_QUERY_RETRIES){
+                *reply_ptr = nullptr;
+                if (REDISSendArgs(reply_ptr, &c_arguments[0], arguments_number)){
+                    if ((*reply_ptr)->type != REDIS_REPLY_ERROR) {
+                        // Everything goes as planned
+                        return true;
+                    } else {
+                        // If we are on a readonly slave we continue to retry
+                        if(strncmp("READONLY", (*reply_ptr)->str, 8) == 0){
+                            DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Trying to write on a readonly slave, "
+                                             "connect to master and retrying the request");
+                            if(!ConnectToRedisMaster()){
+                                freeReplyObject(*reply_ptr);
+                                *reply_ptr = nullptr;
+                                return false;
+                            }
+                            retry++;
+                            continue;
+                        } else {
+                            // Else we stop it
+                            DARWIN_LOG_ERROR("RedisManager::REDISQuery:: Error while executing command: " +
+                                             std::string((*reply_ptr)->str));
+                            freeReplyObject(*reply_ptr);
+                            *reply_ptr = nullptr;
+                            return false;
+                        }
+                    }
                 }
+                DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Redis not responding, "
+                                 "retrying the request");
+                retry++;
             }
 
-            DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Unlocking Redis...");
-            _redis_mutex.unlock();
-            DARWIN_LOG_DEBUG("RedisManager::REDISQuery:: Redis unlocked");
-
-            return result;
+            if(retry > MAX_QUERY_RETRIES){
+                DARWIN_LOG_ERROR("RedisManager::REDISQuery:: Retrying the query too many times ("
+                                 + std::to_string(MAX_QUERY_RETRIES) +"), stop retrying");
+                freeReplyObject(*reply_ptr);
+                *reply_ptr = nullptr;
+                return false;
+            }
+            return false;
         }
 
         RedisManager::~RedisManager() {

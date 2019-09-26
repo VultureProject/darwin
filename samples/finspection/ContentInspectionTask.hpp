@@ -58,10 +58,6 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     Configurations _configurations;
     std::vector<Packet *> _packetList;

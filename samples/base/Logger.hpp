@@ -19,17 +19,9 @@
 #   define DARWIN_LOG_FILE "/var/log/darwin/darwin.log"
 #  endif //!DARWIN_LOG_FILE
 
-#  ifndef DARWIN_ACCESS_FILE
-#   define DARWIN_ACCESS_FILE "/var/log/darwin/access.log"
-#  endif //!DARWIN_ACCESS_FILE
-
 #  ifndef DARWIN_LOGGER
 #   define DARWIN_LOGGER darwin::logger::Logger& log = darwin::logger::Logger::instance()
 #  endif //!DARWIN_LOGGER
-
-#  ifndef DARWIN_ACCESS_LOGGER
-#   define DARWIN_ACCESS_LOGGER darwin::logger::AccessLogger& access_log = darwin::logger::AccessLogger::instance()
-#  endif //!DARWIN_ACCESS_LOGGER
 
 #  ifndef DARWIN_LOG
 #   define DARWIN_LOG(log_level, msg) log.log(log_level, msg)
@@ -58,10 +50,6 @@
 #  ifndef DARWIN_LOG_CRITICAL
 #   define DARWIN_LOG_CRITICAL(msg) log.log(darwin::logger::Critical, msg)
 #  endif //!DARWIN_LOG_CRITICAL
-
-#  ifndef DARWIN_LOG_ACCESS
-#   define DARWIN_LOG_ACCESS(body_size, certitude, duration) access_log.log(body_size, certitude, duration)
-#  endif //!DARWIN_LOG_ACCESS
 
 /// \namespace darwin
 namespace darwin {
@@ -128,56 +116,6 @@ namespace darwin {
 
         private:
             log_type _logLevel;
-            std::ofstream _file;
-            std::string _name;
-            std::mutex _fileMutex;
-        };
-
-        /// \class AccessLogger
-        class AccessLogger {
-        public:
-            /// \brief Function to get the AccessLogger or create it if he hasn't be created yet.
-            /// \return Return the logger object.
-            static AccessLogger& instance() {
-                static AccessLogger log;
-                return log;
-            }
-
-            /// \brief Function which permits to throw log.
-            /// \param size the generic size of the payload processed
-            /// \param certitude the Darwin certitude computed from the payload
-            /// \param duration how much time did it take
-            void log(const std::size_t &size, const unsigned int &certitude, const double &duration);
-
-            /// Set the name of the module in the logger.
-            ///
-            /// \param name The name to set as the module name.
-            void setName(std::string const& name);
-
-            ///Rotate logs
-            void RotateLogs();
-
-        private:
-            /// \brief This is the constructor of logger object.
-            /// This constructor is private because only getLogger method can call it.
-            AccessLogger();
-
-            /// \brief This is the destructor of logger object.
-            ~AccessLogger();
-
-            /// \brief Copy operator.
-            /// \param other, The logger to copy
-            /// \return *this
-            AccessLogger &operator=(AccessLogger const &other) {
-                static_cast<void>(other);
-                return *this;
-            };
-
-            /// \brief Do nothing just for good working of singleton
-            /// \param other useless
-            AccessLogger(AccessLogger const &other) { static_cast<void>(other); };
-
-        private:
             std::ofstream _file;
             std::string _name;
             std::mutex _fileMutex;

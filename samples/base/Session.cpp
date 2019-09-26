@@ -21,10 +21,10 @@
 #include "../../toolkit/xxhash.hpp"
 
 namespace darwin {
-    Session::Session(boost::asio::local::stream_protocol::socket& socket,
+    Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
-            : _socket{std::move(socket)}, _manager{manager},
+            : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
               _filter_socket{socket.get_executor()}, _connected{false}, _cache{cache} {}
 
     void Session::SendResToSession() noexcept {
@@ -57,6 +57,12 @@ namespace darwin {
 
     void Session::SendToDarwin() noexcept {
         DARWIN_LOGGER;
+
+        if (!_next_filter_path.compare("no")) {
+            DARWIN_LOG_NOTICE("Session:: SendToDarwin: No next filter provided. Ignoring...");
+            return ;
+        }
+
         std::string data = GetDataToSendToFilter();
 
         const std::size_t certitude_size = _certitudes.size();
@@ -65,7 +71,7 @@ namespace darwin {
         packet = (darwin_filter_packet_t *) malloc(offsetof(darwin_filter_packet_t, certitude_list[certitude_size]));
 
         if (!packet) {
-            DARWIN_LOG_CRITICAL("Session:: SendResToSession: Could not create a Darwin packet");
+            DARWIN_LOG_CRITICAL("Session:: SendToDarwin: Could not create a Darwin packet");
             return;
         }
 
@@ -74,7 +80,7 @@ namespace darwin {
         }
 
         packet->type = DARWIN_PACKET_FILTER;
-        packet->response = header.response;
+        packet->response = header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : header.response;
         packet->certitude_size = certitude_size;
         packet->filter_code = GetFilterCode();
         packet->body_size = data.size();
@@ -95,7 +101,7 @@ namespace darwin {
         starting_time = std::chrono::high_resolution_clock::now();
     }
 
-    double Session::GetDuration() {
+    double Session::GetDurationMs() {
         return std::chrono::duration_cast<std::chrono::microseconds>(
                 std::chrono::high_resolution_clock::now() - starting_time
         ).count() / ((double)1000);
@@ -197,7 +203,12 @@ namespace darwin {
             ReadBody(header.body_size);
             return;
         }
-        DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
+
+        if (boost::asio::error::eof == e) {
+            DARWIN_LOG_INFO("Session::ReadHeaderCallback:: " + e.message());
+        } else {
+            DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
+        }
 
         header_callback_stop_session:
         _manager.Stop(shared_from_this());
@@ -435,10 +446,10 @@ namespace darwin {
         return false;
     }
 
-    std::string Session::Evt_idToString(){
+    std::string Session::Evt_idToString() {
         char str[37] = {};
         sprintf(str,
-                "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+                "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                 header.evt_id[0], header.evt_id[1], header.evt_id[2], header.evt_id[3],
                 header.evt_id[4], header.evt_id[5], header.evt_id[6], header.evt_id[7],
                 header.evt_id[8], header.evt_id[9], header.evt_id[10], header.evt_id[11],
@@ -448,5 +459,7 @@ namespace darwin {
         return res;
     }
 
-
+    std::string Session::GetFilterName() {
+        return _filter_name;
+    }
 }

@@ -54,10 +54,6 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     tsl::hopscotch_map<std::string, int> _database ; //The "bad" hostname database
     std::string _current_host; //The host to lookup

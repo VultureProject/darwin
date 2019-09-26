@@ -24,7 +24,7 @@ ReputationTask::ReputationTask(boost::asio::local::stream_protocol::socket& sock
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                MMDB_s* db)
-        : Session{socket, manager, cache}, _database{db} {
+        : Session{"reputation", socket, manager, cache}, _database{db} {
     _is_cache = _cache != nullptr;
 }
 
@@ -37,7 +37,7 @@ long ReputationTask::GetFilterCode() noexcept {
 }
 
 void ReputationTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     // We have a generic hash function, which takes no arguments as these can be of very different types depending
@@ -57,7 +57,8 @@ void ReputationTask::operator()() {
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
                     bool tag_found = false;
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
 
                     for (auto const& tag: _current_tags) {
                         _logs += "\"" + tag + "\",";
@@ -71,7 +72,8 @@ void ReputationTask::operator()() {
                     _logs += "], \"certitude\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_ip_address.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -79,7 +81,8 @@ void ReputationTask::operator()() {
         certitude = GetReputation(_current_ip_address);
         if (is_log && (certitude>=_threshold)){
             bool tag_found = false;
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
 
             for (auto const& tag: _current_tags) {
                 _logs += "\"" + tag + "\",";
@@ -97,8 +100,8 @@ void ReputationTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_ip_address.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

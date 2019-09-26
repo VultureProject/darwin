@@ -30,7 +30,7 @@ DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  faup_handler_t *faup_handler,
                  std::map<std::string, unsigned int> &token_map,
                  const unsigned int max_tokens)
-        : Session{socket, manager, cache}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map},
+        : Session{"dga", socket, manager, cache}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map},
           _faup_handler(faup_handler) {
     _is_cache = _cache != nullptr;
 }
@@ -44,7 +44,7 @@ long DGATask::GetFilterCode() noexcept {
 }
 
 void DGATask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     for (const std::string &domain : _domains) {
@@ -62,41 +62,31 @@ void DGATask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
                 }
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_domain.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
 
         certitude = Predict();
         if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": "+std::to_string(certitude) + "}\n";
+            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
         }
         _certitudes.push_back(certitude);
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-        DARWIN_LOG_ACCESS(_current_domain.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
     _domains = std::vector<std::string>();
-}
-
-std::string DGATask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }
 
 void DGATask::Workflow(){

@@ -135,6 +135,11 @@ fabric.properties
 
 .idea/
 
+### VsCode
+# Ignores the whole vscode folder
+
+.vscode/
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -251,8 +256,6 @@ tags
 # End of https://www.gitignore.io/api/c,c++,vim,python,jetbrains+all
 .idea*
 cmake-build-debug*
-
-test*
 
 !*.model
 !*.pb

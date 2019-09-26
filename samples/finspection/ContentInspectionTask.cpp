@@ -19,7 +19,7 @@ ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                Configurations configurations)
-        : Session{socket, manager, cache} {
+        : Session{"content_inspection", socket, manager, cache} {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
 }
@@ -37,6 +37,7 @@ void ContentInspectionTask::operator()() {
 
     for(Packet *pkt : _packetList) {
         unsigned int certitude = 0;
+        SetStartingTime();
 
         pkt->enterTime = std::time(NULL);
         pkt->hash = calculatePacketFlowHash(pkt);
@@ -84,8 +85,8 @@ void ContentInspectionTask::operator()() {
 
                 certitude = 100;
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + GetTime() +
-                             R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                             R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
                              std::string(buffer.GetString()) +
                              "}\n";
                 }
@@ -93,6 +94,8 @@ void ContentInspectionTask::operator()() {
         }
 
         _certitudes.push_back(certitude);
+        DARWIN_LOG_DEBUG("ContentInspectionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         freePacket(pkt);
     }
 
@@ -158,18 +161,4 @@ bool ContentInspectionTask::ParseBody() {
     }
 
     return true;
-}
-
-std::string ContentInspectionTask::GetTime(){
-    char str_time[256];
-    time_t rawtime;
-    struct tm * timeinfo;
-    std::string res;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
-    res = str_time;
-
-    return res;
 }

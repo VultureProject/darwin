@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <climits>
 #include <cstring>
+#include <exception>
 
 #include "Generator.hpp"
 #include "Logger.hpp"
@@ -22,6 +23,7 @@ namespace darwin {
 
     int Core::run() {
         DARWIN_LOGGER;
+        int ret{0};
 
        Generator gen{};
         if (!gen.Configure(_modConfigPath, _cacheSize)) {
@@ -30,28 +32,36 @@ namespace darwin {
         }
         DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
-        Monitor monitor{_monSocketPath};
-        std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
+        try {
+            Monitor monitor{_monSocketPath};
+            std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
 
-        Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
-        server.Run();
+            try {
+                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
+                server.Run();
+            } catch (const std::exception& e) {
+                DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
+                ret = 1;
+            }
 
-        if (t.joinable())
-            t.join();
+            if (t.joinable())
+                t.join();
+        } catch (const std::exception& e) {
+            DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open monitoring socket: ") + e.what());
+            return 1;
+        }
 
-        return 0;
+        return ret;
     }
 
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
-        DARWIN_ACCESS_LOGGER;
         if (ac < 11) {
             DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
         }
         log.setName(av[1]);
-        access_log.setName(av[1]);
         _name = av[1];
         _socketPath = av[2];
         _modConfigPath = av[3];
@@ -68,8 +78,6 @@ namespace darwin {
         if (ac > 11) {
             if (!strncmp("-d", av[11], 2)) {
                 log.setLevel(logger::Debug);
-                DARWIN_LOG_DEBUG("Debug mode activated");
-                daemon = false;
             } else if (!strncmp("-i", av[11], 2)) {
                 log.setLevel(logger::Info);
             } else if (!strncmp("-n", av[11], 2)) {
@@ -80,6 +88,10 @@ namespace darwin {
                 log.setLevel(logger::Error);
             } else if (!strncmp("-c", av[11], 2)) {
                 log.setLevel(logger::Critical);
+            } else if (!strncmp("-z", av[11], 2)) {
+                log.setLevel(logger::Debug);
+                DARWIN_LOG_DEBUG("Developer mode activated");
+                daemon = false;
             }
         }
 
@@ -114,8 +126,9 @@ namespace darwin {
                    "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
         std::cout
-                << "  -d\tDebug mode, does not create a daemon, set log level to debug"
+                << "  -z\tDeveloper mode, does not create a daemon, set log level to debug"
                 << std::endl;
+        std::cout << "  -d\tSet log level to debug" << std::endl;
         std::cout << "  -i\tSet log level to info" << std::endl;
         std::cout << "  -n\tSet log level to notice" << std::endl;
         std::cout << "  -w\tSet log level to warning (DEFAULT)" << std::endl;
@@ -146,6 +159,8 @@ namespace darwin {
     }
 
     void Core::ClearPID() {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Core::ClearPID:: Removing PID file");
         std::string name{_pidPath};
         unlink(name.c_str());
     }

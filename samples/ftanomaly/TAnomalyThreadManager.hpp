@@ -72,10 +72,6 @@ private:
     /// \return true on success, false otherwise.
     bool REDISReinsertLogs(std::vector<std::string> &logs) noexcept;
 
-    /// Get current time as string
-    /// \return time as string
-    std::string GetTime();
-
 private:
     // pre-processed data put in a matrix :    ip1    ip2
     //                                      (   2      0       <--- UDP_NB_HOST

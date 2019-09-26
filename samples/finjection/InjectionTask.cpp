@@ -24,7 +24,7 @@ InjectionTask::InjectionTask(boost::asio::local::stream_protocol::socket& socket
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                              BoosterHandle booster, std::set<std::string> *keywords,
                              std::size_t additional_features_length, std::size_t features_length)
-        : Session{socket, manager, cache}, _additional_features_length{additional_features_length},
+        : Session{"injection", socket, manager, cache}, _additional_features_length{additional_features_length},
           _features_length{features_length}, _booster{booster}, _keywords{keywords} {
     _is_cache = _cache != nullptr;
 }
@@ -34,7 +34,7 @@ xxh::hash64_t InjectionTask::GenerateHash() {
 }
 
 void InjectionTask::operator()() {
-    DARWIN_ACCESS_LOGGER;
+    DARWIN_LOGGER;
 
     // We have a generic hash function, which takes no arguments as these can be of very different types depending
     // on the nature of the filter
@@ -51,7 +51,8 @@ void InjectionTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 _certitudes.push_back(certitude);
-                DARWIN_LOG_ACCESS(_current_request.size(), certitude, GetDuration());
+                DARWIN_LOG_DEBUG("InjectionTask:: processed entry in "
+                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
             }
         }
@@ -62,8 +63,8 @@ void InjectionTask::operator()() {
         if (_is_cache) {
             SaveToCache(hash, certitude);
         }
-
-        DARWIN_LOG_ACCESS(_current_request.size(), certitude, GetDuration());
+        DARWIN_LOG_DEBUG("InjectionTask:: processed entry in "
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();

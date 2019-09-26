@@ -26,14 +26,14 @@ import json
 import socket
 from threading import Lock
 from copy import deepcopy
-from subprocess import Popen, call
+from subprocess import Popen, call, TimeoutExpired
 from os import kill, remove, access, F_OK
 from signal import SIGTERM, SIGUSR1
 from pprint import pprint
 from JsonSocket import JsonSocket
 from HeartBeat import HeartBeat
 from time import sleep
-
+import psutil
 
 logger = logging.getLogger()
 
@@ -59,17 +59,17 @@ class Services:
         Start all the filters.
         """
         with self._lock:
-            for f, _ in self._filters.items():
-                self.start_one(f, True)
+            for _, filter in self._filters.items():
+                self.start_one(filter, True)
 
     def rotate_logs_all(self):
         """
         Reset the logs of all the filters
         """
         with self._lock:
-            for f, _ in self._filters.items():
+            for _, filter in self._filters.items():
                 try:
-                    self.rotate_logs_one(f, True)
+                    self.rotate_logs_one(filter, True)
                 except Exception:
                     pass
 
@@ -78,9 +78,9 @@ class Services:
         Stop all the filters
         """
         with self._lock:
-            for f, _ in self._filters.items():
+            for _, filter in self._filters.items():
                 try:
-                    self.stop_one(f, True)
+                    self.stop_one(filter, True)
                 except Exception:
                     pass
 
@@ -92,18 +92,17 @@ class Services:
         self.start_all()
 
     @staticmethod
-    def _build_cmd(filt, name):
+    def _build_cmd(filt):
         """
         Build the cmd to execute a filter with Popen.
 
         :param filt: The filter object.
-        :param name: The name of the filter.
         :return: The formatted command.
         """
 
         cmd = [
             filt['exec_path'],
-            name,
+            filt['name'],
             filt['socket'],
             filt['config_file'],
             filt['monitoring'],
@@ -111,8 +110,8 @@ class Services:
             filt['output'],
             filt['next_filter_unix_socket'],
             str(filt['nb_thread']),
-            str(filt['threshold']),
             str(filt['cache_size']),
+            str(filt['threshold']),
         ]
 
         try:
@@ -128,6 +127,8 @@ class Services:
                 cmd.append('-e')
             elif log_level == "critical":
                 cmd.append('-c')
+            elif log_level == "developer":
+                cmd.append('-z')
             else:
                 logger.warning(
                     'Invalid log level argument provided: "{log_level}". Ignoring'.format(log_level)
@@ -155,31 +156,51 @@ class Services:
 
         :param file: The file containing the PID a a program.
         """
-        with open(file) as f:
+        logger.debug("Entering kill_with_pid_file")
+        if not access(file, F_OK):
+            logger.warning("Trying to read non-existing PID file...")
+            return
+        with open(file, 'r') as f:
             pid = f.readline()
+        logger.debug("Pid read : {}".format(pid))
         kill(int(pid), SIGTERM)
+        logger.debug("SIGTERM sent")
 
-    def start_one(self, name, no_lock=False):
+    def start_one(self, filter, no_lock=False):
         """
-        Start the filter named name.
+        Start the filter.
 
-        :param name: The name of the filter to start.
+        :param filter: The dict of the filter to start.
         :param no_lock: If set to True, will not lock mutex
         """
 
         if not no_lock:
             self._lock.acquire()
 
-        cmd = self._build_cmd(self._filters[name], name)
-        call(['ln', '-s', self._filters[name]['socket'],
-              self._filters[name]['socket_link']])
+        cmd = self._build_cmd(filter)
+        call(['ln', '-s', filter['socket'],
+              filter['socket_link']])
 
         if not no_lock:
             self._lock.release()
 
         # start process
         logger.debug("Starting {}".format(" ".join(cmd)))
-        Popen(cmd)
+        filter['status'] = psutil.STATUS_WAKING
+        p = Popen(cmd)
+        try:
+            p.wait(timeout=1)
+        except TimeoutExpired:
+            if filter['log_level'].lower() == "debug":
+                logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+            else:
+                logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                p.kill()
+                p.wait()
+                filter['status'] = psutil.STATUS_DEAD
+                return
+
+        filter['status'] = psutil.STATUS_RUNNING
 
     @staticmethod
     def rotate_logs(name, pid_file):
@@ -194,17 +215,17 @@ class Services:
         except Exception as e:
             logger.error("Cannot rotate logs of filter {}: {}".format(name, e))
 
-    def rotate_logs_one(self, name, no_lock=False):
+    def rotate_logs_one(self, filter, no_lock=False):
         """
-        Rotate the logs of the filter named name.
+        Rotate the logs of the filter.
 
-        :param name: The name of the filter to rotate_logs.
+        :param filter: The dict of the filter to rotate_logs.
         :param no_lock: If set to True, will not lock mutex
         """
         if not no_lock:
             self._lock.acquire()
 
-        self.rotate_logs(name, self._filters[name]['pid_file'])
+        self.rotate_logs(filter['name'], filter['pid_file'])
 
         if not no_lock:
             self._lock.release()
@@ -222,7 +243,13 @@ class Services:
         try:
             Services._kill_with_pid_file(pid_file)
         except FileNotFoundError as e:
-            logger.warning("Filter {} not running (no pid file found). Did the filter start/crash?".format(name))
+            logger.warning("No PID found for {}. Did the filter start/crash?".format(name))
+            for proc in psutil.process_iter(attrs=["cmdline", "name", "pid"]):
+                if name in proc.info["cmdline"] and "darwin_" in proc.info["name"]:
+                    logger.warning("Filter {} found in running processes (pid {}). Killing.".format(name, proc.info['pid']))
+                    kill(proc.info['pid'], SIGTERM)
+                    sleep(2)
+
         except Exception as e:
             logger.error("Cannot stop filter {}: {}".format(name, e))
 
@@ -235,44 +262,54 @@ class Services:
         except Exception as e:
             logger.error("Cannot remove filter symlink {}: {}".format(name, e))
 
-    def stop_one(self, name, no_lock=False):
+    def stop_one(self, filter, no_lock=False):
         """
-        Stop the filter named name.
+        Stop the filter.
 
-        :param name: The name of the filter to stop.
+        :param filter: The dict of the filter to stop.
         :param no_lock: If set to True, will not lock mutex
         """
         if not no_lock:
             self._lock.acquire()
 
-        self.stop(name, self._filters[name]['pid_file'],
-                  self._filters[name]['socket_link'])
+        self.stop(filter['name'], filter['pid_file'],
+                  filter['socket_link'])
+
+        filter['status'] = psutil.STATUS_STOPPED
 
         if not no_lock:
             self._lock.release()
 
-    def restart_one(self, name, no_lock=False):
+    def restart_one(self, filter, no_lock=False):
         """
-        Restart the filter named name.
+        Restart the filter.
 
-        :param name: The name of the filter to restart.
+        :param filter: The object of the filter to restart.
         :param no_lock: If set to True, will not lock mutex
         """
         try:
-            self.stop_one(name, no_lock=no_lock)
+            self.stop_one(filter, no_lock=no_lock)
         except Exception as e:
-            logger.error("Cannot stop filter {}: {}".format(name, e))
+            logger.error("Cannot stop filter {}: {}".format(filter['name'], e))
 
         sleep(1)
         try:
-            self.clean_one(name, no_lock=no_lock)
+            self.clean_one(filter, no_lock=no_lock)
         except Exception as e:
-            logger.error("Cannot clean {}: {}", name, e)
+            logger.error("Cannot clean {}: {}".format(filter['name'], e))
 
         try:
-            self.start_one(name, no_lock=no_lock)
+            self.start_one(filter, no_lock=no_lock)
         except Exception as e:
-            logger.error("Cannot start filter {}: {}".format(name, e))
+            logger.error("Cannot start filter {}: {}".format(filter['name'], e))
+
+        ret = Services._update_check_process(filter)
+        if ret:
+            logger.error("Error when starting filter {}: {}".format(filter['name'], ret))
+            self.clean_one(filter, no_lock=no_lock)
+        else:
+            filter['status'] = psutil.STATUS_RUNNING
+            filter['failures'] = 0
 
     def update(self, names):
         """
@@ -301,7 +338,8 @@ class Services:
                     new[n] = filters[n]
                 except KeyError:
                     try:
-                        self.stop_one(n, no_lock=True)
+                        self.stop_one(self._filters[n], no_lock=True)
+                        self.clean_one(self._filters[n], no_lock=True)
                     except KeyError:
                         errors.append({"filter": n,
                                        "error": 'Filter not existing'})
@@ -317,10 +355,14 @@ class Services:
                 )
 
                 new[n]['output'] = new[n]['output']
+                new[n]['name'] = n
 
-                new[n]['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                    next_filter=new[n]['next_filter']
-                )
+                if not new[n]['next_filter']:
+                    new[n]['next_filter_unix_socket'] = 'no'
+                else:
+                    new[n]['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                        next_filter=new[n]['next_filter']
+                    )
 
                 new[n]['socket'] = '/var/sockets/darwin/{name}{extension}.sock'.format(
                     name=n, extension=new[n]['extension']
@@ -336,21 +378,57 @@ class Services:
                     logger.warning("Field 'config_file' not found for {}: setting default.".format(n))
                     new[n]['config_file'] = '/home/darwin/conf/{name}.conf'.format(name=n)
 
+                if 'cache_size' not in new[n]:
+                    new[n]['cache_size'] = 0
+
+                    logger.info('No cache size provided. Setting it to {cache_size}'.format(
+                        cache_size=new[n]['cache_size']
+                    ))
+
+                if 'output' not in new[n]:
+                    new[n]['output'] = 'NONE'
+                    logger.info('No output type provided. Setting it to {output}'.format(output=new[n]['output']))
+
+                if 'nb_thread' not in new[n]:
+                    new[n]['nb_thread'] = 5
+
+                    logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
+                        nb_thread=new[n]['nb_thread']
+                    ))
+
+                if 'threshold' not in new[n]:
+                    new[n]['threshold'] = 101
+
+                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
+
             for n, c in new.items():
-                cmd = self._build_cmd(c, n)
+                c['status'] = psutil.STATUS_WAKING
+                c['failures'] = 0
+                cmd = self._build_cmd(c)
                 logger.info("Starting updated filter")
-                Popen(cmd)
-                sleep(0.1)
-                ret = self._update_check_process(c)
+                p = Popen(cmd)
+                try:
+                    p.wait(timeout=1)
+                except TimeoutExpired:
+                    if c['log_level'].lower() == "developer":
+                        logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
+                    else:
+                        logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
+                        p.kill()
+                        p.wait()
+                ret = Services._update_check_process(c)
                 if ret:
                     logger.error("Unable to update filter {}: {}".format(n, ret))
                     # Then there is an error
                     errors.append({"filter": n, "error": ret})
                     try:
                         self.stop(n, c['pid_file'])
+                        self.clean_one(c, no_lock=True)
                     except Exception:
                         pass
                     continue
+
+                c['status'] = psutil.STATUS_RUNNING
 
                 logger.info("Switching filters symlink...")
                 try:
@@ -361,16 +439,23 @@ class Services:
                     errors.append({"filter": n, "error": "{0}".format(e)})
                     try:
                         self.stop(n, c['pid_file'])
+                        self.clean_one(c, no_lock=True)
                     except Exception:
                         pass
                     continue
 
                 try:
-                    logger.info("Killing older filter...")
-                    self._kill_with_pid_file(self._filters[n]['pid_file'])
+                    if self._filters[n]['status'] != psutil.STATUS_STOPPED:
+                        logger.info("Killing older filter...")
+                        Services.stop(n, self._filters[n]['pid_file'])
+                        logger.debug("{} with PID {} killed.".format(n, self._filters[n]['pid_file']))
+                        self.clean_one(self._filters[n], no_lock=True)
+                        logger.debug("Cleaned filter")
                 except KeyError:
+                    logger.debug("Key error when trying to kill with PID")
                     pass
                 self._filters[n] = deepcopy(c)
+                logger.info("successfully updated {}".format(n))
 
         return errors
 
@@ -398,12 +483,18 @@ class Services:
                     logger.debug('No next filter provided')
 
                 try:
+                    c['name'] = f
+                    c['failures'] = 0
+                    c['status'] = psutil.STATUS_WAKING
                     c['extension'] = '.1'
                     c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
 
-                    c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                        next_filter=c['next_filter']
-                    )
+                    if not c['next_filter']:
+                        c['next_filter_unix_socket'] = 'no'
+                    else:
+                        c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                            next_filter=c['next_filter']
+                        )
 
                     c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
                     c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
@@ -449,22 +540,26 @@ class Services:
         """
         pprint(self._filters)
 
-    def monitor_one(self, name):
+    @staticmethod
+    def monitor_one(file):
         """
-        Get the monitoring info from the filter named 'name'.
+        Get the monitoring info from the filter's monitoring socket.
 
-        :param name: The name of the filter to connect to.
+        :param file: The fullpath of the management socket to connect to.
         :return: Acquired monitoring data on success, None otherwise.
         """
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            sock.connect(self._filters[name]['monitoring'])
+            logger.debug("connecting to monitoring socket...")
+            sock.connect(file)
         except Exception as e:
-            logger.error("Error, cannot connect to monitoring socket of filter {}: {}".format(name, e))
+            logger.error("Error, cannot connect to monitoring socket {} : {}".format(file, e))
             return
 
         try:
+            #TODO implement select() method to get timeout errors and not hang
             data = JsonSocket(sock).recv()
+            logger.debug("received data: '{}'".format(data))
         except Exception as e:
             logger.error("Error, filter monitoring data not received: {}".format(e))
             return
@@ -478,8 +573,8 @@ class Services:
         """
         monitor_data = {}
         with self._lock:
-            for n, _ in self._filters.items():
-                monitor_data[n] = self.monitor_one(n)
+            for n, c in self._filters.items():
+                monitor_data[n] = Services.monitor_one(c['monitoring'])
         return monitor_data
 
     @staticmethod
@@ -490,40 +585,65 @@ class Services:
         :param content: Dict containing the filter configuration.
         :return: None on success, a str containing the error message on error.
         """
-        pid = HeartBeat.check_pid_file(content['pid_file'])
-        if not pid:
-            return "PID file not accessible"
+        logger.debug("entered _update_check_process")
+        retries = 1
+        status = "Not None"
+        while status and retries <= 3:
+            sleep(0.2)
+            retries += 1
+            status = None
+            pid = HeartBeat.check_pid_file(content['pid_file'])
+            if not pid:
+                status = "PID file not accessible"
+                continue
 
-        if not HeartBeat.check_process(pid):
-            return "Process not running"
+            if not HeartBeat.check_process(pid):
+                status = "Process not running"
+                continue
 
-        if not HeartBeat.check_socket(content['socket']):
-            return "Socket not created"
+            if not HeartBeat.check_socket(content['socket']):
+                status = "Main socket not created"
+                continue
 
-        return None
+            if not HeartBeat.check_socket(content['monitoring']):
+                status = "Monitoring socket not created"
+                continue
 
-    def hb_one(self, name, content):
+            if Services.monitor_one(content['monitoring']) is None:
+                status = "Monitoring socket not ready"
+                continue
+
+        return status
+
+    def hb_one(self, filter):
         """
         Perform HB to the passed and restart it if needed.
 
-        :param name: The name of the filter.
-        :param content: The configuration of the filter.
+        :param filter: The dict object representing the filter.
         """
 
         try:
-            pid = HeartBeat.check_pid_file(content['pid_file'])
+            pid = HeartBeat.check_pid_file(filter['pid_file'])
             if not pid:
                 raise Exception('PID not accessible')
 
             if not HeartBeat.check_process(pid):
                 raise Exception('Process not running')
 
-            if not HeartBeat.check_socket(content['socket']):
+            if not HeartBeat.check_socket(filter['socket']):
                 raise Exception('Socket not accessible')
 
         except Exception as e:
-            logger.warning("HeartBeat failed on {} ({}). Restarting the filter.".format(name, e))
-            self.restart_one(name, no_lock=True)
+            logger.warning("HeartBeat failed on {} ({}). Restarting the filter.".format(filter['name'], e))
+            filter['failures']  += 1
+            if filter['failures'] > 3:
+                logger.error('Too many failures when starting {}. Filter stopped.'.format(filter['name']))
+                self.stop_one(filter, no_lock=True)
+                sleep(1)
+                self.clean_one(filter, no_lock=True)
+                return
+            filter['status'] = psutil.STATUS_DEAD
+            self.restart_one(filter, no_lock=True)
 
     def hb_all(self):
         """
@@ -532,27 +652,28 @@ class Services:
         """
 
         with self._lock:
-            for n, c in self._filters.items():
-                self.hb_one(n, c)
+            for _, c in self._filters.items():
+                if c['status'] != psutil.STATUS_STOPPED:
+                    self.hb_one(c)
 
-    def clean_one(self, name, no_lock=False):
+    def clean_one(self, content, no_lock=False):
         if not no_lock:
             self._lock.acquire()
         try:
-            if access(self._filters[name]['pid_file'], F_OK):
-                remove(self._filters[name]['pid_file'])
+            if access(content['pid_file'], F_OK):
+                remove(content['pid_file'])
         except Exception as e:
             logger.error("Cannot delete leftover pidfile: {}".format(e))
 
         try:
-            if access(self._filters[name]['socket'], F_OK):
-                remove(self._filters[name]['socket'])
+            if access(content['socket'], F_OK):
+                remove(content['socket'])
         except Exception as e:
             logger.error("Cannot delete leftover socket: {}".format(e))
 
         try:
-            if access(self._filters[name]['monitoring'], F_OK):
-                remove(self._filters[name]['monitoring'])
+            if access(content['monitoring'], F_OK):
+                remove(content['monitoring'])
         except Exception as e:
             logger.error("Cannot delete leftover monitor socket: {}".format(e))
 
@@ -561,5 +682,5 @@ class Services:
 
     def clean_all(self):
         with self._lock:
-            for n, _ in self._filters.items():
-                self.clean_one(n, no_lock=True)
+            for _, c in self._filters.items():
+                self.clean_one(c, no_lock=True)
