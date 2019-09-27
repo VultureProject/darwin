@@ -55,7 +55,7 @@ def new_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.start()
+    connection_filter.valgrind_start()
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -93,7 +93,10 @@ def new_connection_test():
     darwin_api.close()
 
     connection_filter.clean_files()
-    connection_filter.stop()
+    # ret = connection_filter.valgrind_stop() or connection_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not connection_filter.valgrind_stop():
+        ret = False
 
     return ret
 
@@ -111,7 +114,7 @@ def known_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.start()
+    connection_filter.valgrind_start()
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -149,7 +152,10 @@ def known_connection_test():
     darwin_api.close()
 
     connection_filter.clean_files()
-    connection_filter.stop()
+    # ret = connection_filter.valgrind_stop() or connection_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not connection_filter.valgrind_stop():
+        ret = False
 
     return ret
 
@@ -166,7 +172,7 @@ def new_connection_to_known_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.start()
+    connection_filter.valgrind_start()
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -212,6 +218,9 @@ def new_connection_to_known_test():
     darwin_api.close()
 
     connection_filter.clean_files()
-    connection_filter.stop()
+    # ret = connection_filter.valgrind_stop() or connection_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not connection_filter.valgrind_stop():
+        ret = False
 
     return ret
