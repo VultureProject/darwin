@@ -23,7 +23,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
 
     if (!SetUpClassifier(configFile)) return false;
 
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
+    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
     if (cache_size > 0) {
         _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
     }
@@ -34,14 +34,14 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
 
 bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Setting up classifier...");
+    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
 
     if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("DGA:: Generator:: Could not open the configuration file");
+        DARWIN_LOG_ERROR("ConnectionSupervision:: Generator:: Could not open the configuration file");
 
         return false;
     }
@@ -52,7 +52,7 @@ bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     rapidjson::Document configuration;
     configuration.Parse(raw_configuration.c_str());
 
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Reading configuration...");
+    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Reading configuration...");
 
     if (!LoadClassifier(configuration)) {
         return false;
@@ -65,7 +65,7 @@ bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
 
 bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Loading classifier...");
+    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
     std::string init_data_path = "";
@@ -143,7 +143,7 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
                 "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
                 "(([0-9]+;(17|6))|([0-9]*;*1))")))
         {
-            DARWIN_LOG_WARNING("AnomalyTask:: ParseLogs:: The data: "+ current_line +", isn't valid, ignored. "
+            DARWIN_LOG_WARNING("ConnectionSupervision:: ParseLogs:: The data: "+ current_line +", isn't valid, ignored. "
                                                                                "Format expected : "
                                                                                "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
                                                                                "\"[ip_protocol udp or tcp]\")|"
