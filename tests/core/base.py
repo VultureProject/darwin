@@ -1,6 +1,7 @@
 import logging
 import socket
 from os import kill, remove, access, F_OK
+from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
 from core.utils import DEFAULT_PATH
@@ -12,6 +13,7 @@ FLOGS_CONFIG = '{"log_file_path": "/tmp/logs_test.log"}'
 def run():
     tests = [
         check_start_stop,
+        check_start_wrong_conf,
         check_pid_file,
         check_socket_create_delete,
         check_socket_connection,
@@ -24,10 +26,10 @@ def run():
 
 
 def check_start_stop():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
     try:
         kill(filter.process.pid, 0)
     except OSError as e:
@@ -39,13 +41,27 @@ def check_start_stop():
     
     return True
 
+def check_start_wrong_conf():
+    filter = Filter(filter_name="logs")
+
+    filter.configure("")
+    filter.valgrind_start()
+    sleep(2)
+    try:
+        kill(filter.process.pid, 0)
+    except OSError as e:
+        return True
+
+    logging.error("check_start_wrong_conf: Process running with wrong configuration")
+    return False
+
 
 def check_pid_file():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         with open(filter.pid) as f:
@@ -70,11 +86,11 @@ def check_pid_file():
 
 
 def check_socket_create_delete():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
 
     if not access(filter.socket, F_OK):
         logging.error("check_socket_create_delete: Socket file not accesible")
@@ -90,11 +106,11 @@ def check_socket_create_delete():
 
 
 def check_socket_connection():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         api = DarwinApi(socket_path=filter.socket, socket_type="unix")
@@ -109,11 +125,11 @@ def check_socket_connection():
 
 
 def check_socket_monitor_create_delete():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
 
     if not access(filter.monitor, F_OK):
         logging.error("check_socket_monitor_create_delete: Socket file not accesible")
@@ -129,12 +145,11 @@ def check_socket_monitor_create_delete():
 
 
 def check_socket_monitor_connection():
-    filter = Filter(DEFAULT_PATH)
+    filter = Filter(filter_name="logs")
     pid = -1
-    result = None
 
     filter.configure(FLOGS_CONFIG)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
@@ -147,9 +162,6 @@ def check_socket_monitor_connection():
     except Exception as e:
         logging.error("check_socket_monitor_connection: Error connecting to socket: {}".format(e))
         return False
-
-    if result != "test\n":
-        logging.error("check_socket_monitor_connection: Result differs. Got {}".format(result))
 
     filter.stop()    
     return True

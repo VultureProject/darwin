@@ -2,7 +2,7 @@ import subprocess
 import os
 import logging
 from time import sleep
-from conf import DEFAULT_FILTER_PATH
+from conf import DEFAULT_FILTER_PATH, VALGRIND_MEMCHECK
 
 
 class Filter():
@@ -16,10 +16,14 @@ class Filter():
         self.pid = pid_file if pid_file else "/tmp/{}.pid".format(filter_name)
         self.cmd = [self.path, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_thread), str(cache_size), str(thresold), log_level]
         self.process = None
+        self.error_code = 99 # For valgrind testing
 
     def __del__(self):       
         if self.process and self.process.poll() is None:
-            self.stop()
+            if VALGRIND_MEMCHECK is False:
+                self.stop()
+            else:
+                self.valgrind_stop()
         self.clean_files()
 
     def start(self):
@@ -36,6 +40,43 @@ class Filter():
             self.process.kill()
             self.process.wait()
             return False
+        return True
+
+    def valgrind_start(self):
+        if VALGRIND_MEMCHECK is False:
+            self.start()
+            return
+        command = ['valgrind',
+                   '--tool=memcheck',
+                   '--leak-check=yes',
+                   '-v', # Quiet mode so it doesn't pollute the output
+                   '--error-exitcode={}'.format(self.error_code), #If valgrind report error on the run, return this exitcode.
+                   ] + self.cmd
+
+        self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        sleep(3)
+
+    def valgrind_stop(self):
+        if VALGRIND_MEMCHECK is False:
+            self.stop()
+            return
+        sleep(3)
+        self.process.terminate()
+        try:
+            self.process.wait(15) # Valgrind can take some times, so it need a generous timeout
+        except subprocess.TimeoutExpired:
+            logging.error("Unable to stop filter properly... Killing it.")
+            self.process.kill()
+            self.process.wait()
+            return False
+
+        # If valgrind return the famous error code
+        if self.process.returncode == self.error_code :
+            out, err = self.process.communicate()
+            logging.error("Valgrind returned error code: {}".format(self.process.returncode))
+            logging.error("Valgrind error: {}".format(out))
+            return False
+
         return True
 
     def clean_files(self):
