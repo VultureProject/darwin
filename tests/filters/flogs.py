@@ -2,10 +2,12 @@ import logging
 import os
 import uuid
 import ctypes
+import redis
 from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
+
 
 REDIS_SOCKET = "/var/sockets/redis/redis.sock"
 REDIS_LIST_NAME = "logs_darwin"
@@ -46,28 +48,42 @@ class Logs(Filter):
         api.socket.sendall(log_line)
         api.close()
 
-    def get_logs_from_file(self, nb_lines=-1):
+    def get_logs_from_file(self):
         """
-        Read nb_lines from the internal log file and return them.
+        Read lines from the internal log file and return them.
         On error returns None.
         """
         l = None
         try:
             with open(self.log_file, 'r') as f:
-                if nb_lines == -1:
-                    l = f.readlines()
-                else:
-                    l = f.readlines(nb_lines)
+                l = f.readlines()
         except Exception as e:
             logging.error("Error opening log file: {}".format(e))
             return None
         return l
 
+    def get_log_from_redis(self):
+        res = None
+        
+        try:
+            r = redis.Redis(host='localhost', port=6379, db=0)
+            res = r.lpop(REDIS_LIST_NAME)
+            r.close()
+        except Exception as e:
+            logging.error("Unable to connect to redis: {}".format(e))
+            return None
+        
+        return res
+
 
 def run():
     tests = [
         single_log_to_file,
+        single_log_to_redis,
+        single_log_to_both,
         multiple_log_to_file,
+        multiple_log_to_redis,
+        multiple_log_to_both,
     ]
 
     for i in tests:
@@ -95,11 +111,48 @@ def single_log_to_file():
 
 
 def single_log_to_redis():
-    pass
+    filter = Logs()
+    filter.configure(FLOGS_CONFIG_REDIS)
+    filter.valgrind_start()
+
+    try:
+        filter.log(b'If you think your users are idiots, only idiots will use it. Linus Torvald\n')
+        sleep(1)
+    except Exception as e:
+        logging.error("single_log_to_file: Unable to connect to filter: {}".format(e))
+        return False
+
+    log = filter.get_log_from_redis()
+    if log != b'If you think your users are idiots, only idiots will use it. Linus Torvald\n':
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+
+    return True
 
 
 def single_log_to_both():
-    pass
+    filter = Logs()
+    filter.configure(FLOGS_CONFIG_BOTH)
+    filter.valgrind_start()
+
+    try:
+        filter.log(b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n')
+        sleep(1)
+    except Exception as e:
+        logging.error("single_log_to_file: Unable to connect to filter: {}".format(e))
+        return False
+
+    logs = filter.get_logs_from_file()
+    if logs != ['There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n']:
+        logging.error("single_log_to_file: Log line not matching: {}".format(logs))
+        return False
+
+    log = filter.get_log_from_redis()
+    if log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+
+    return True
 
 
 def multiple_log_to_file():
@@ -127,8 +180,78 @@ def multiple_log_to_file():
 
 
 def multiple_log_to_redis():
-    pass
+    filter = Logs()
+    filter.configure(FLOGS_CONFIG_REDIS)
+    filter.valgrind_start()
+
+    try:
+        filter.log(b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n')
+        filter.log(b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n')
+        sleep(1)
+    except Exception as e:
+        logging.error("single_log_to_file: Unable to connect to filter: {}".format(e))
+        return False
+
+    log = filter.get_log_from_redis()
+    if log != b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n' and log != b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+
+    log = filter.get_log_from_redis()
+    if log != b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n' and log != b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+
+    return True
 
 
 def multiple_log_to_both():
+    filter = Logs()
+    filter.configure(FLOGS_CONFIG_BOTH)
+    filter.valgrind_start()
+
+    try:
+        filter.log(b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n')
+        filter.log(b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n')
+        sleep(1)
+    except Exception as e:
+        logging.error("single_log_to_file: Unable to connect to filter: {}".format(e))
+        return False
+
+    logs = filter.get_logs_from_file()
+    if logs != [
+        'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n',
+        'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n'
+        ]:
+        logging.error("single_log_to_file: Log line not matching: {}".format(logs))
+        return False
+
+    log = filter.get_log_from_redis()
+    if log not in [
+        b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n',
+        b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n'
+        ]:
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+    
+    log = filter.get_log_from_redis()
+    if log not in [
+        b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n',
+        b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n'
+        ]:
+        logging.error("single_log_to_file: Log line not matching: {}".format(log))
+        return False
+
+    return True
+
+
+def empty_log_to_file():
+    pass
+
+
+def empty_log_to_redis():
+    pass
+
+
+def empty_log_to_both():
     pass
