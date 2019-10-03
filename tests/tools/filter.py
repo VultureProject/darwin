@@ -91,13 +91,6 @@ class Filter:
         except:
             pass
 
-        """
-        try:
-            os.remove(self.path)
-        except:
-            pass
-        """
-
 
     def configure(self, config):
         with open(self.config, 'w') as f:
