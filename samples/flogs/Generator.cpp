@@ -60,6 +60,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     std::string redis_socket_path;
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("Logs:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     _redis = configuration.HasMember("redis_socket_path");
     _log = configuration.HasMember("log_file_path");
 

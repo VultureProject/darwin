@@ -58,7 +58,7 @@ class Filter():
     def valgrind_stop(self):
         if VALGRIND_MEMCHECK is False:
             self.stop()
-            return
+            return True
         sleep(3)
         self.process.terminate()
         try:

@@ -13,12 +13,13 @@ FLOGS_CONFIG = '{"log_file_path": "/tmp/logs_test.log"}'
 def run():
     tests = [
         check_start_stop,
-        check_start_wrong_conf,
         check_pid_file,
         check_socket_create_delete,
         check_socket_connection,
         check_socket_monitor_create_delete,
-        check_socket_monitor_connection
+        check_socket_monitor_connection,
+        check_start_wrong_conf,
+        check_start_no_conf,
     ]
 
     for i in tests:
@@ -40,20 +41,6 @@ def check_start_stop():
         return False
     
     return True
-
-def check_start_wrong_conf():
-    filter = Filter(filter_name="logs")
-
-    filter.configure("")
-    filter.valgrind_start()
-    sleep(2)
-    try:
-        kill(filter.process.pid, 0)
-    except OSError as e:
-        return True
-
-    logging.error("check_start_wrong_conf: Process running with wrong configuration")
-    return False
 
 
 def check_pid_file():
@@ -165,3 +152,30 @@ def check_socket_monitor_connection():
 
     filter.stop()    
     return True
+
+
+def check_start_wrong_conf():
+    filter = Filter(filter_name="logs")
+
+    filter.configure("")
+    filter.valgrind_start()
+    sleep(2)
+    
+    if not access(filter.pid, F_OK):
+        return True
+
+    logging.error("check_start_wrong_conf: Process running with wrong configuration")
+    return False
+
+
+def check_start_no_conf():
+    filter = Filter(filter_name="logs")
+
+    filter.valgrind_start()
+    sleep(2)
+    
+    if not access(filter.pid, F_OK):
+        return True
+
+    logging.error("check_start_wrong_conf: Process running with wrong configuration")
+    return False

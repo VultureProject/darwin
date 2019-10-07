@@ -295,6 +295,7 @@ def one_update_one_wrong_conf():
 
     if not check_filter_files("logs_1", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     darwin_stop(process)
     darwin_remove_configuration()
@@ -417,9 +418,11 @@ def many_update_two_wrong_conf():
 
     if not check_filter_files("logs_2", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     if not check_filter_files("logs_3", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     darwin_stop(process)
     darwin_remove_configuration()
@@ -453,12 +456,15 @@ def many_update_all_wrong_conf():
 
     if not check_filter_files("logs_1", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     if not check_filter_files("logs_2", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     if not check_filter_files("logs_3", ".1"):
         logging.error("Error: filter files check failed")
+        ret = False
 
     darwin_stop(process)
     darwin_remove_configuration()
