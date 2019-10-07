@@ -31,7 +31,6 @@ class Filter():
         sleep(1)
 
     def stop(self):
-        ret = True
         self.process.terminate()
         try:
             self.process.wait(3)

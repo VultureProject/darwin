@@ -167,6 +167,8 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
                              "Error when trying to add line \"" + current_line + "\" from initial data for redis, line "
                                                                                  "not added");
         }
+        freeReplyObject(reply);
+        reply = nullptr;
     }
 
     init_data_stream.close();
