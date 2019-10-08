@@ -67,6 +67,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("HostLookup:: Generator:: Loading classifier...");
     std::string line, db;
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     if (!configuration.HasMember("database")) {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Missing parameter: \"database\"");
         return false;
