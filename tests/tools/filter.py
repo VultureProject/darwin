@@ -18,7 +18,7 @@ class Filter():
         self.process = None
         self.error_code = 99 # For valgrind testing
 
-    def __del__(self):       
+    def __del__(self):
         if self.process and self.process.poll() is None:
             if VALGRIND_MEMCHECK is False:
                 self.stop()
