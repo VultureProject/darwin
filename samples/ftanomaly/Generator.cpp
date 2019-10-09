@@ -76,6 +76,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading classifier...");
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Missing parameter: \"redis_socket_path\"");
         return false;

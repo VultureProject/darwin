@@ -67,6 +67,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     std::string token_map_path;
     std::string model_path;
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     if (!configuration.HasMember("token_map_path")) {
         DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: \"token_map_path\"");
         return false;
