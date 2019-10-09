@@ -21,6 +21,10 @@ class Logs(Filter):
     def __init__(self):
         super().__init__(filter_name="logs")
         self.log_file = LOG_FILE
+        try:
+            os.remove(self.log_file)
+        except:
+            pass
 
     def clean_files(self):
         super(Logs, self).clean_files()
