@@ -69,6 +69,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     std::string redis_socket_path;
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("Session:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("Session:: Generator:: Missing parameter: \"redis_socket_path\"");
         return false;

@@ -43,6 +43,11 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
     config.Parse(content.c_str());
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: file parsed");
 
+    if (!config.IsObject()) {
+        DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     char str[2048];
     if(config.HasMember("maxConnections")) {
         if(config["maxConnections"].IsUint()) {
