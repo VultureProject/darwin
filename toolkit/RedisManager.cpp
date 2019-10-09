@@ -267,6 +267,8 @@ namespace darwin {
                                 return false;
                             }
                             retry++;
+                            freeReplyObject(*reply_ptr);
+                            *reply_ptr = nullptr;
                             continue;
                         } else {
                             // Else we stop it

@@ -48,7 +48,7 @@ class Filter():
         command = ['valgrind',
                    '--tool=memcheck',
                    '--leak-check=yes',
-                   '-v', # Quiet mode so it doesn't pollute the output
+                   '-q', # Quiet mode so it doesn't pollute the output
                    '--error-exitcode={}'.format(self.error_code), #If valgrind report error on the run, return this exitcode.
                    ] + self.cmd
 
@@ -73,7 +73,7 @@ class Filter():
         if self.process.returncode == self.error_code :
             out, err = self.process.communicate()
             logging.error("Valgrind returned error code: {}".format(self.process.returncode))
-            logging.error("Valgrind error: {}".format(out))
+            logging.error("Valgrind error: {}".format(err))
             return False
 
         return True

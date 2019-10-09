@@ -73,17 +73,17 @@ namespace darwin {
     protected:
         /// Send the packet header & size bytes of data to the configured filter.
         ///
-        /// \param header Header of the packet. If the size field is <= 0, does not send data.
+        /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
         /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
         /// \return Upon successful completion, return true, otherwise return false.
-        virtual void SendToFilter(darwin_filter_packet_t const& hdr, void const* data) final;
+        virtual void SendToFilter(darwin_filter_packet_t const* hdr, void const* data) final;
 
         /// Send the packet header & size bytes of data to the session.
         ///
-        /// \param header Header of the packet. If the size field is <= 0, does not send data.
+        /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
         /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
         /// \return Upon successful completion, return true, otherwise return false.
-        virtual void Send(darwin_filter_packet_t const& hdr, void const* data) final;
+        virtual void Send(darwin_filter_packet_t const* hdr, void const* data) final;
 
         /// Send result into the session.
         virtual void SendResToSession() noexcept;
