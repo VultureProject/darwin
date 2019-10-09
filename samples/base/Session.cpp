@@ -31,11 +31,23 @@ namespace darwin {
         DARWIN_LOGGER;
         const std::size_t certitude_size = _certitudes.size();
 
+        /* 
+         * Allocate the header +
+         * the size of the certitude -
+         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+         */
+        std::size_t packet_size = 0;
+        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
+            packet_size = sizeof(darwin_filter_packet_t) +
+                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
+        } else {
+            packet_size = sizeof(darwin_filter_packet_t);
+        }
+
+        DARWIN_LOG_DEBUG("Session::SendResToSession: Computed packet size: " + std::to_string(packet_size));
+
         darwin_filter_packet_t* packet;
-        /* Allocate the header + the size of the certitude - 1 certitude already in header size */
-        packet = (darwin_filter_packet_t *) malloc(sizeof(darwin_filter_packet_t) +
-                                                    (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) *
-                                                    sizeof(unsigned int));
+        packet = (darwin_filter_packet_t *) malloc(packet_size);
 
         if (!packet) {
             DARWIN_LOG_CRITICAL("Session::SendResToSession: Could not create a Darwin packet");
@@ -46,9 +58,7 @@ namespace darwin {
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
          */
-        memset(packet, 0, sizeof(darwin_filter_packet_t) +
-                            (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) *
-                            sizeof(unsigned int));
+        memset(packet, 0, packet_size);
 
         for (std::size_t index = 0; index < certitude_size; ++index) {
             packet->certitude_list[index] = _certitudes[index];
@@ -61,7 +71,7 @@ namespace darwin {
         packet->body_size = 0;
         memcpy(packet->evt_id, header.evt_id, 16);
 
-        Send(packet, nullptr);
+        Send(packet, nullptr, packet_size);
 
         free(packet);
     }
@@ -78,11 +88,23 @@ namespace darwin {
 
         const std::size_t certitude_size = _certitudes.size();
 
+        /* 
+         * Allocate the header +
+         * the size of the certitude - 
+         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+         */
+        std::size_t packet_size = 0;
+        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
+            packet_size = sizeof(darwin_filter_packet_t) +
+                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
+        } else {
+            packet_size = sizeof(darwin_filter_packet_t);
+        }
+
+        DARWIN_LOG_DEBUG("Session::SendToDarwin: Computed packet size: " + std::to_string(packet_size));
+
         darwin_filter_packet_t* packet;
-        /* Allocate the header + the size of the certitude - 1 certitude already in header size */        
-        packet = (darwin_filter_packet_t *) malloc(sizeof(darwin_filter_packet_t) +
-                                                    (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) *
-                                                    sizeof(unsigned int));
+        packet = (darwin_filter_packet_t *) malloc(packet_size);
 
         if (!packet) {
             DARWIN_LOG_CRITICAL("Session:: SendToDarwin: Could not create a Darwin packet");
@@ -93,9 +115,7 @@ namespace darwin {
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
          */
-        memset(packet, 0, sizeof(darwin_filter_packet_t) +
-                            (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) *
-                            sizeof(unsigned int));
+        memset(packet, 0, packet_size);
 
         for (std::size_t index = 0; index < certitude_size; ++index) {
             packet->certitude_list[index] = _certitudes[index];
@@ -110,10 +130,10 @@ namespace darwin {
 
         if(packet->body_size <= 0) {
             DARWIN_LOG_DEBUG("Session:: SendToDarwin: no data");
-            SendToFilter(packet, nullptr);
+            SendToFilter(packet, nullptr, packet_size);
         } else {
             DARWIN_LOG_DEBUG("Session:: SendToDarwin: Send data : " + data);
-            SendToFilter(packet, data.c_str());
+            SendToFilter(packet, data.c_str(), packet_size);
         }
 
         free(packet);
@@ -213,6 +233,7 @@ namespace darwin {
         _certitudes = std::vector<unsigned int>();
         _logs = std::string();
 
+        DARWIN_LOG_DEBUG("Session::ReadHeaderCallback:: Reading header");
         if (!e) {
             if (size != sizeof(header)) {
                 DARWIN_LOG_ERROR("Session::ReadHeaderCallback:: Mismatching header size");
@@ -310,7 +331,7 @@ namespace darwin {
     }
 
     void Session::Send(darwin_filter_packet_t const* hdr,
-                       void const* data) {
+                       void const* data, std::size_t packet_size) {
         DARWIN_LOGGER;
 
         // Here is the synchronous way.
@@ -327,16 +348,6 @@ namespace darwin {
 //            return;
 //        }
         DARWIN_LOG_DEBUG("Session::Send:: Async sending header to session...");
-
-        std::size_t packet_size;
-
-        if (hdr->certitude_size > 1) {
-            packet_size = sizeof(darwin_filter_packet_t) + sizeof(unsigned int) * (hdr->certitude_size - 1);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
-        }
-
-        DARWIN_LOG_DEBUG("Session::Send:: Computed packet size: " + std::to_string(packet_size));
 
         boost::asio::async_write(_socket,
                                  boost::asio::buffer(hdr, packet_size),
@@ -365,7 +376,7 @@ namespace darwin {
     }
 
     void Session::SendToFilter(darwin_filter_packet_t const* hdr,
-                               void const* data) {
+                               void const* data, std::size_t packet_size) {
         DARWIN_LOGGER;
 
         if (!_connected) {
@@ -382,14 +393,6 @@ namespace darwin {
                                  e.what());
                 return;
             }
-        }
-
-        std::size_t packet_size;
-
-        if (hdr->certitude_size > 1) {
-            packet_size = sizeof(darwin_filter_packet_t) + sizeof(unsigned int) * (hdr->certitude_size - 1);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
         }
 
         // Here is the synchronous way.
