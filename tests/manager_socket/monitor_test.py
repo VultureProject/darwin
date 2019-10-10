@@ -1,4 +1,4 @@
-from manager_socket.utils import requests, CONF_EMPTY, CONF_FLOGS, CONF_ONE, CONF_THREE, REQ_MONITOR, RESP_EMPTY, RESP_ONE, RESP_THREE, PATH_CONF_FLOGS
+from manager_socket.utils import requests, CONF_EMPTY, CONF_FLOGS, CONF_ONE, CONF_THREE, REQ_MONITOR, RESP_EMPTY, RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3, PATH_CONF_FLOGS
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
 from tools.output import print_result
 
@@ -11,7 +11,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("Monitoring: " + i.__name__, i())
+        print_result("Monitoring: " + i.__name__, i)
 
 
 def multiple_filters_running():
@@ -23,7 +23,7 @@ def multiple_filters_running():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp == RESP_THREE:
+    if all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         ret = True
 
     darwin_stop(process)
@@ -41,7 +41,7 @@ def one_filters_running():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp == RESP_ONE:
+    if RESP_LOGS_1 in resp:
         ret = True
 
     darwin_stop(process)
@@ -56,7 +56,7 @@ def no_filter():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp == RESP_EMPTY:
+    if RESP_EMPTY in resp:
         ret = True
 
     darwin_stop(process)

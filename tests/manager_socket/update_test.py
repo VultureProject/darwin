@@ -1,6 +1,6 @@
 import logging
 from time import sleep
-from manager_socket.utils import requests, check_filter_files, PATH_CONF_FLOGS, CONF_EMPTY, CONF_ONE, CONF_THREE, CONF_FLOGS, CONF_FLOGS_WRONG_CONF , REQ_MONITOR, REQ_UPDATE_EMPTY, REQ_UPDATE_ONE, REQ_UPDATE_TWO, REQ_UPDATE_THREE, REQ_UPDATE_NON_EXISTING, RESP_EMPTY, RESP_ONE, RESP_THREE, RESP_STATUS_OK, RESP_STATUS_KO_LIST, RESP_STATUS_KO_GEN, RESP_FILTER_NOT_EXISTING
+from manager_socket.utils import requests, check_filter_files, PATH_CONF_FLOGS, CONF_EMPTY, CONF_ONE, CONF_THREE, CONF_FLOGS, CONF_FLOGS_WRONG_CONF , REQ_MONITOR, REQ_UPDATE_EMPTY, REQ_UPDATE_ONE, REQ_UPDATE_TWO, REQ_UPDATE_THREE, REQ_UPDATE_NON_EXISTING, RESP_EMPTY, RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3, RESP_STATUS_OK, RESP_STATUS_KO, RESP_ERROR_FILTER_NOT_EXISTING
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
 from tools.output import print_result
 
@@ -26,7 +26,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("Update: " + i.__name__, i())
+        print_result("Update: " + i.__name__, i)
 
 
 def no_filter_to_none():
@@ -36,17 +36,17 @@ def no_filter_to_none():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("no_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_UPDATE_EMPTY)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("no_filter_to_none: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("no_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -63,19 +63,19 @@ def no_filter_to_one():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("no_filter_to_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_ONE)
     darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
     resp = requests(REQ_UPDATE_ONE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("no_filter_to_one: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("no_filter_to_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -93,19 +93,19 @@ def no_filter_to_many():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("no_filter_to_many: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_THREE)
     darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
     resp = requests(REQ_UPDATE_THREE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("no_filter_to_many: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("no_filter_to_many: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -124,18 +124,18 @@ def one_filter_to_none():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_EMPTY)    
     resp = requests(REQ_UPDATE_ONE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("one_filter_to_none: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("one_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -154,18 +154,18 @@ def many_filters_to_none():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_filters_to_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_EMPTY)    
     resp = requests(REQ_UPDATE_THREE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_filters_to_none: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_EMPTY:
+    if RESP_EMPTY not in resp:
         logging.error("many_filters_to_none: Mismatching second monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -184,20 +184,20 @@ def many_filters_to_one():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_filters_to_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     darwin_configure(CONF_ONE)    
     resp = requests(REQ_UPDATE_TWO)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_filters_to_one: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1)
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("many_filters_to_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -216,19 +216,19 @@ def one_update_none():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay    
     resp = requests(REQ_UPDATE_EMPTY)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("one_update_none: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -247,19 +247,19 @@ def one_update_one():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(2) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_ONE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("one_update_one: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -277,19 +277,19 @@ def one_update_one_wrong_conf():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FLOGS_WRONG_CONF, path=PATH_CONF_FLOGS)
     resp = requests(REQ_UPDATE_ONE)
-    if resp not in RESP_STATUS_KO_LIST:
+    if RESP_STATUS_KO not in resp:
         logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_ONE:
+    if RESP_LOGS_1 not in resp:
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -312,18 +312,18 @@ def many_update_none():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_EMPTY)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_update_none: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_none: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -342,18 +342,18 @@ def many_update_one():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_ONE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_update_one: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_one: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -371,18 +371,18 @@ def many_update_many():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_many: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_TWO)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_update_many: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_many: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -400,19 +400,19 @@ def many_update_two_wrong_conf():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FLOGS_WRONG_CONF, path=PATH_CONF_FLOGS)
     resp = requests(REQ_UPDATE_TWO)
-    if RESP_STATUS_KO_GEN not in resp:
+    if RESP_STATUS_KO not in resp:
         logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -438,19 +438,19 @@ def many_update_all_wrong_conf():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FLOGS_WRONG_CONF, path=PATH_CONF_FLOGS)
     resp = requests(REQ_UPDATE_THREE)
-    if RESP_STATUS_KO_GEN not in resp:
+    if RESP_STATUS_KO not in resp:
         logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -481,18 +481,18 @@ def many_update_all():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_all: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_THREE)
-    if resp != RESP_STATUS_OK:
+    if RESP_STATUS_OK not in resp:
         logging.error("many_update_all: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("many_update_all: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
@@ -511,18 +511,18 @@ def non_existing_filter():
     process = darwin_start()
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("non_existing_filter: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
     
     sleep(1) # Need this beacause of the starting delay
     resp = requests(REQ_UPDATE_NON_EXISTING)
-    if resp != RESP_FILTER_NOT_EXISTING:
+    if RESP_ERROR_FILTER_NOT_EXISTING not in resp:
         logging.error("non_existing_filter: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
-    if resp != RESP_THREE:
+    if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("non_existing_filter: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
