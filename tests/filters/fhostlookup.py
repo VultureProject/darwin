@@ -41,7 +41,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("connection: " + i.__name__, i())
+        print_result("hostlookup: " + i.__name__, i())
 
 
 def test(test_name, init_data, data, expected_certitudes, expected_certitudes_size):
