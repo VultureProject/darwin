@@ -5,6 +5,7 @@ from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
 from core.utils import DEFAULT_PATH
+from manager_socket.utils import RESP_MON_STATUS_RUNNING
 from darwin import DarwinApi
 
 
@@ -141,9 +142,9 @@ def check_socket_monitor_connection():
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.connect(filter.monitor)
-            data = s.recv(4096)
+            data = s.recv(4096).decode()
             s.close()
-        if data != b'{}\x00':
+        if RESP_MON_STATUS_RUNNING not in data:
             logging.error("check_socket_monitor_connection: Wrong response; got {}".format(data))
             return False
     except Exception as e:

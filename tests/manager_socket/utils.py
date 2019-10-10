@@ -147,8 +147,8 @@ REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata
 # Responses
 
 RESP_EMPTY     = '{}'
-RESP_ONE       = '{"logs_1": {}}'
-RESP_THREE     = '{"logs_1": {}, "logs_2": {}, "logs_3": {}}'
+RESP_ONE       = '{"logs_1": {"status": "running"}}'
+RESP_THREE     = '{"logs_1": {"status": "running"}, "logs_2": {"status": "running"}, "logs_3": {"status": "running"}}'
 RESP_STATUS_OK = '{"status": "OK"}'
 RESP_STATUS_KO_GEN = '{"status": "KO"'
 RESP_STATUS_KO_NO_PID = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "PID file not accessible"}]}'
@@ -162,3 +162,7 @@ RESP_STATUS_KO_LIST = [ RESP_STATUS_KO_NO_PID,
                         RESP_STATUS_KO_NO_MON_SOCK,
                         RESP_STATUS_KO_NO_MON_SOCK_NREADY]
 RESP_FILTER_NOT_EXISTING = '{"status": "KO", "errors": [{"filter": "tototititata", "error": "Filter not existing"}]}'
+
+RESP_MON_STATUS_STARTING = '"status: "starting"'
+RESP_MON_STATUS_CONFIGURING = '"status": "configuring"'
+RESP_MON_STATUS_RUNNING = '"status": "running"'

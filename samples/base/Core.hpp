@@ -9,6 +9,7 @@
 
 #include <thread>
 #include "Monitor.hpp"
+#include <boost/atomic.hpp>
 
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
@@ -76,6 +77,8 @@ namespace darwin {
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
+        boost::atomic<FilterStatusEnum> _filter_status;
+
 
     public:
         // TODO Maybe a getter is a better idea...
