@@ -79,17 +79,24 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     db = configuration["database"].GetString();
     std::ifstream file(db.c_str());
+    std::string host;
 
-    while (std::getline(file, line)) {
-        std::istringstream iss(line);
-        std::string host ;
-        if (!(iss >> host)) {
-            DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Cannot open host database");
-            return false;
-        }
-        _database.insert({host,0});
+    if (!file) {
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Cannot open host database");
+        return false;
     }
 
+    while (!darwin::files_utils::GetLineSafe(file, host).eof()) {
+        if(file.fail() or file.bad()){
+            DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Error when reading host database");
+            return false;
+        }
+        if (!host.empty()){
+            _database.insert({host,0});
+        }
+    }
+
+    file.close();
     return true;
 }
 
@@ -98,7 +105,4 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<HostLookupTask>(socket, manager, _cache, _database));
-}
-
-Generator::~Generator() {
 }
