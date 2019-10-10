@@ -71,7 +71,7 @@ def test(test_name, init_data, data, expected_certitudes, expected_certitudes_si
 
     if certitudes is None:
         ret = False
-        logging.error("Hostlookup Test : {} : No certitude list found in result".forma(test_name))
+        logging.error("Hostlookup Test : {} : No certitude list found in result".format(test_name))
 
 
     if len(certitudes) != expected_certitudes_size:
