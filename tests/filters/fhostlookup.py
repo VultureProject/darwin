@@ -37,6 +37,7 @@ def run():
         multiple_trusted_host_test,
         multiple_untrusted_host_test,
         multiple_host_test,
+        init_data_test
     ]
 
     for i in tests:
@@ -177,3 +178,28 @@ def multiple_host_test():
             ["good_host_1"],
         ],
         [0,0,100,0,100],5)
+
+"""
+We give database file with differents endlines, 
+blank lines, blank spaces and tabs
+"""
+def init_data_test():
+    return test(
+        "init_data_test",
+        [
+         "good_host_1\r",
+         "\tgood_host_2",
+         "  good_host_3  ",
+         "  ",
+         "",
+         "good_host_4",
+         ""
+         ],
+        [
+            ["good_host_1"],
+            ["good_host_2"],
+            ["good_host_3"],
+            ["good_host_4"],
+            [""],
+        ],
+        [100,100,100,100,0],5)
