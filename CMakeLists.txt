@@ -111,6 +111,41 @@ set(
 #   Filters CMake Calls   #
 ###########################
 
+###########################
+#   YARA SCANNER FILTER   #
+###########################
+
+set(
+        YARA_SCAN_SOURCES
+        samples/fyarascan/Generator.cpp samples/fyarascan/Generator.hpp
+        samples/fyarascan/YaraScanTask.cpp samples/fyarascan/YaraScanTask.hpp
+        toolkit/Yara.cpp toolkit/Yara.hpp
+)
+
+set(
+        YARA_SCAN_GENERATOR_DIRECTORY
+        samples/fyarascan/
+)
+
+set(
+        YARA_SCAN_LIBS
+        yara
+)
+
+set(
+        YARA_SCAN_INC
+        ${LIBYARA_INCLUDE_DIRS}
+)
+
+set(
+        YARA_SCAN_LIBS_DIRS
+        ${LIBYARA_LIBRARY_DIRS}
+)
+
+###########################
+#  !YARA SCANNER FILTER   #
+###########################
+
 message("Generating CMake files for the filters: ${FILTERS}")
 
 if(LOGS IN_LIST FILTERS)
@@ -151,4 +186,8 @@ endif()
 
 if(SOFA IN_LIST FILTERS)
 include(fsofa)
+endif()
+
+if(YARA IN_LIST FILTERS)
+include(fyara)
 endif()
