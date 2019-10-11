@@ -72,6 +72,7 @@ set(
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
         toolkit/Time.cpp toolkit/Time.hpp
+        toolkit/Files.cpp toolkit/Files.hpp
 )
 
 find_package(Boost)
