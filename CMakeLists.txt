@@ -72,6 +72,7 @@ set(
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
         toolkit/Time.cpp toolkit/Time.hpp
+        toolkit/Base64.h
 )
 
 find_package(Boost)
@@ -546,6 +547,41 @@ set(
 #  !CONTENT INSPECTION FILTER   #
 #################################
 
+###########################
+#   YARA SCANNER FILTER   #
+###########################
+
+set(
+        YARA_SCAN_SOURCES
+        samples/fyarascan/Generator.cpp samples/fyarascan/Generator.hpp
+        samples/fyarascan/YaraScanTask.cpp samples/fyarascan/YaraScanTask.hpp
+        toolkit/Yara.cpp toolkit/Yara.hpp
+)
+
+set(
+        YARA_SCAN_GENERATOR_DIRECTORY
+        samples/fyarascan/
+)
+
+set(
+        YARA_SCAN_LIBS
+        yara
+)
+
+set(
+        YARA_SCAN_INC
+        ${LIBYARA_INCLUDE_DIRS}
+)
+
+set(
+        YARA_SCAN_LIBS_DIRS
+        ${LIBYARA_LIBRARY_DIRS}
+)
+
+###########################
+#  !YARA SCANNER FILTER   #
+###########################
+
 if (NOT DEFINED FILTER)
     set(
         FILTERS
@@ -560,6 +596,7 @@ if (NOT DEFINED FILTER)
         LOGS
         END
         CONTENT_INSPECTION
+        YARA_SCAN
     )
 else (NOT DEFINED FILTER)
     set(
