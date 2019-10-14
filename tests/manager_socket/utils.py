@@ -147,9 +147,9 @@ REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata
 # Responses
 
 RESP_EMPTY     = '{}'
-RESP_LOGS_1 = '"logs_1":'
-RESP_LOGS_2 = '"logs_2":'
-RESP_LOGS_3 = '"logs_3":'
+RESP_LOGS_1 = '"logs_1": {}'
+RESP_LOGS_2 = '"logs_2": {}'
+RESP_LOGS_3 = '"logs_3": {}'
 RESP_STATUS_OK = '"status": "OK"'
 RESP_STATUS_KO = '"status": "KO"'
 RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
