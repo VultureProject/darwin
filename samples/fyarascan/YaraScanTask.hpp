@@ -13,7 +13,7 @@
 #include "../toolkit/Yara.hpp"
 #include "Session.hpp"
 
-#define DARWIN_FILTER_YARA_SCAN 0x00000000
+#define DARWIN_FILTER_YARA_SCAN 0x79617261
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -47,7 +47,7 @@ private:
     bool ParseBody() override;
 
 private:
-    std::vector<unsigned char> _current_chunk;
-    std::vector<std::vector<unsigned char>> _chunks;
+    std::string _current_chunk;
+    std::vector<std::string> _chunks;
     std::shared_ptr<darwin::toolkit::YaraEngine> _yaraEngine = nullptr;
 };

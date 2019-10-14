@@ -31,7 +31,7 @@ YaraScanTask::YaraScanTask(boost::asio::local::stream_protocol::socket& socket,
 }
 
 xxh::hash64_t YaraScanTask::GenerateHash() {
-    return xxh::xxhash<64>(std::string(_current_chunk.begin(), _current_chunk.end()));
+    return xxh::xxhash<64>(_current_chunk);
 }
 
 long YaraScanTask::GetFilterCode() noexcept {
@@ -42,11 +42,23 @@ void YaraScanTask::operator()() {
     DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    for (const std::vector<unsigned char> &chunk : _chunks) {
+    for (const std::string &chunk : _chunks) {
         SetStartingTime();
         _current_chunk = chunk;
         unsigned int certitude;
         xxh::hash64_t hash;
+
+        std::string decoded;
+        std::string error = darwin::toolkit::Base64::Decode(_current_chunk, decoded);
+        if(!error.empty()) {
+            DARWIN_LOG_ERROR("YaraScanTask:: wrong format error -> " + error);
+            _certitudes.push_back(101);
+            continue;
+        }
+
+        const unsigned char* raw_decoded = reinterpret_cast<const unsigned char *>(decoded.c_str());
+        std::vector<unsigned char> data(raw_decoded, raw_decoded + decoded.size());
+
 
         if (_is_cache) {
             hash = GenerateHash();
@@ -65,7 +77,7 @@ void YaraScanTask::operator()() {
             }
         }
 
-        certitude = _yaraEngine->ScanData(_current_chunk);
+        certitude = _yaraEngine->ScanData(data);
 
         if(certitude < 0) {
             DARWIN_LOG_WARNING("YaraScanTask:: could not scan data, ignoring chunk");
@@ -93,7 +105,7 @@ void YaraScanTask::operator()() {
     }
 
     Workflow();
-    _chunks = std::vector<std::vector<unsigned char>>();
+    _chunks = std::vector<std::string>();
 }
 
 void YaraScanTask::Workflow() {
@@ -141,16 +153,10 @@ bool YaraScanTask::ParseBody() {
                 return false;
             }
 
-            std::string data(request.GetString());
-            
-            std::string decoded("");
-            darwin::toolkit::Base64::Decode(data, decoded);
-            const unsigned char* raw_decoded = reinterpret_cast<const unsigned char *>(decoded.c_str());
-            std::vector<unsigned char> chunk(raw_decoded, raw_decoded + decoded.size());
-            _chunks.push_back(chunk);
+            _chunks.push_back(request.GetString());
         }
 
-        DARWIN_LOG_INFO("YaraScanTask:: ParseBody: finished parsing " + std::to_string(_chunks.size()) + " input(s)");
+        DARWIN_LOG_INFO("YaraScanTask:: ParseBody: got " + std::to_string(_chunks.size()) + " input(s)");
     } catch (...) {
         DARWIN_LOG_CRITICAL("YaraScanTask:: ParseBody: Unknown Error");
         return false;
