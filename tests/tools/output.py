@@ -10,6 +10,6 @@ def print_result(name, function):
     print(name + "... ", end='', flush=True)
     result = function()
     if result is True:
-        print("\t\33[32m OK \33[0m")
+        print("\33[32m OK \33[0m")
     else:
-        print("\t\033[91m ERROR \33[0m")
+        print("\033[91m ERROR \33[0m")
