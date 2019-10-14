@@ -10,7 +10,7 @@
 #include "Logger.hpp"
 
 namespace darwin {
-    Monitor::Monitor(std::string const& unix_socket_path, boost::atomic<FilterStatusEnum>& status)
+    Monitor::Monitor(std::string const& unix_socket_path, std::atomic<FilterStatusEnum>& status)
             : _socket_path{unix_socket_path}, _io_context{1},
               _signals{_io_context},
               _acceptor{_io_context,
