@@ -94,7 +94,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("logs: " + i.__name__, i())
+        print_result("logs: " + i.__name__, i)
 
 
 def single_log_to_file():

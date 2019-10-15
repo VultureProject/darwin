@@ -4,12 +4,11 @@ from os import kill, remove, access, F_OK
 from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
-from core.utils import DEFAULT_PATH
-from manager_socket.utils import RESP_MON_STATUS_RUNNING
+from core.utils import DEFAULT_PATH, FLOGS_CONFIG, RESP_MON_STATUS_RUNNING
 from darwin import DarwinApi
 
 
-FLOGS_CONFIG = '{"log_file_path": "/tmp/logs_test.log"}'
+
 
 def run():
     tests = [
