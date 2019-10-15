@@ -147,18 +147,14 @@ REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata
 # Responses
 
 RESP_EMPTY     = '{}'
-RESP_ONE       = '{"logs_1": {}}'
-RESP_THREE     = '{"logs_1": {}, "logs_2": {}, "logs_3": {}}'
-RESP_STATUS_OK = '{"status": "OK"}'
-RESP_STATUS_KO_GEN = '{"status": "KO"'
-RESP_STATUS_KO_NO_PID = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "PID file not accessible"}]}'
-RESP_STATUS_KO_NO_RUN = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Process not running"}]}'
-RESP_STATUS_KO_NO_MAIN_SOCK = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Main socket not created"}]}'
-RESP_STATUS_KO_NO_MON_SOCK = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Monitoring socket not created"}]}'
-RESP_STATUS_KO_NO_MON_SOCK_NREADY = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Monitoring socket not ready"}]}'
-RESP_STATUS_KO_LIST = [ RESP_STATUS_KO_NO_PID,
-                        RESP_STATUS_KO_NO_RUN,
-                        RESP_STATUS_KO_NO_MAIN_SOCK,
-                        RESP_STATUS_KO_NO_MON_SOCK,
-                        RESP_STATUS_KO_NO_MON_SOCK_NREADY]
-RESP_FILTER_NOT_EXISTING = '{"status": "KO", "errors": [{"filter": "tototititata", "error": "Filter not existing"}]}'
+RESP_LOGS_1 = '"logs_1": {}'
+RESP_LOGS_2 = '"logs_2": {}'
+RESP_LOGS_3 = '"logs_3": {}'
+RESP_STATUS_OK = '"status": "OK"'
+RESP_STATUS_KO = '"status": "KO"'
+RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
+RESP_ERROR_NO_RUN = '"error": "Process not running"'
+RESP_ERROR_NO_MAIN_SOCK = '"error": "Main socket not created"'
+RESP_ERROR_NO_MON_SOCK = '"error": "Monitoring socket not created"'
+RESP_ERROR_NO_MON_SOCK_NOT_READY = '"error": "Monitoring socket not ready"'
+RESP_ERROR_FILTER_NOT_EXISTING = '"error": "Filter not existing"'

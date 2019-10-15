@@ -40,7 +40,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("connection: " + i.__name__, i())
+        print_result("connection: " + i.__name__, i)
 
 
 """

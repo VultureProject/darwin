@@ -23,7 +23,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("Basic tests: " + i.__name__, i())
+        print_result("Basic tests: " + i.__name__, i)
 
 
 def check_start_stop():
