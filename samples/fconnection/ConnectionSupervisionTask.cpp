@@ -158,6 +158,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     if (!_redis_manager->REDISQuery(&reply, arguments)) {
         DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong while querying Redis");
         freeReplyObject(reply);
+        reply = nullptr;
         return 101;
     }
 
@@ -182,10 +183,13 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         }
         arguments.emplace_back("0");
 
+        freeReplyObject(reply);
+        reply = nullptr;
         if (!_redis_manager->REDISQuery(&reply, arguments)) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong "
                              "while adding a new connection to Redis");
             freeReplyObject(reply);
+            reply = nullptr;
             return 101;
         }
     }

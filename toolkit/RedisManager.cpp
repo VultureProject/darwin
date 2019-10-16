@@ -48,6 +48,10 @@ namespace darwin {
 
             if(!ConnectToRedisMaster()){
                 DARWIN_LOG_CRITICAL("RedisManager::ConnectToRedis:: Configure:: Cannot connect to Redis master");
+                if (_redis_connection) {
+                    redisFree(_redis_connection);
+                    _redis_connection = nullptr;
+                }
                 return false;
             }
 
@@ -94,6 +98,7 @@ namespace darwin {
             if (_redis_connection == nullptr || _redis_connection->err) {
                 if (_redis_connection) {
                     redisFree(_redis_connection);
+                    _redis_connection = nullptr;
                 }
                 DARWIN_LOG_CRITICAL("RedisManager::ConnectWithIp:: "
                                  "Error when trying to connect");
@@ -238,7 +243,7 @@ namespace darwin {
             }
 
             int arguments_number = (int) arguments.size();
-            std::vector<const char *> c_arguments;
+            std::vector<const char *> c_arguments{};
 
             c_arguments.reserve(arguments.size());
             for (const auto &argument : arguments) {
@@ -262,6 +267,8 @@ namespace darwin {
                                 return false;
                             }
                             retry++;
+                            freeReplyObject(*reply_ptr);
+                            *reply_ptr = nullptr;
                             continue;
                         } else {
                             // Else we stop it
@@ -285,6 +292,9 @@ namespace darwin {
                 *reply_ptr = nullptr;
                 return false;
             }
+
+            freeReplyObject(*reply_ptr);
+            *reply_ptr = nullptr;
             return false;
         }
 

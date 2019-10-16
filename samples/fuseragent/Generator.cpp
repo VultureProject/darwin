@@ -32,7 +32,7 @@ bool Generator::Configure(const std::string &configuration_file_path, const std:
 bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("UserAgent:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("UserAgent:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
@@ -66,6 +66,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     std::string token_map_path;
     std::string model_path;
+
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
 
     if (!configuration.HasMember("token_map_path")) {
         DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: \"token_map_path\"");

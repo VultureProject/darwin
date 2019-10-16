@@ -19,29 +19,34 @@ namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0}, daemon{true} {}
+              _pidPath{}, _nbThread{0}, daemon{true}, _filter_status{FilterStatusEnum::starting} {}
 
     int Core::run() {
         DARWIN_LOGGER;
         int ret{0};
 
-       Generator gen{};
-        if (!gen.Configure(_modConfigPath, _cacheSize)) {
-            DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
-            return 1;
-        }
-        DARWIN_LOG_DEBUG("Core::run:: Configured generator");
-
         try {
-            Monitor monitor{_monSocketPath};
+            Monitor monitor{_monSocketPath, _filter_status};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
+
+            _filter_status.store(FilterStatusEnum::configuring);
+            Generator gen{};
+            if (!gen.Configure(_modConfigPath, _cacheSize)) {
+                DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
+                raise(SIGTERM);
+                t.join();
+                return 1;
+            }
+            DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
             try {
                 Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
+                _filter_status.store(FilterStatusEnum::running);
                 server.Run();
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
                 ret = 1;
+                raise(SIGTERM);
             }
 
             if (t.joinable())
@@ -100,9 +105,9 @@ namespace darwin {
 
     void Core::Usage() {
         std::cout << "Usage: ./darwin filter_name socket_path config_file" <<
-                  " monitoring_socket_path pid_file output next_filter_socket_path max_thread "
+                  " monitoring_socket_path pid_file output next_filter_socket_path nb_thread "
                   <<
-                  "min_spare_thread max_spare_thread [OPTIONS]\n";
+                  "cache_size threshold [OPTIONS]\n";
         std::cout
                 << "  filter_name\tSpecify the name of this filter in the logs\n";
         std::cout

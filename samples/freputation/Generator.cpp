@@ -61,6 +61,11 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("Reputation:: Generator:: Loading classifier...");
     std::string db;
 
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("Reputation:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     if (!configuration.HasMember("mmdb_database")) {
         DARWIN_LOG_CRITICAL("Reputation:: Generator:: Missing parameter: \"mmdb_database\"");
         return false;

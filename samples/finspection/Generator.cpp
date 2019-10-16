@@ -43,6 +43,11 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
     config.Parse(content.c_str());
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: file parsed");
 
+    if (!config.IsObject()) {
+        DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
+
     char str[2048];
     if(config.HasMember("maxConnections")) {
         if(config["maxConnections"].IsUint()) {
@@ -51,7 +56,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
             DARWIN_LOG_DEBUG(str);
         }
         else {
-            DARWIN_LOG_ERROR("'maxConnections' parameter must be a number");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'maxConnections' parameter must be a number");
         }
     }
     if(config.HasMember("yaraRuleFile")) {
@@ -63,7 +68,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
                 fclose(yaraRuleFile);
 
                 if(yaraCompileRules()) {
-                    DARWIN_LOG_ERROR("error while compiling yara rules");
+                    DARWIN_LOG_ERROR("ContentInspection:: Generator:: error while compiling yara rules");
                     return false;
                 }
                 std::snprintf(str, 2048, "yaraRuleFile set to '%s'", config["yaraRuleFile"].GetString());
@@ -71,7 +76,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
             }
         }
         else {
-            DARWIN_LOG_ERROR("'yaraRuleFile' parameter must be a string");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraRuleFile' parameter must be a string");
         }
     }
     if(config.HasMember("yaraScanType")) {
@@ -80,19 +85,19 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
 
             if(strcmp(scanType, "packet") == 0) {
                 _configurations.yaraCnf->scanType = SCAN_PACKET_ONLY;
-                DARWIN_LOG_INFO("set yaraScanType to 'packet'");
+                DARWIN_LOG_INFO("ContentInspection:: Generator:: set yaraScanType to 'packet'");
             }
             else if(strcmp(scanType, "stream") == 0) {
                 _configurations.yaraCnf->scanType = SCAN_STREAM;
-                DARWIN_LOG_INFO("set yaraScanType to 'stream'");
+                DARWIN_LOG_INFO("ContentInspection:: Generator:: set yaraScanType to 'stream'");
             }
             else {
-                DARWIN_LOG_ERROR("unhandled parameter, valid YARA scan types are 'packet' and 'stream'");
+                DARWIN_LOG_ERROR("ContentInspection:: Generator:: unhandled parameter, valid YARA scan types are 'packet' and 'stream'");
                 return false;
             }
         }
         else {
-            DARWIN_LOG_ERROR("'yaraScanType' parameter must be a string");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraScanType' parameter must be a string");
         }
     }
     if(config.HasMember("yaraScanMaxSize")) {
@@ -104,7 +109,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
             DARWIN_LOG_DEBUG(str);
         }
         else {
-            DARWIN_LOG_ERROR("'yaraScanMaxSize' parameter must be a number");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraScanMaxSize' parameter must be a number");
         }
     }
     if(config.HasMember("streamStoreFolder")) {
@@ -115,7 +120,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
             DARWIN_LOG_DEBUG(str);
         }
         else {
-            DARWIN_LOG_ERROR("'yaraScanMaxSize' parameter must be a string");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraScanMaxSize' parameter must be a string");
         }
     }
     if(config.HasMember("maxMemoryUsage")) {
@@ -125,25 +130,25 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
             DARWIN_LOG_DEBUG(str);
         }
         else {
-            DARWIN_LOG_ERROR("'maxMemoryUsage' parameter must be a number");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'maxMemoryUsage' parameter must be a number");
         }
     }
 
     if(_configurations.streamsCnf->streamStoreFolder) {
         if(createFolder(_configurations.streamsCnf->streamStoreFolder) != 0) {
-            DARWIN_LOG_ERROR("could not create folder to dump files");
+            DARWIN_LOG_ERROR("ContentInspection:: Generator:: could not create folder to dump files");
             return false;
         }
     }
 
     if(!_configurations.streamsCnf->streamStoreFolder && _configurations.yaraCnf->scanType == SCAN_NONE) {
-        DARWIN_LOG_ERROR("missing parameters: at least 'streamStoreParameter' or 'yaraScanType' are necessary "
+        DARWIN_LOG_ERROR("ContentInspection:: Generator:: missing parameters: at least 'streamStoreParameter' or 'yaraScanType' are necessary "
                          "to launch this filter");
         return false;
     }
 
     if(_configurations.yaraCnf->scanType && !_configurations.yaraCnf->ruleFilename) {
-        DARWIN_LOG_ERROR("missing parameters: if 'yaraScanType' is given, you must provide a rule file with "
+        DARWIN_LOG_ERROR("ContentInspection:: Generator:: missing parameters: if 'yaraScanType' is given, you must provide a rule file with "
                          "the 'yaraRuleFile' parameter");
         return false;
     }

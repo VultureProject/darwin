@@ -2,6 +2,7 @@ import sys
 import os
 import socket
 import subprocess
+import logging
 from time import sleep
 from conf import MANAGEMENT_SOCKET_PATH, DEFAULT_FILTER_PATH, FILTER_SOCKETS_DIR, FILTER_PIDS_DIR
 from os import access, F_OK
@@ -14,28 +15,32 @@ def requests(request):
     try:
         sock.connect(MANAGEMENT_SOCKET_PATH)
     except socket.error as msg:
-        print(msg, file=sys.stderr)
+        logging.error(msg)
         return None
     try:
         sock.sendall(bytes(request))
     except Exception as e:
-        print("Error: Could not send the request: " + str(e), file=sys.stderr)
+        logging.error("manager_socket.utils.requests: Could not send the request: " + str(e))
         return None
 
     try:
         response = sock.recv(4096).decode()
     except Exception as e:
-        print("Error: could not get the response: " + str(e), file=sys.stderr)
+        logging.error("manager_socket.utils.requests: Could not get the response: " + str(e))
         return None
 
     return response
 
 def check_pid_file(file):
-    if access(file, F_OK):
+    try:
         with open(file, 'r') as f:
-            if f.read():
+            if f.readline():
                 return True
-    print("Error: PID file check failed", file=sys.stderr)
+    except Exception as e:
+        logging.error("manager_socket.utils.check_pid_file: PID file check failed: {}".format(e))
+        return False
+
+    logging.error("manager_socket.utils.check_pid_file: PID file check failed: File seems empty")
     return False
 
 def check_socket_file(socket_path):
@@ -45,12 +50,12 @@ def check_socket_file(socket_path):
         try:
             sock.connect(socket_path)
         except socket.error as e:
-            print(e, file=sys.stderr)
+            logging.error(e)
             return False
         sock.close()
         return True
 
-    print("Error: could not access socket {}".format(socket_path), file=sys.stderr)
+    logging.error("manager_socket.utils.check_socket_file: could not access socket {}".format(socket_path))
     return False
 
 def check_filter_files(filter_name, extension=".1"):
@@ -142,18 +147,15 @@ REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata
 # Responses
 
 RESP_EMPTY     = '{}'
-RESP_ONE       = '{"logs_1": {}}'
-RESP_THREE     = '{"logs_1": {}, "logs_2": {}, "logs_3": {}}'
-RESP_STATUS_OK = '{"status": "OK"}'
-RESP_STATUS_KO_GEN = '{"status": "KO"'
-RESP_STATUS_KO_NO_PID = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "PID file not accessible"}]}'
-RESP_STATUS_KO_NO_RUN = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Process not running"}]}'
-RESP_STATUS_KO_NO_MAIN_SOCK = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Main socket not created"}]}'
-RESP_STATUS_KO_NO_MON_SOCK = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Monitoring socket not created"}]}'
-RESP_STATUS_KO_NO_MON_SOCK_NREADY = '{"status": "KO", "errors": [{"filter": "logs_1", "error": "Monitoring socket not ready"}]}'
-RESP_STATUS_KO_LIST = [ RESP_STATUS_KO_NO_PID,
-                        RESP_STATUS_KO_NO_RUN,
-                        RESP_STATUS_KO_NO_MAIN_SOCK,
-                        RESP_STATUS_KO_NO_MON_SOCK,
-                        RESP_STATUS_KO_NO_MON_SOCK_NREADY]
-RESP_FILTER_NOT_EXISTING = '{"status": "KO", "errors": [{"filter": "tototititata", "error": "Filter not existing"}]}'
+
+RESP_LOGS_1 = '"logs_1": {"status": "running"}'
+RESP_LOGS_2 = '"logs_2": {"status": "running"}'
+RESP_LOGS_3 = '"logs_3": {"status": "running"}'
+RESP_STATUS_OK = '"status": "OK"'
+RESP_STATUS_KO = '"status": "KO"'
+RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
+RESP_ERROR_NO_RUN = '"error": "Process not running"'
+RESP_ERROR_NO_MAIN_SOCK = '"error": "Main socket not created"'
+RESP_ERROR_NO_MON_SOCK = '"error": "Monitoring socket not created"'
+RESP_ERROR_NO_MON_SOCK_NOT_READY = '"error": "Monitoring socket not ready"'
+RESP_ERROR_FILTER_NOT_EXISTING = '"error": "Filter not existing"'

@@ -17,40 +17,40 @@
 
 bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Configuring...");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Configuring...");
 
     if (!SetUpClassifier(configFile)) return false;
 
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
     if (cache_size > 0) {
         _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
     }
 
     _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(_redis_socket_path);
     if(!_redis_manager->ConnectToRedis(true)){
-        DARWIN_LOG_ERROR("Anomaly:: Generator:: Error when connecting to Redis");
+        DARWIN_LOG_ERROR("TAnomaly:: Generator:: Error when connecting to Redis");
         return false;
     }
 
     _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_redis_manager, _log_file_path, _redis_list_name);
     if(!_anomaly_thread_manager->Start()) {
-        DARWIN_LOG_DEBUG("Anomaly:: Generator:: Error when starting thread");
+        DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Error when starting thread");
     }
 
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Configured");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Configured");
     return true;
 }
 
 bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Setting up classifier...");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
 
     if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("Anomaly:: Generator:: Could not open the configuration file");
+        DARWIN_LOG_ERROR("TAnomaly:: Generator:: Could not open the configuration file");
 
         return false;
     }
@@ -61,7 +61,7 @@ bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     rapidjson::Document configuration;
     configuration.Parse(raw_configuration.c_str());
 
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Reading configuration...");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Reading configuration...");
 
     if (!LoadClassifier(configuration)) {
         return false;
@@ -74,15 +74,20 @@ bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
 
 bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Anomaly:: Generator:: Loading classifier...");
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading classifier...");
+
+    if (!configuration.IsObject()) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Configuration is not a JSON object");
+        return false;
+    }
 
     if (!configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("Anomaly:: Generator:: Missing parameter: \"redis_socket_path\"");
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Missing parameter: \"redis_socket_path\"");
         return false;
     }
 
     if (!configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Anomaly:: Generator:: \"redis_socket_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"redis_socket_path\" needs to be a string");
         return false;
     }
 
@@ -91,7 +96,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     if (configuration.HasMember("redis_list_name")) {
 
         if (!configuration["redis_list_name"].IsString()) {
-            DARWIN_LOG_CRITICAL("Anomaly:: Generator:: \"redis_list_name\" needs to be a string");
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"redis_list_name\" needs to be a string");
             return false;
         }
 
@@ -99,12 +104,12 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     }
 
     if (!configuration.HasMember("log_file_path")) {
-        DARWIN_LOG_CRITICAL("Anomaly:: Generator:: Missing parameter: \"log_file_path\"");
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Missing parameter: \"log_file_path\"");
         return false;
     }
 
     if (!configuration["log_file_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Anomaly:: Generator:: \"log_file_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"log_file_path\" needs to be a string");
         return false;
     }
 
