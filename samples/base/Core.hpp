@@ -8,8 +8,9 @@
 #pragma once
 
 #include <thread>
-#include "Monitor.hpp"
 #include <atomic>
+#include "Monitor.hpp"
+#include "ThreadGroup.hpp"
 
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
@@ -78,6 +79,7 @@ namespace darwin {
         std::size_t _cacheSize;
         std::size_t _threshold;
         std::atomic<FilterStatusEnum> _filter_status;
+        ThreadGroup _threadpool;
 
 
     public:

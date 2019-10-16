@@ -19,7 +19,9 @@ namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0}, daemon{true}, _filter_status{FilterStatusEnum::starting} {}
+              _pidPath{}, _nbThread{0}, daemon{true},
+              _filter_status{FilterStatusEnum::starting},
+              _threadpool{} {}
 
     int Core::run() {
         DARWIN_LOGGER;
@@ -40,15 +42,21 @@ namespace darwin {
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
             try {
-                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
+                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
                 _filter_status.store(FilterStatusEnum::running);
-                server.Run();
+
+                for (std::size_t i = 0; i < _nbThread; ++i) {
+                    _threadpool.CreateThread(
+                        std::bind(&Server::Run, server)
+                    );
+                }
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
                 ret = 1;
                 raise(SIGTERM);
             }
 
+            _threadpool.JoinAll();
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {

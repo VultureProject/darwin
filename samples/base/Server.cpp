@@ -17,11 +17,10 @@ namespace darwin {
     Server::Server(std::string const& socket_path,
                    std::string const& output,
                    std::string const& next_filter_socket,
-                   std::size_t nb_threads,
                    std::size_t threshold,
                    Generator& generator)
             : _socket_path{socket_path}, _socket_next{next_filter_socket}, _output{output},
-              _io_context{(int)nb_threads}, _threshold{threshold}, _signals{_io_context},
+              _io_context{}, _threshold{threshold}, _signals{_io_context},
               _acceptor{_io_context,
                         boost::asio::local::stream_protocol::endpoint(
                                 socket_path)},
@@ -91,13 +90,13 @@ namespace darwin {
         }
 
         if (!e) {
+            Accept();
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
             auto task = _generator.CreateTask(_new_connection, _manager);
             task->SetNextFilterSocketPath(_socket_next);
             task->SetOutputType(_output);
             task->SetThreshold(_threshold);
             _manager.Start(task);
-            Accept();
         } else {
             DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
         }
