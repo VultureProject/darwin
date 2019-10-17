@@ -144,7 +144,22 @@ bool Generator::LoadTokenMap(const std::string &token_map_path) {
 
     while (!token_map_stream.eof() && std::getline(token_map_stream, current_line)) {
         boost::tokenizer<boost::char_separator<char>> tokens(current_line, separator);
-        _token_map[*tokens.begin()] = (unsigned int)std::stoi(*(++tokens.begin()));
+
+        boost::tokenizer<boost::char_separator<char>>::iterator key(tokens.begin());
+        if (key==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when parsing token map");
+            token_map_stream.close();
+            return false;
+        }
+
+        boost::tokenizer<boost::char_separator<char>>::iterator value(++tokens.begin());
+        if (value==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when parsing token map");
+            token_map_stream.close();
+            return false;
+        }
+
+        _token_map[*key] = (unsigned int)std::stoi(*value);
     }
 
     token_map_stream.close();
