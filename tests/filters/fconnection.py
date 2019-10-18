@@ -56,7 +56,9 @@ def new_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        connection_filter.clean_files()
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -115,7 +117,9 @@ def known_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        connection_filter.clean_files()
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -173,7 +177,9 @@ def new_connection_to_known_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        connection_filter.clean_files()
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,

@@ -54,7 +54,9 @@ def test(test_name, init_data, data, expected_certitudes, expected_certitudes_si
     hostlookup_filter.configure()
 
     # START FILTER
-    hostlookup_filter.valgrind_start()
+    if not hostlookup_filter.valgrind_start():
+        hostlookup_filter.clean_files()
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=hostlookup_filter.socket,
