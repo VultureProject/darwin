@@ -66,6 +66,8 @@ set(
         samples/base/Server.cpp samples/base/Server.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
         samples/base/Session.cpp samples/base/Session.hpp
+        samples/base/AGenerator.cpp samples/base/AGenerator.hpp
+        samples/base/ThreadGroup.cpp samples/base/ThreadGroup.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp
         toolkit/Validators.cpp toolkit/Validators.hpp

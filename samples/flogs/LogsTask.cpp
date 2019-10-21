@@ -29,6 +29,7 @@ LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
         : Session{"logs", socket, manager, cache},
           _log{log}, _redis{redis},
           _log_file_path{log_file_path}, _log_file{log_file},
+          _file_mutex{},
           _redis_list_name{redis_list_name},
           _redis_manager{redis_manager}{}
 
@@ -80,23 +81,27 @@ bool LogsTask::WriteLogs() {
     unsigned int retry = RETRY;
     bool fail;
 
-    fail = !_log_file.is_open() or _log_file.fail();
-    while(retry and fail){
-        DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                        "will retry " + std::to_string(retry) + " times");
-        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
+    {
+        std::unique_lock<std::mutex> lck{_file_mutex};
+        
         fail = !_log_file.is_open() or _log_file.fail();
-        retry--;
-    }
+        while(retry and fail){
+            DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+                            "will retry " + std::to_string(retry) + " times");
+            _log_file.open(_log_file_path, std::ios::out | std::ios::app);
+            fail = !_log_file.is_open() or _log_file.fail();
+            retry--;
+        }
 
-    if(fail) {
-        DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                         "too many retry, "
-                         "may due to low space disk or wrong permission");
-        return false;
-    }
+        if(fail) {
+            DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+                            "too many retry, "
+                            "may due to low space disk or wrong permission");
+            return false;
+        }
 
-    _log_file << body << std::flush;
+        _log_file << body << std::flush;
+    }
 
     return true;
 }

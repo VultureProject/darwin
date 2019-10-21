@@ -46,6 +46,9 @@ namespace darwin {
         /// Start the server and the threads.
         void Run();
 
+        /// Clean the server's ressources (sessions, socket)
+        void Clean();
+
     private:
         /// Start async waiting for the stopping signals.
         void AwaitStop();

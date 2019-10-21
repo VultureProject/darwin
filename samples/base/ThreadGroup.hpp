@@ -28,7 +28,7 @@ namespace darwin {
 
         /// Destructor.
         /// If the threads were not joined, join all and free ressources.
-        ~ThreadGroup();
+        virtual ~ThreadGroup();
 
         // You cannot copy a ThreadGroup
         ThreadGroup(const ThreadGroup&) = delete;

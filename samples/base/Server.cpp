@@ -53,7 +53,16 @@ namespace darwin {
         // the I/O service object can execute the handler in a different thread.
         // Now, not only can operations outside of a process be executed concurrently,
         // but handlers within the process can be executed concurrently, too.
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Server::Run:: Running...");
         _io_context.run();
+    }
+
+    void Server::Clean() {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
+        _manager.StopAll();
+        unlink(_socket_path.c_str());
     }
 
     void Server::AwaitStop() {
@@ -71,8 +80,7 @@ namespace darwin {
 
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
-        _manager.StopAll();
-        unlink(_socket_path.c_str());
+        _io_context.stop();
     }
 
     void Server::Accept() {
@@ -90,13 +98,13 @@ namespace darwin {
         }
 
         if (!e) {
-            Accept();
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
             auto task = _generator.CreateTask(_new_connection, _manager);
             task->SetNextFilterSocketPath(_socket_next);
             task->SetOutputType(_output);
             task->SetThreshold(_threshold);
             _manager.Start(task);
+            Accept();
         } else {
             DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
         }
