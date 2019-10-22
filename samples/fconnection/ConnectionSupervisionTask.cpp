@@ -149,14 +149,14 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: Looking up '" +  connection  + "' in the Redis");
 
-    darwin::toolkit::RedisManager& instance = darwin::toolkit::RedisManager::GetInstance();
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     long long int result;
 
     std::vector<std::string> arguments{};
     arguments.emplace_back("EXISTS");
     arguments.emplace_back(connection);
 
-    if(instance.Query(arguments, result) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments, result) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Didn't get the expected response from Redis when looking for connection '" + connection + "'.");
         return 101;
     }
@@ -179,7 +179,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         }
         arguments.emplace_back("0");
 
-        if(instance.Query(arguments) == REDIS_REPLY_ERROR) {
+        if(redis.Query(arguments) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong "
                              "while adding a new connection to Redis");
             return 101;

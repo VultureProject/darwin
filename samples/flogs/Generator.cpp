@@ -75,8 +75,8 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Redis configuration...");
 
-    darwin::toolkit::RedisManager& instance = darwin::toolkit::RedisManager::GetInstance();
-    bool ret = instance.SetUnixPath(redis_socket_path);
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    bool ret = redis.SetUnixPath(redis_socket_path);
 
     return ret;
 }

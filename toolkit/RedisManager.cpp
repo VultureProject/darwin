@@ -129,35 +129,35 @@ namespace darwin {
         }
 
         std::shared_ptr<ThreadData> RedisManager::GetThreadInfo() {
-            thread_local static std::shared_ptr<ThreadData> instance = std::make_shared<ThreadData>();
-            instance->thread_id = std::this_thread::get_id();
+            thread_local static std::shared_ptr<ThreadData> threadData = std::make_shared<ThreadData>();
+            threadData->thread_id = std::this_thread::get_id();
             std::unique_lock<std::mutex> lock(_setMut);
-            auto result = _threadSet.insert(instance);
+            auto result = _threadSet.insert(threadData);
 
-            // if the instance was inserted, it was also created -> init a connection
+            // if the threadData was inserted, it was also created -> init a connection
             if(result.second) {
-                std::unique_lock<std::mutex> lock(instance->_masterContextMut);
+                std::unique_lock<std::mutex> lock(threadData->_masterContextMut);
                 bool masterSuccess = false;
                 if(not _masterUnixSocket.empty()) {
-                    masterSuccess = this->ConnectUnixSocket(_masterUnixSocket, &instance->_masterContext);
+                    masterSuccess = this->ConnectUnixSocket(_masterUnixSocket, &threadData->_masterContext);
                 }
                 else if(not _masterIp.empty()) {
-                    masterSuccess = this->ConnectAddress(_masterIp, _masterPort, &instance->_masterContext);
+                    masterSuccess = this->ConnectAddress(_masterIp, _masterPort, &threadData->_masterContext);
                 }
 
                 // If the master connection could not be established, tries to connect to slave straight away
                 if(not masterSuccess) {
-                    std::unique_lock<std::mutex> lock(instance->_slaveContextMut);
+                    std::unique_lock<std::mutex> lock(threadData->_slaveContextMut);
                     if(not _slaveUnixSocket.empty()) {
-                        this->ConnectUnixSocket(_slaveUnixSocket, &instance->_slaveContext);
+                        this->ConnectUnixSocket(_slaveUnixSocket, &threadData->_slaveContext);
                     }
                     else if(not _slaveIp.empty()) {
-                        this->ConnectAddress(_slaveIp, _slavePort, &instance->_slaveContext);
+                        this->ConnectAddress(_slaveIp, _slavePort, &threadData->_slaveContext);
                     }
                 }
             }
 
-            return instance;
+            return threadData;
         }
 
         bool RedisManager::ConnectUnixSocket(const std::string unixSocket, redisContext **context) {

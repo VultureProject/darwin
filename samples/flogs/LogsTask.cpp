@@ -84,7 +84,7 @@ bool LogsTask::WriteLogs() {
 
     {
         std::unique_lock<std::mutex> lck{_file_mutex};
-        
+
         fail = !_log_file.is_open() or _log_file.fail();
         while(retry and fail){
             DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
@@ -111,8 +111,8 @@ bool LogsTask::REDISAddLogs(const std::string& logs) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("LogsTask::REDISAdd:: Add logs in Redis...");
 
-    darwin::toolkit::RedisManager& instance = darwin::toolkit::RedisManager::GetInstance();
-    return instance.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) != REDIS_REPLY_ERROR;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    return redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) != REDIS_REPLY_ERROR;
 }
 
 bool LogsTask::ParseBody() {
