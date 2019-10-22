@@ -15,7 +15,7 @@
 #include "Session.hpp"
 #include "AGenerator.hpp"
 #include "../../toolkit/RedisManager.hpp"
-#include "../toolkit/rapidjson/document.h"
+#include "../../toolkit/rapidjson/document.h"
 
 class Generator: public AGenerator {
 public:

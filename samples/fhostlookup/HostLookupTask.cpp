@@ -20,8 +20,9 @@
 HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                               std::mutex& cache_mutex,
                                tsl::hopscotch_map<std::string, int>& db)
-        : Session{"host_lookup", socket, manager, cache}, _database{db} {
+        : Session{"host_lookup", socket, manager, cache, cache_mutex}, _database{db} {
     _is_cache = _cache != nullptr;
 }
 

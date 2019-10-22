@@ -93,7 +93,7 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<LogsTask>(socket, manager, _cache,
+            std::make_shared<LogsTask>(socket, manager, _cache, _cache_mutex,
                                        _log, _redis,
                                        _log_file_path, _log_file,
                                        _redis_list_name, _redis_manager));

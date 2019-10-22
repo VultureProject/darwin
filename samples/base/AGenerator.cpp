@@ -11,7 +11,6 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "AGenerator.hpp"
-#include "LogsTask.hpp"
 
 bool AGenerator::Configure(std::string const& configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;

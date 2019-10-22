@@ -26,6 +26,7 @@ public:
     explicit ConnectionSupervisionTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                                       std::mutex& cache_mutex,
                                        std::shared_ptr<darwin::toolkit::RedisManager> rm,
                                        unsigned int expire);
     ~ConnectionSupervisionTask() override = default;

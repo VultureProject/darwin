@@ -61,4 +61,5 @@ protected:
 
 protected:
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; //!< The cache for already processed request
+    std::mutex _cache_mutex;
 };
