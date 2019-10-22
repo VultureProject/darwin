@@ -10,12 +10,14 @@
 #include "Logger.hpp"
 
 namespace darwin {
-    Monitor::Monitor(std::string const& unix_socket_path)
+    Monitor::Monitor(std::string const& unix_socket_path, std::atomic<FilterStatusEnum>& status)
             : _socket_path{unix_socket_path}, _io_context{1},
               _signals{_io_context},
               _acceptor{_io_context,
                         boost::asio::local::stream_protocol::endpoint(
-                                _socket_path)}, _connection{_io_context} {
+                                _socket_path)},
+              _connection{_io_context},
+              _filter_status{status} {
         // Setting the stopping signals for the service
         _signals.add(SIGINT);
         _signals.add(SIGTERM);
@@ -88,7 +90,16 @@ namespace darwin {
     }
 
     void Monitor::SendMonitoringData() {
-        boost::asio::async_write(_connection, boost::asio::buffer("{}"),
+        std::string message("{\"status\": ");
+        switch(_filter_status) {
+            case FilterStatusEnum::starting : message.append("\"starting\"");   break;
+            case FilterStatusEnum::configuring : message.append("\"configuring\"");    break;
+            case FilterStatusEnum::running : message.append("\"running\""); break;
+            default: message.append("\"unknown\"");
+        }
+        message.append("}");
+
+        boost::asio::async_write(_connection, boost::asio::buffer(message),
                                  boost::bind(&Monitor::HandleSend, this,
                                              boost::asio::placeholders::error,
                                              boost::asio::placeholders::bytes_transferred));

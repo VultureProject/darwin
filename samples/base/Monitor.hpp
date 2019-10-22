@@ -9,6 +9,9 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <atomic>
+
+enum class FilterStatusEnum {starting, configuring, running};
 
 /// \namespace darwin
 namespace darwin {
@@ -23,7 +26,7 @@ namespace darwin {
         /// Constructor.
         ///
         /// \param unix_socket_path The path to the unix socket to connect to the management API.
-        explicit Monitor(std::string const& unix_socket_path);
+        explicit Monitor(std::string const& unix_socket_path, std::atomic<FilterStatusEnum>& status);
         ~Monitor() = default;
 
     public:
@@ -64,5 +67,6 @@ namespace darwin {
         boost::asio::signal_set _signals; //!< Set of the stopping signals.
         boost::asio::local::stream_protocol::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::local::stream_protocol::socket _connection; //!< Socket of the current connection.
+        std::atomic<FilterStatusEnum>& _filter_status; //!< Current status of the filter.
     };
 }

@@ -14,12 +14,13 @@
 #include "Session.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
+#include "../toolkit/Files.hpp"
 #include "../toolkit/rapidjson/document.h"
 
 class Generator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
     // The config file is the database here

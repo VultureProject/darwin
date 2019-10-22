@@ -73,6 +73,7 @@ set(
         toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
         toolkit/Time.cpp toolkit/Time.hpp
         toolkit/Base64.h
+        toolkit/Files.cpp toolkit/Files.hpp
 )
 
 find_package(Boost)
