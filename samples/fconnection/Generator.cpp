@@ -126,7 +126,7 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _cache_mutex, __manager_expire));
+            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _cache_mutex, _redis_expire));
 }
 
 Generator::~Generator() = default;
