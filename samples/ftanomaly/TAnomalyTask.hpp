@@ -26,7 +26,6 @@ public:
     explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
                                        std::shared_ptr<AnomalyThreadManager> vat,
                                        std::string redis_list_name);
     ~AnomalyTask() override = default;
@@ -53,6 +52,5 @@ private:
 private:
     bool _learning_mode = true;
     std::string _redis_list_name;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;
 };

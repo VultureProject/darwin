@@ -35,10 +35,6 @@ public:
 private:
     bool SetUpClassifier(const std::string &configuration_file_path);
     bool LoadClassifier(const rapidjson::Document &configuration);
-    bool ConfigRedis(std::string redis_socket_path);
-
-    std::string _redis_socket_path; // Redis UNIX socket path
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 
     // The cache for already processed request
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;

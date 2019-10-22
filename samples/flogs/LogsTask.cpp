@@ -24,13 +24,11 @@ LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
                    bool redis,
                    std::string log_file_path,
                    std::ofstream& log_file,
-                   std::string redis_list_name,
-                   std::shared_ptr<darwin::toolkit::RedisManager> redis_manager)
+                   std::string redis_list_name)
         : Session{"logs", socket, manager, cache},
           _log{log}, _redis{redis},
           _log_file_path{log_file_path}, _log_file{log_file},
-          _redis_list_name{redis_list_name},
-          _redis_manager{redis_manager}{}
+          _redis_list_name{redis_list_name}{}
 
 long LogsTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_LOGS;
@@ -46,7 +44,9 @@ void LogsTask::operator()() {
             WriteLogs();
         }
         if (_redis){
-            REDISAddLogs(body);
+            if(not REDISAddLogs(body)) {
+                DARWIN_LOG_WARNING("LogsTask:: Could not add log line to Redis.");
+            }
         }
     } else {
         DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(header.body_size));
@@ -105,29 +105,8 @@ bool LogsTask::REDISAddLogs(const std::string& logs) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("LogsTask::REDISAdd:: Add logs in Redis...");
 
-    redisReply *reply = nullptr;
-
-    std::vector<std::string> arguments;
-    arguments.emplace_back("LPUSH");
-    arguments.emplace_back(_redis_list_name);
-    arguments.emplace_back(logs);
-
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("LogsTask::REDISAdd:: Something went wrong while querying Redis, data not added");
-        freeReplyObject(reply);
-        return false;
-    }
-
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("LogsTask::REDISAdd:: Not the expected Redis response");
-        freeReplyObject(reply);
-        return false;
-    }
-
-    freeReplyObject(reply);
-    reply = nullptr;
-
-    return true;
+    darwin::toolkit::RedisManager& instance = darwin::toolkit::RedisManager::GetInstance();
+    return instance.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) != REDIS_REPLY_ERROR;
 }
 
 bool LogsTask::ParseBody() {

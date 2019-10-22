@@ -33,7 +33,6 @@ private:
     bool ConfigRedis(const std::string &redis_socket_path, const std::string &init_data_path);
 
     unsigned int _redis_expire = 0;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
     // The cache for already processed request
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
 };

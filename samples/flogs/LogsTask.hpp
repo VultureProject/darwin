@@ -32,8 +32,7 @@ public:
                       bool redis,
                       std::string log_file_path,
                       std::ofstream& log_file,
-                      std::string redis_list_name,
-                      std::shared_ptr<darwin::toolkit::RedisManager> redis_manager);
+                      std::string redis_list_name);
 
     ~LogsTask() override = default;
 
@@ -68,5 +67,4 @@ private:
     std::string _log_file_path;
     std::ofstream& _log_file;
     std::string _redis_list_name;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

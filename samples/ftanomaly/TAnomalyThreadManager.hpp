@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <any>
 #include <string>
 #include <thread>
 #include <mlpack/core.hpp>
@@ -21,8 +22,7 @@
 
 class AnomalyThreadManager: public darwin::toolkit::ThreadManager{
 public:
-    AnomalyThreadManager(std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
-                         std::string redis_list_name,
+    AnomalyThreadManager(std::string redis_list_name,
                          std::string log_file_path);
     ~AnomalyThreadManager() override = default;
 
@@ -85,5 +85,4 @@ private:
 
     std::string _log_file_path;
     const std::string _redis_list_name; // redis' list which contain our data
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };
