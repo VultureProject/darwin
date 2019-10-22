@@ -24,8 +24,9 @@
 ConnectionSupervisionTask::ConnectionSupervisionTask(boost::asio::local::stream_protocol::socket& socket,
                                                      darwin::Manager& manager,
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                                                     std::mutex& cache_mutex,
                                                      unsigned int expire)
-        : Session{"connection", socket, manager, cache},
+        : Session{"connection", socket, manager, cache, cache_mutex},
           _redis_expire{expire}{}
 
 long ConnectionSupervisionTask::GetFilterCode() noexcept {

@@ -29,7 +29,8 @@ namespace darwin {
         Session(std::string name,
                 boost::asio::local::stream_protocol::socket& socket,
                 Manager& manager,
-                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
+                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                std::mutex& cache_mutex);
 
         virtual ~Session() = default;
 
@@ -204,6 +205,7 @@ namespace darwin {
         std::vector<unsigned int> _certitudes; //!< The Darwin results obtained.
         //!< Cache received from the Generator
         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
+        std::mutex& _cache_mutex;
         bool _is_cache = false;
         std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD; //!<Default threshold
     };

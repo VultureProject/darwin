@@ -17,11 +17,10 @@ namespace darwin {
     Server::Server(std::string const& socket_path,
                    std::string const& output,
                    std::string const& next_filter_socket,
-                   std::size_t nb_threads,
                    std::size_t threshold,
                    Generator& generator)
             : _socket_path{socket_path}, _socket_next{next_filter_socket}, _output{output},
-              _io_context{(int)nb_threads}, _threshold{threshold}, _signals{_io_context},
+              _io_context{}, _threshold{threshold}, _signals{_io_context},
               _acceptor{_io_context,
                         boost::asio::local::stream_protocol::endpoint(
                                 socket_path)},
@@ -54,7 +53,16 @@ namespace darwin {
         // the I/O service object can execute the handler in a different thread.
         // Now, not only can operations outside of a process be executed concurrently,
         // but handlers within the process can be executed concurrently, too.
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Server::Run:: Running...");
         _io_context.run();
+    }
+
+    void Server::Clean() {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
+        _manager.StopAll();
+        unlink(_socket_path.c_str());
     }
 
     void Server::AwaitStop() {
@@ -72,8 +80,7 @@ namespace darwin {
 
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
-        _manager.StopAll();
-        unlink(_socket_path.c_str());
+        _io_context.stop();
     }
 
     void Server::Accept() {

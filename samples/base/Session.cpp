@@ -23,9 +23,11 @@
 namespace darwin {
     Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
-                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
+                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                     std::mutex& cache_mutex)
             : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
-              _filter_socket{socket.get_executor()}, _connected{false}, _cache{cache} {}
+              _filter_socket{socket.get_executor()}, _connected{false},
+              _cache{cache}, _cache_mutex{cache_mutex} {}
 
     void Session::SendResToSession() noexcept {
         DARWIN_LOGGER;
@@ -460,13 +462,18 @@ namespace darwin {
     void Session::SaveToCache(const xxh::hash64_t &hash, const unsigned int certitude) const {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("SaveToCache:: Saving certitude " + std::to_string(certitude) + " to cache");
+        std::unique_lock<std::mutex> lck{_cache_mutex};
         _cache->insert(hash, certitude);
     }
 
     bool Session::GetCacheResult(const xxh::hash64_t &hash, unsigned int& certitude) {
         DARWIN_LOGGER;
         boost::optional<unsigned int> cached_certitude;
-        cached_certitude = _cache->get(hash);
+
+        {
+            std::unique_lock<std::mutex> lck{_cache_mutex};
+            cached_certitude = _cache->get(hash);
+        }
 
         if (cached_certitude != boost::none) {
             certitude = cached_certitude.get();

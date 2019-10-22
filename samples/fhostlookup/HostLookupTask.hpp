@@ -26,6 +26,7 @@ public:
     explicit HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
                             tsl::hopscotch_map<std::string, int>& db);
 
     ~HostLookupTask() override = default;
@@ -55,7 +56,8 @@ private:
     bool ParseBody() override;
 
 private:
-    tsl::hopscotch_map<std::string, int> _database ; //The "bad" hostname database
-    std::string _current_host; //The host to lookup
+    // This implementation of the hopscotch map allows multiple reader with no writer
+    tsl::hopscotch_map<std::string, int>& _database ; //!< The "bad" hostname database
+    std::string _current_host; //!< The host to lookup
     std::vector<std::string> _hosts;
 };

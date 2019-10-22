@@ -24,12 +24,10 @@ namespace darwin {
         /// \param socket_path Path of the UNIX socket to listen on.
         /// \param output Filters' output type
         /// \param next_filter_socket Path of the UNIX socket of the filter to send data to.
-        /// \param nb_threads Number of thread in the server.
         /// \param threshold Threshold at which the filter will raise a log.
         Server(std::string const& socket_path,
                std::string const& output,
                std::string const& next_filter_socket,
-               std::size_t nb_threads,
                std::size_t threshold,
                Generator& generator);
 
@@ -47,6 +45,9 @@ namespace darwin {
     public:
         /// Start the server and the threads.
         void Run();
+
+        /// Clean the server's ressources (sessions, socket)
+        void Clean();
 
     private:
         /// Start async waiting for the stopping signals.

@@ -28,6 +28,7 @@ public:
     explicit LogsTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager,
                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                      std::mutex& cache_mutex,
                       bool log,
                       bool redis,
                       std::string log_file_path,
@@ -66,5 +67,6 @@ private:
     bool _redis; // If the filter will stock the data in a REDIS
     std::string _log_file_path;
     std::ofstream& _log_file;
+    std::mutex _file_mutex;
     std::string _redis_list_name;
 };

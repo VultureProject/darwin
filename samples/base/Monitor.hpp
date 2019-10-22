@@ -11,10 +11,10 @@
 #include <boost/bind.hpp>
 #include <atomic>
 
-enum class FilterStatusEnum {starting, configuring, running};
-
 /// \namespace darwin
 namespace darwin {
+
+    enum class FilterStatusEnum {starting, configuring, running};
 
     /// This class is made to handle one connection at the time.
     /// Each connection will receive monitoring data.

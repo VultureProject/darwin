@@ -16,64 +16,12 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/RedisManager.hpp"
 
-
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("ConnectionSupervision:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
     std::string init_data_path = "";
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
 
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: \"redis_socket_path\"");
@@ -178,7 +126,7 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _redis_expire));
+            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _cache_mutex, __manager_expire));
 }
 
 Generator::~Generator() = default;
