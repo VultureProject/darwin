@@ -4,6 +4,14 @@ from tools.redis_utils import RedisServer
 from tools.output import print_result
 from filters.flogs import Logs
 
+
+REDIS_SOCKET_PATH = "/tmp/redis.socket"
+REDIS_LIST_NAME = "redisTest"
+FLOGS_CONF_TEMPLATE = """{{
+    "redis_socket_path": "{0}",
+    "redis_list_name": "{1}"
+}}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME)
+
 def run():
     tests = [
         simple_master_server,
@@ -21,10 +29,7 @@ def simple_master_server():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
     filter = Logs(redis_server=master)
-    filter.configure("""{
-        "redis_socket_path": "/tmp/redis.socket",
-        "redis_list_name": "redisTest"
-    }""")
+    filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
@@ -49,10 +54,7 @@ def master_slave():
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
     filter = Logs(redis_server=slave)
-    filter.configure("""{
-        "redis_socket_path": "/tmp/redis.socket",
-        "redis_list_name": "redisTest"
-    }""")
+    filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
@@ -79,10 +81,7 @@ def master_slave_master_fail():
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
     filter = Logs(redis_server=slave)
-    filter.configure("""{
-        "redis_socket_path": "/tmp/redis.socket",
-        "redis_list_name": "redisTest"
-    }""")
+    filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
@@ -120,10 +119,7 @@ def master_slave_master_off():
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
     filter = Logs(redis_server=slave)
-    filter.configure("""{
-        "redis_socket_path": "/tmp/redis.socket",
-        "redis_list_name": "redisTest"
-    }""")
+    filter.configure(FLOGS_CONF_TEMPLATE)
     master.stop()
 
     filter.start()
@@ -152,10 +148,7 @@ def master_timeout_restart():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
     filter = Logs(redis_server=master)
-    filter.configure("""{
-        "redis_socket_path": "/tmp/redis.socket",
-        "redis_list_name": "redisTest"
-    }""")
+    filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
