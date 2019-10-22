@@ -17,6 +17,7 @@ extern "C" {
 #include <string>
 #include <thread>
 #include <vector>
+#include <any>
 
 #include "protocol.h"
 #include "Session.hpp"
@@ -35,8 +36,7 @@ class SessionTask : public darwin::Session {
 public:
     explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
                        darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::shared_ptr<darwin::toolkit::RedisManager> redis_manager);
+                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
     ~SessionTask() override = default;
 
 
@@ -84,6 +84,4 @@ private:
     std::vector<std::string> _tokens;
     std::vector<std::string> _current_repo_ids; // The associated repository IDs to check
     std::vector<std::vector<std::string>> _repo_ids_list;
-
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

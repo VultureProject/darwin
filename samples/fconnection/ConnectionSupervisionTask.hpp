@@ -27,7 +27,6 @@ public:
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                        std::mutex& cache_mutex,
-                                       std::shared_ptr<darwin::toolkit::RedisManager> rm,
                                        unsigned int expire);
     ~ConnectionSupervisionTask() override = default;
 
@@ -60,5 +59,4 @@ private:
     unsigned int _redis_expire;
     std::string _current_connection; // The current connection to process
     std::vector<std::string> _connections;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager;
 };

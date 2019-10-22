@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.7.2)
 project(darwin)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(ENV{PKG_CONFIG_PATH}  "/usr/local/lib/pkgconfig/;/usr/local/libdata/pkgconfig/")
 
 find_package(PkgConfig)

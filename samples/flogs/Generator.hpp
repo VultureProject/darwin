@@ -38,5 +38,4 @@ private:
     std::string _log_file_path = "";
     std::string _redis_list_name = "";
     std::ofstream _log_file;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

@@ -30,6 +30,12 @@ class Filter():
         self.process = subprocess.Popen(self.cmd)
         sleep(1)
 
+    def check_run(self):
+        if self.process and self.process.poll() is None:
+            return True
+
+        return False
+
     def stop(self):
         self.process.terminate()
         try:

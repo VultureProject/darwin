@@ -26,13 +26,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
         _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
     }
 
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(_redis_socket_path);
-    if(!_redis_manager->ConnectToRedis(true)){
-        DARWIN_LOG_ERROR("TAnomaly:: Generator:: Error when connecting to Redis");
-        return false;
-    }
-
-    _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_redis_manager, _log_file_path, _redis_list_name);
+    _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_log_file_path, _redis_list_name);
     if(!_anomaly_thread_manager->Start()) {
         DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Error when starting thread");
     }
@@ -91,7 +85,12 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         return false;
     }
 
-    _redis_socket_path = configuration["redis_socket_path"].GetString();
+    std::string redis_socket_path = configuration["redis_socket_path"].GetString();
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    if(not redis.SetUnixPath(redis_socket_path)) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to Redis socket '" + redis_socket_path + "'.");
+        return false;
+    }
 
     if (configuration.HasMember("redis_list_name")) {
 
@@ -122,8 +121,7 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<AnomalyTask>(socket, manager, _cache, _redis_manager,
-                                          _anomaly_thread_manager, _redis_list_name));
+            std::make_shared<AnomalyTask>(socket, manager, _cache, _anomaly_thread_manager, _redis_list_name));
 }
 
 Generator::~Generator() = default;;

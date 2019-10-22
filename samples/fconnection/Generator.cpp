@@ -63,18 +63,13 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
 
     std::ifstream init_data_stream;
     std::string current_line;
-
-    redisReply *reply = nullptr;
     std::vector<std::string> arguments;
 
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(redis_socket_path);
-
-    /* Ignore signals for broken pipes.
-     * Otherwise, if the Redis UNIX socket does not exist anymore,
-     * this filter will crash */
-    signal(SIGPIPE, SIG_IGN);
-
-    if (!_redis_manager->ConnectToRedis(true)) return false;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    if(not redis.SetUnixPath(redis_socket_path)) {
+        DARWIN_LOG_ERROR("ConnectionSupervision::Generator::ConfigureRedis:: Could not configure Redis connection.");
+        return false;
+    }
 
     if(init_data_path.empty()) return true;
 
@@ -115,19 +110,15 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
         }
         arguments.emplace_back("0");
 
-        if (!_redis_manager->REDISQuery(&reply, arguments)) {
+        if (redis.Query(arguments) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::ConfigRedis:: "
                              "Error when trying to add line \"" + current_line + "\" from initial data for redis, line "
                                                                                  "not added");
         }
-        freeReplyObject(reply);
-        reply = nullptr;
     }
 
     init_data_stream.close();
-
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ConfigRedis:: Initial data loaded in redis");
-
     return true;
 }
 
@@ -135,7 +126,7 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _cache_mutex, _redis_manager, _redis_expire));
+            std::make_shared<ConnectionSupervisionTask>(socket, manager, _cache, _cache_mutex, __manager_expire));
 }
 
 Generator::~Generator() = default;

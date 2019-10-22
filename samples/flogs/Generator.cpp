@@ -75,18 +75,10 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Redis configuration...");
 
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(redis_socket_path);
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    bool ret = redis.SetUnixPath(redis_socket_path);
 
-    /* Ignore signals for broken pipes.
-     * Otherwise, if the Redis UNIX socket does not exist anymore,
-     * this filter will crash */
-    signal(SIGPIPE, SIG_IGN);
-
-    if (!_redis_manager->ConnectToRedis(true)) return false;
-
-    DARWIN_LOG_DEBUG("Logs:: ConfigRedis:: Redis configured");
-
-    return true;
+    return ret;
 }
 
 darwin::session_ptr_t
@@ -96,7 +88,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
             std::make_shared<LogsTask>(socket, manager, _cache, _cache_mutex,
                                        _log, _redis,
                                        _log_file_path, _log_file,
-                                       _redis_list_name, _redis_manager));
+                                       _redis_list_name));
 }
 
 Generator::~Generator(){

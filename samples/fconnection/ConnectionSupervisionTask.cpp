@@ -25,10 +25,9 @@ ConnectionSupervisionTask::ConnectionSupervisionTask(boost::asio::local::stream_
                                                      darwin::Manager& manager,
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                                      std::mutex& cache_mutex,
-                                                     std::shared_ptr<darwin::toolkit::RedisManager> rm,
                                                      unsigned int expire)
         : Session{"connection", socket, manager, cache, cache_mutex},
-          _redis_expire{expire}, _redis_manager{std::move(rm)} {}
+          _redis_expire{expire}{}
 
 long ConnectionSupervisionTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_CONNECTION;
@@ -150,26 +149,22 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: Looking up '" +  connection  + "' in the Redis");
 
-    redisReply *reply = nullptr;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    long long int result;
 
     std::vector<std::string> arguments{};
     arguments.emplace_back("EXISTS");
     arguments.emplace_back(connection);
 
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong while querying Redis");
-        freeReplyObject(reply);
-        reply = nullptr;
+    if(redis.Query(arguments, result) != REDIS_REPLY_INTEGER) {
+        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Didn't get the expected response from Redis when looking for connection '" + connection + "'.");
         return 101;
     }
 
     // When doubt, everything is ok
     unsigned int certitude = 0;
 
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Not the expected Redis response "
-                         "when looking up for connection " + connection);
-    } else if (!reply->integer) {
+    if (not result) {
         certitude = 100;
 
         // If connection not found in the Redis, we put it in
@@ -184,19 +179,12 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         }
         arguments.emplace_back("0");
 
-        freeReplyObject(reply);
-        reply = nullptr;
-        if (!_redis_manager->REDISQuery(&reply, arguments)) {
+        if(redis.Query(arguments) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong "
                              "while adding a new connection to Redis");
-            freeReplyObject(reply);
-            reply = nullptr;
             return 101;
         }
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: Certitude of a new connection is " +
                      std::to_string(certitude));

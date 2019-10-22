@@ -34,5 +34,4 @@ private:
                      const std::string &init_data_path);
 
     unsigned int _redis_expire = 0;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

@@ -85,31 +85,13 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     }
 
     redis_socket_path = configuration["redis_socket_path"].GetString();
-    
-    return ConfigRedis(redis_socket_path);
-}
-
-bool Generator::ConfigRedis(std::string redis_socket_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Session:: Generator:: Redis configuration...");
-
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(redis_socket_path);
-
-    /* Ignore signals for broken pipes.
-     * Otherwise, if the Redis UNIX socket does not exist anymore,
-     * this filter will crash */
-    signal(SIGPIPE, SIG_IGN);
-
-    if (!_redis_manager->ConnectToRedis(true)) return false;
-
-    DARWIN_LOG_DEBUG("Session:: ConfigRedis:: Redis configured");
-
-    return true;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    return redis.SetUnixPath(redis_socket_path);
 }
 
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<SessionTask>(socket, manager, _cache, _redis_manager));
+            std::make_shared<SessionTask>(socket, manager, _cache));
 }
