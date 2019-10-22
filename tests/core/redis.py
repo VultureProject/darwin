@@ -1,4 +1,5 @@
 import logging
+import threading
 from time import sleep
 from tools.redis_utils import RedisServer
 from tools.output import print_result
@@ -18,7 +19,8 @@ def run():
         master_slave,
         master_slave_master_fail,
         master_slave_master_off,
-        master_timeout_restart
+        master_timeout_restart,
+        multi_thread_master
     ]
 
     for i in tests:
@@ -180,4 +182,39 @@ def master_timeout_restart():
         logging.error("master_timeout: wrong number active connections: expected 2 but got " + str(number))
         return False
 
+    return True
+
+def multi_thread_master():
+    master = RedisServer(unix_socket="/tmp/redis.socket")
+
+    filter = Logs(redis_server=master, nb_threads=5)
+    filter.configure(FLOGS_CONF_TEMPLATE)
+    filter.start()
+
+    thread_list = []
+    def thread_brute(filter, count_log):
+        for count in range(0, count_log):
+            try:
+                filter.log(b'All work and no play makes Jake a dull boy.')
+            except:
+                return False
+        return True
+
+
+    for num in range(0, 5):
+        thread_list.append(threading.Thread(target=thread_brute, args=(filter, 50)))
+
+    for thread in thread_list:
+        thread.start()
+
+    for thread in thread_list:
+        thread.join()
+
+    sleep(1)
+
+    number = master.get_number_of_connections()
+
+    if number != 6:
+        logging.error("master_timeout: wrong number active connections: expected 6 but got " + str(number))
+        return False
     return True

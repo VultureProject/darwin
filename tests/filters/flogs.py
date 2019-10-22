@@ -19,8 +19,8 @@ FLOGS_CONFIG_BOTH = '{{"redis_socket_path": "{1}", "redis_list_name": "{2}", "lo
 
 
 class Logs(Filter):
-    def __init__(self, log_file=None, redis_server=None):
-        super().__init__(filter_name="logs")
+    def __init__(self, log_file=None, redis_server=None, nb_threads=1):
+        super().__init__(filter_name="logs", nb_thread=nb_threads)
         self.log_file = log_file if log_file else LOG_FILE
         self.redis = redis_server if redis_server else RedisServer(unix_socket=REDIS_SOCKET)
         try:
