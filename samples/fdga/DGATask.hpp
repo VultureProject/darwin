@@ -29,8 +29,9 @@ public:
     explicit DGATask(boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                     std::mutex& cache_mutex,
                      std::shared_ptr<tensorflow::Session> &session,
-                     faup_handler_t *faup_handler,
+                     faup_options_t *faup_options,
                      std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);
     ~DGATask() override;
 
@@ -79,5 +80,5 @@ private:
     std::map<std::string, unsigned int> _token_map; // The token map to help classifying domains
     std::vector<std::string> _domains; // The domains to check
     std::string _current_domain; // The current domain being checked
-    faup_handler_t *_faup_handler = nullptr; // used to extract the public suffix
+    faup_options_t *_faup_options = nullptr;
 };

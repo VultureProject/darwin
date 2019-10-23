@@ -19,9 +19,9 @@ namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0}, daemon{true},
+              _pidPath{}, _nbThread{0},
               _filter_status{FilterStatusEnum::starting},
-              _threadpool{} {}
+              _threadpool{}, daemon{true} {}
 
     int Core::run() {
         DARWIN_LOGGER;

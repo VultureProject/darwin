@@ -68,8 +68,8 @@ namespace darwin {
         std::string _socket_path; //!< Path to the UNIX socket to listen on.
         std::string _socket_next; //!< Path to the next filter's UNIX socket.
         std::string _output; //!< Filter's output type
-        std::size_t _threshold; //!< Filter's threshold
         boost::asio::io_context _io_context; //!< The async io context.
+        std::size_t _threshold; //!< Filter's threshold
         boost::asio::signal_set _signals; //!< Set of the stopping signals.
         boost::asio::local::stream_protocol::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::local::stream_protocol::socket _new_connection; //!< Socket used to accept a new connection.
