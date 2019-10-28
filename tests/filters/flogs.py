@@ -10,9 +10,9 @@ from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 
 
-REDIS_SOCKET = "/tmp/redis.sock"
+REDIS_SOCKET = "/tmp/redis_logs.sock"
 REDIS_LIST_NAME = "logs_darwin"
-LOG_FILE = "/tmp/logs_test.log"
+LOG_FILE = "/tmp/darwin_logs_test.log"
 FLOGS_CONFIG_FILE = '{{"log_file_path": "{0}"}}'.format(LOG_FILE)
 FLOGS_CONFIG_REDIS = '{{"redis_socket_path": "{0}", "redis_list_name": "{1}"}}'.format(REDIS_SOCKET, REDIS_LIST_NAME)
 FLOGS_CONFIG_BOTH = '{{"redis_socket_path": "{1}", "redis_list_name": "{2}", "log_file_path": "{0}"}}'.format(LOG_FILE, REDIS_SOCKET, REDIS_LIST_NAME)
