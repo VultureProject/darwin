@@ -67,7 +67,7 @@ class Filter():
 
         self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sleep(3)
-        return self.check_stop()
+        return self.check_start()
 
     def valgrind_stop(self):
         if VALGRIND_MEMCHECK is False:
