@@ -1,7 +1,3 @@
-#include <utility>
-
-#include <utility>
-
 /// \file     LogsTask.cpp
 /// \authors  jjourdin
 /// \version  1.0
