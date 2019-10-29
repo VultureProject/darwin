@@ -40,7 +40,7 @@ namespace darwin {
             bool app;
             std::string file;
             std::mutex file_mutex;
-            std::fstream file_stream;
+            std::ofstream file_stream;
         };
     }
 }

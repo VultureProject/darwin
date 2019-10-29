@@ -20,10 +20,10 @@ namespace darwin {
             file_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
             try {
                 if(app){
-                    file_stream.open(file, std::fstream::in | std::fstream::out | std::fstream::app);
+                    file_stream.open(file, std::fstream::app);
                 }
                 else{
-                    file_stream.open(file, std::fstream::in | std::fstream::out);
+                    file_stream.open(file);
                 }
             }catch (std::fstream::failure& e) {
                 std::cerr << "Error when opening file..." << e.what();
@@ -39,7 +39,7 @@ namespace darwin {
             try {
                 std::lock_guard<std::mutex> lock(file_mutex);
                 file_stream << s << std::flush;
-            }catch (std::fstream::failure& e) {
+            }catch (std::ofstream::failure& e) {
                 std::cerr << "Exception when writing in file..." << e.what();
                 return false;
             }
@@ -48,7 +48,7 @@ namespace darwin {
         }
 
         bool FileManager::operator<<(std::string str) {
-            return Write(std::move(str));
+            return Write(str);
         }
 
         bool FileManager::operator<<(int val) {
