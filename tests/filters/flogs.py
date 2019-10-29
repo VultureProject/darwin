@@ -101,7 +101,6 @@ def single_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -123,7 +122,6 @@ def single_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -145,7 +143,6 @@ def single_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -172,7 +169,6 @@ def multiple_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -198,7 +194,6 @@ def multiple_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -226,7 +221,6 @@ def multiple_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -262,7 +256,6 @@ def empty_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -284,7 +277,6 @@ def empty_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:
@@ -306,7 +298,6 @@ def empty_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
     if not filter.valgrind_start():
-        filter.clean_files()
         return False
 
     try:

@@ -57,7 +57,6 @@ def new_connection_test():
 
     # START FILTER
     if not connection_filter.valgrind_start():
-        connection_filter.clean_files()
         return False
 
     # SEND TEST
@@ -118,7 +117,6 @@ def known_connection_test():
 
     # START FILTER
     if not connection_filter.valgrind_start():
-        connection_filter.clean_files()
         return False
 
     # SEND TEST
@@ -178,7 +176,6 @@ def new_connection_to_known_test():
 
     # START FILTER
     if not connection_filter.valgrind_start():
-        connection_filter.clean_files()
         return False
 
     # SEND TEST
