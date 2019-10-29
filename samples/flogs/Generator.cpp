@@ -106,10 +106,9 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         _log_file_path = configuration["log_file_path"].GetString();
 
         // Open file and check permissions (and create file if not existing)
-        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
-        if(!_log_file.is_open() or _log_file.fail()) {
-            DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                         "maybe too low space disk or wrong permission");
+        _log_file = std::make_shared<darwin::toolkit::FileManager>(_log_file_path, true);
+        if(!_log_file->Open()){
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: Error when opening log file");
             return false;
         }
     }
@@ -144,7 +143,3 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                                        _log_file_path, _log_file,
                                        _redis_list_name, _redis_manager));
 }
-
-Generator::~Generator(){
-    _log_file.close();
-};
