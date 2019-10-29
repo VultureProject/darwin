@@ -14,7 +14,7 @@
 #include "tensorflow/core/framework/graph.pb.h"
 #include "UserAgentTask.hpp"
 
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("UserAgent:: Generator:: Loading classifier...");
 

@@ -7,10 +7,6 @@
 
 #pragma once
 
-extern "C" {
-#include <maxminddb.h>
-}
-
 #include <map>
 #include <string>
 
@@ -36,6 +32,9 @@ private:
     bool LoadTokenMap(const std::string &token_map_path);
     bool LoadModel(const std::string &model_path);
 
+    // The doc is quite hard to find so here is a link to the version currently used on BSD
+    // (see vulture-libtensorflow)
+    // https://github.com/tensorflow/tensorflow/blob/r1.13/tensorflow/core/public/session.h
     std::shared_ptr<tensorflow::Session> _session;
     std::map<std::string, unsigned int> _token_map;
     unsigned int _max_tokens = 50;

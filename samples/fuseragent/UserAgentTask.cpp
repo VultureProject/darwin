@@ -85,26 +85,7 @@ void UserAgentTask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _user_agents = std::vector<std::string>();
-}
-
-void UserAgentTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 UserAgentTask::~UserAgentTask() = default;
@@ -155,15 +136,23 @@ unsigned int UserAgentTask::Predict(const std::string &user_agent) {
 
     std::vector<tensorflow::Tensor> output_tensors;
 
-    tensorflow::Status run_status = _session->Run({{"embedding_4_input", input_tensor}},
-                                                  {"output_node0"},
-                                                  {},
-                                                  &output_tensors);
+    try {
+        tensorflow::Status run_status = _session->Run({{"embedding_4_input", input_tensor}},
+                                                    {"output_node0"},
+                                                    {},
+                                                    &output_tensors);
 
-    if (!run_status.ok()) {
-        DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+        if (!run_status.ok()) {
+            DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+            return 101;
+        }
+    }
+    catch(const std::exception& e)
+    {
+        DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
         return 101;
     }
+
 
     std::map<std::string, float> result;
     index = 0;

@@ -45,10 +45,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Classify the parsed request.
     ///
     /// \return true on success, false otherwise.
