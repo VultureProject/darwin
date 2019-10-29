@@ -44,16 +44,15 @@ namespace darwin {
             std::unique_lock<std::mutex> lock(_janitorMut);
 
             while(not _janitorStop) {
-                _janitorCondVar.wait_for(lock, std::chrono::duration<int>(_janitorRunInterval));
+                _janitorCondVar.wait_for(lock, std::chrono::seconds(_janitorRunInterval));
 
                 if(_janitorStop) break;
-
-                _setMut.lock();
                 DARWIN_LOG_DEBUG("RedisManager::JanitorRun:: Janitor running...");
 
+                std::lock_guard<std::mutex> lck(_setMut);
                 for(auto& thread_info : _threadSet) {
-                    std::unique_lock<std::mutex> lockMaster(thread_info->_masterContextMut);
-                    std::unique_lock<std::mutex> lockSlave(thread_info->_slaveContextMut);
+                    std::lock_guard<std::mutex> lockMaster(thread_info->_masterContextMut);
+                    std::lock_guard<std::mutex> lockSlave(thread_info->_slaveContextMut);
 
                     if(thread_info->_masterContext) {
                         if(difftime(time(nullptr), thread_info->_masterLastUse) > CONNECTION_DROP_TIMEOUT) {
@@ -78,7 +77,6 @@ namespace darwin {
                     }
                 }
 
-                _setMut.unlock();
                 DARWIN_LOG_DEBUG("RedisManager::JanitorRun:: Janitor finished.");
             }
         }
@@ -130,12 +128,15 @@ namespace darwin {
 
         std::shared_ptr<ThreadData> RedisManager::GetThreadInfo() {
             thread_local static std::shared_ptr<ThreadData> threadData = std::make_shared<ThreadData>();
-            threadData->thread_id = std::this_thread::get_id();
-            std::unique_lock<std::mutex> lock(_setMut);
-            auto result = _threadSet.insert(threadData);
+            bool s = false;
+            {
+                std::unique_lock<std::mutex> lock(_setMut);
+                auto result = _threadSet.insert(threadData);
+                s = result.second;
+            }
 
             // if the threadData was inserted, it was also created -> init a connection
-            if(result.second) {
+            if(s) {
                 std::unique_lock<std::mutex> lock(threadData->_masterContextMut);
                 bool masterSuccess = false;
                 if(not _masterUnixSocket.empty()) {

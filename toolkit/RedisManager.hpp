@@ -20,7 +20,6 @@ namespace darwin {
         public:
             ThreadData(){};
         public:
-            std::thread::id thread_id;
             redisContext* _masterContext = nullptr;
             std::mutex _masterContextMut;
             time_t _masterLastUse;
