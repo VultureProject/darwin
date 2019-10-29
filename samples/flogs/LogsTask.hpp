@@ -30,10 +30,10 @@ public:
                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                       bool log,
                       bool redis,
-                      std::string log_file_path,
-                      std::shared_ptr<darwin::toolkit::FileManager> log_file,
-                      std::string redis_list_name,
-                      std::shared_ptr<darwin::toolkit::RedisManager> redis_manager);
+                      std::string& log_file_path,
+                      std::shared_ptr<darwin::toolkit::FileManager>& log_file,
+                      std::string& redis_list_name,
+                      std::shared_ptr<darwin::toolkit::RedisManager>& redis_manager);
 
     ~LogsTask() override = default;
 

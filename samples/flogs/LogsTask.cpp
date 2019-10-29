@@ -1,3 +1,7 @@
+#include <utility>
+
+#include <utility>
+
 /// \file     LogsTask.cpp
 /// \authors  jjourdin
 /// \version  1.0
@@ -22,14 +26,15 @@ LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
                    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                    bool log,
                    bool redis,
-                   std::string log_file_path,
-                   std::shared_ptr<darwin::toolkit::FileManager> log_file,
-                   std::string redis_list_name,
-                   std::shared_ptr<darwin::toolkit::RedisManager> redis_manager)
+                   std::string& log_file_path,
+                   std::shared_ptr<darwin::toolkit::FileManager>& log_file,
+                   std::string& redis_list_name,
+                   std::shared_ptr<darwin::toolkit::RedisManager>& redis_manager)
         : Session{"logs", socket, manager, cache},
           _log{log}, _redis{redis},
-          _log_file_path{log_file_path}, _log_file{log_file},
+          _log_file_path{log_file_path},
           _redis_list_name{redis_list_name},
+          _log_file{log_file},
           _redis_manager{redis_manager}{}
 
 long LogsTask::GetFilterCode() noexcept {
