@@ -135,9 +135,11 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
 }
 
 Generator::~Generator() {
-    tensorflow::Status s = _session->Close();
-    if (not s.ok()) {
-        DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("DGA:: Generator:: Unable to close the Tensorflow Session");
+    if (_session) {
+        tensorflow::Status s = _session->Close();
+        if (not s.ok()) {
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("DGA:: Generator:: Unable to close the Tensorflow Session");
+        }
     }
 }

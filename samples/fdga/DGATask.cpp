@@ -86,26 +86,7 @@ void DGATask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _domains = std::vector<std::string>();
-}
-
-void DGATask::Workflow(){
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 DGATask::~DGATask() = default;
@@ -213,13 +194,21 @@ unsigned int DGATask::Predict() {
 
     std::vector<tensorflow::Tensor> output_tensors;
 
-    tensorflow::Status run_status = _session->Run({{"embedding_1_input", input_tensor}},
-                                                  {"activation_1/Sigmoid"},
-                                                  {},
-                                                  &output_tensors);
+    try
+    {
+        tensorflow::Status run_status = _session->Run({{"embedding_1_input", input_tensor}},
+                                                    {"activation_1/Sigmoid"},
+                                                    {},
+                                                    &output_tensors);
 
-    if (!run_status.ok()) {
-        DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+        if (!run_status.ok()) {
+            DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+            return 101;
+        }
+    }
+    catch(const std::exception& e)
+    {
+        DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
         return 101;
     }
 

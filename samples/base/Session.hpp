@@ -76,7 +76,6 @@ namespace darwin {
         ///
         /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
         /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
-        /// \return Upon successful completion, return true, otherwise return false.
         virtual void SendToFilter(darwin_filter_packet_t const* hdr, void const* data,
                                     std::size_t packet_size) final;
 
@@ -84,12 +83,14 @@ namespace darwin {
         ///
         /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
         /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
-        /// \return Upon successful completion, return true, otherwise return false.
-        virtual void Send(darwin_filter_packet_t const* hdr, void const* data,
+        /// \return Upon critical error involving closing the Session return false, return true otherwise.
+        virtual bool Send(darwin_filter_packet_t const* hdr, void const* data,
                             std::size_t packet_size) final;
 
         /// Send result into the session.
-        virtual void SendResToSession() noexcept;
+        ///
+        /// \return Upon critical error involving closing the Session return false, return true otherwise.
+        virtual bool SendResToSession() noexcept;
 
         /// Send result into DARWIN.
         virtual void SendToDarwin() noexcept;
@@ -138,6 +139,8 @@ namespace darwin {
 
         /// Get the name of the filter
         std::string GetFilterName();
+
+        bool Workflow();
 
     private:
 

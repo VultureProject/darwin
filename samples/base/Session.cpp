@@ -29,7 +29,7 @@ namespace darwin {
               _filter_socket{socket.get_executor()}, _connected{false},
               _cache{cache}, _cache_mutex{cache_mutex} {}
 
-    void Session::SendResToSession() noexcept {
+    bool Session::SendResToSession() noexcept {
         DARWIN_LOGGER;
         const std::size_t certitude_size = _certitudes.size();
 
@@ -53,7 +53,7 @@ namespace darwin {
 
         if (!packet) {
             DARWIN_LOG_CRITICAL("Session::SendResToSession: Could not create a Darwin packet");
-            return;
+            return true;
         }
 
         /* 
@@ -73,9 +73,10 @@ namespace darwin {
         packet->body_size = 0;
         memcpy(packet->evt_id, header.evt_id, 16);
 
-        Send(packet, nullptr, packet_size);
+        auto ret = Send(packet, nullptr, packet_size);
 
         free(packet);
+        return ret;
     }
 
     void Session::SendToDarwin() noexcept {
@@ -319,7 +320,8 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Session::ExecuteFilter::");
 
         (*this)();
-        Start();
+        if (this->Workflow())
+            Start();
     }
 
     void Session::SendCallback(const boost::system::error_code& e,
@@ -329,52 +331,54 @@ namespace darwin {
         if (e) {
             DARWIN_LOG_ERROR("Session::SendCallback:: " + e.message());
             _manager.Stop(shared_from_this());
+            DARWIN_LOG_DEBUG("Session::SendCallback:: Stopped session in manager");
         }
     }
 
-    void Session::Send(darwin_filter_packet_t const* hdr,
+    bool Session::Send(darwin_filter_packet_t const* hdr,
                        void const* data, std::size_t packet_size) {
         DARWIN_LOGGER;
 
         // Here is the synchronous way.
         // I let it because it may be useful if you want to create
         // synchronous methods or for debug purposes.
-//        DARWIN_LOG_DEBUG("Session::Send:: Sending header to session...");
-//        try {
-//            boost::asio::write(_socket, boost::asio::buffer(&hdr, sizeof(hdr)));
-//        } catch (boost::system::system_error const& e) {
-//            DARWIN_LOG_ERROR(std::string(
-//                    "Session::Send:: Error sending header to session: ") +
-//                      e.what());
-//            _manager.Stop(shared_from_this());
-//            return;
-//        }
-        DARWIN_LOG_DEBUG("Session::Send:: Async sending header to session...");
-
-        boost::asio::async_write(_socket,
-                                 boost::asio::buffer(hdr, packet_size),
-                                 boost::bind(&Session::SendCallback, this,
-                                             boost::asio::placeholders::error,
-                                             boost::asio::placeholders::bytes_transferred));
-        if (data != nullptr && hdr->body_size > 0) {
-//            DARWIN_LOG_DEBUG("Session::Send:: Sending body to session...");
-//            try {
-//                boost::asio::write(_socket,
-//                                   boost::asio::buffer(data, hdr.body_size));
-//            } catch (boost::system::system_error const& e) {
-//                DARWIN_LOG_ERROR(std::string(
-//                        "Session::Send:: Error sending header to session: ") +
-//                          e.what());
-//                _manager.Stop(shared_from_this());
-//                return;
-//            }
-            DARWIN_LOG_DEBUG("Session::Send:: Async sending body to session...");
-            boost::asio::async_write(_socket,
-                                     boost::asio::buffer(data, hdr->body_size),
-                                     boost::bind(&Session::SendCallback, this,
-                                                 boost::asio::placeholders::error,
-                                                 boost::asio::placeholders::bytes_transferred));
+        DARWIN_LOG_DEBUG("Session::Send:: Sending header to session...");
+        try {
+            boost::asio::write(_socket, boost::asio::buffer(hdr, packet_size));
+        } catch (boost::system::system_error const& e) {
+            DARWIN_LOG_ERROR(std::string(
+                    "Session::Send:: Error sending header to session: ") +
+                        e.what());
+            _manager.Stop(shared_from_this());
+            return false;
         }
+        // DARWIN_LOG_DEBUG("Session::Send:: Async sending header to session...");
+
+        // boost::asio::async_write(_socket,
+        //                          boost::asio::buffer(hdr, packet_size),
+        //                          boost::bind(&Session::SendCallback, this,
+        //                                      boost::asio::placeholders::error,
+        //                                      boost::asio::placeholders::bytes_transferred));
+        if (data != nullptr && hdr->body_size > 0) {
+            DARWIN_LOG_DEBUG("Session::Send:: Sending body to session...");
+            try {
+                boost::asio::write(_socket,
+                                    boost::asio::buffer(data, hdr->body_size));
+            } catch (boost::system::system_error const& e) {
+                DARWIN_LOG_ERROR(std::string(
+                        "Session::Send:: Error sending header to session: ") +
+                            e.what());
+                _manager.Stop(shared_from_this());
+                return false;
+            }
+            // DARWIN_LOG_DEBUG("Session::Send:: Async sending body to session...");
+            // boost::asio::async_write(_socket,
+            //                          boost::asio::buffer(data, hdr->body_size),
+            //                          boost::bind(&Session::SendCallback, this,
+            //                                      boost::asio::placeholders::error,
+            //                                      boost::asio::placeholders::bytes_transferred));
+        }
+        return true;
     }
 
     void Session::SendToFilter(darwin_filter_packet_t const* hdr,
@@ -502,5 +506,20 @@ namespace darwin {
 
     std::string Session::GetFilterName() {
         return _filter_name;
+    }
+
+    bool Session::Workflow(){
+        switch (header.response) {
+            case DARWIN_RESPONSE_SEND_BOTH:
+                SendToDarwin();
+                return SendResToSession();
+            case DARWIN_RESPONSE_SEND_BACK:
+                return SendResToSession();
+            case DARWIN_RESPONSE_SEND_DARWIN:
+                SendToDarwin();
+            case DARWIN_RESPONSE_SEND_NO:
+            default:
+                return true;
+        }
     }
 }

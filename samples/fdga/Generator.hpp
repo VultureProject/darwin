@@ -9,7 +9,6 @@
 
 #include <faup/faup.h>
 #include <map>
-#include <maxminddb.h>
 #include <string>
 
 #include "../toolkit/rapidjson/document.h"

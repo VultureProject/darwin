@@ -46,10 +46,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Extract the registered domain with the TLD
     ///
     /// \param to_predict Will contain the string extracted.
