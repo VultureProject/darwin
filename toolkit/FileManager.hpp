@@ -18,7 +18,7 @@ namespace darwin {
             /// FileManager constructor
             /// \param file the file's path to manage
             /// \param append if we append data to the file
-            explicit FileManager(std::string file, bool append);
+            explicit FileManager(std::string& file, bool append);
             ~FileManager();
 
             /// Open the file
@@ -27,14 +27,14 @@ namespace darwin {
 
             /// Write in the file
             /// \return true if successful, else false
-            bool Write(std::string);
+            bool Write(std::string s);
 
             /// Add a value to add in the file
             /// \param val the value to add
             bool operator<<(int val);
             /// Add a string to add in the file
             /// \param str the string to add
-            bool operator<<(std::string str);
+            bool operator<<(std::string& str);
 
         private:
             bool app;

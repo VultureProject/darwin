@@ -9,8 +9,8 @@ namespace darwin {
     /// \namespace toolkit
     namespace toolkit{
 
-        FileManager::FileManager(std::string file, bool app)
-                : app{app}, file{std::move(file)} {}
+        FileManager::FileManager(std::string& file, bool app)
+                : app{app}, file{file} {}
 
         bool FileManager::Open() {
             if(file_stream.is_open()){
@@ -47,7 +47,7 @@ namespace darwin {
             return true;
         }
 
-        bool FileManager::operator<<(std::string str) {
+        bool FileManager::operator<<(std::string& str) {
             return Write(str);
         }
 
