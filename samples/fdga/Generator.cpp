@@ -209,5 +209,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
 }
 
 Generator::~Generator() {
-    faup_terminate(_faup_handler);
+    if(_faup_handler){
+        faup_terminate(_faup_handler);
+    }
 }
