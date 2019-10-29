@@ -18,7 +18,7 @@ namespace darwin {
             /// FileManager constructor
             /// \param file the file's path to manage
             /// \param append if we append data to the file
-            explicit FileManager(std::string& file, bool append);
+            explicit FileManager(std::string& file, bool app=true);
             ~FileManager();
 
             /// Open the file
