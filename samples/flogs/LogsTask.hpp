@@ -46,10 +46,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Parse the body received.
     bool ParseBody() override;
 

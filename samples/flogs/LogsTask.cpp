@@ -53,26 +53,6 @@ void LogsTask::operator()() {
     } else {
         DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(header.body_size));
     }
-
-    Workflow();
-}
-
-void LogsTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool LogsTask::WriteLogs() {

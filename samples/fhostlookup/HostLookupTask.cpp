@@ -77,26 +77,7 @@ void HostLookupTask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _hosts = std::vector<std::string>();
-}
-
-void HostLookupTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 unsigned int HostLookupTask::DBLookup(const std::string &host) noexcept {

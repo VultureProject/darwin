@@ -55,26 +55,7 @@ void ConnectionSupervisionTask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _connections = std::vector<std::string>();
-}
-
-void ConnectionSupervisionTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool ConnectionSupervisionTask::ParseBody() {
@@ -165,6 +146,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     unsigned int certitude = 0;
 
     if (not result) {
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: No resultfound, setting certitude to 100");
         certitude = 100;
 
         // If connection not found in the Redis, we put it in
