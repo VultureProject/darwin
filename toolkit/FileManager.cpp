@@ -9,97 +9,53 @@ namespace darwin {
     /// \namespace toolkit
     namespace toolkit{
 
-        FileManager::FileManager(std::string file, bool app=true)
+        FileManager::FileManager(std::string file, bool app)
                 : app{app}, file{std::move(file)} {}
 
         bool FileManager::Open() {
-            if(file_stream){
+            if(file_stream.is_open()){
                 return true;
             }
 
-            if(app){
-                file_stream.open(file, std::fstream::in | std::fstream::out | std::fstream::app);
-            }
-            else{
-                file_stream.open(file, std::fstream::in | std::fstream::out);
-            }
-
-            return !!file_stream;
-        }
-
-        void FileManager::Write(){
-            std::mutex mtx;
-            std::unique_lock<std::mutex> lock(mtx);
-
-            while (!is_stop) {
-                // Wait to have add to write
-                cv.wait(lock);
-
-                // Check if the file is Open/Can be opened
-                if(!Open()){
-                    // In case error when open the file, stop the loop
-                    is_stop = true;
-                    break;
+            file_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+            try {
+                if(app){
+                    file_stream.open(file, std::fstream::in | std::fstream::out | std::fstream::app);
                 }
-
-                std::unique_lock<std::mutex> file_lock(file_mutex);
-                // Write the buffer in file
-                file_stream << ExtractBuffer();
-                file_lock.unlock();
+                else{
+                    file_stream.open(file, std::fstream::in | std::fstream::out);
+                }
+            }catch (std::fstream::failure& e) {
+                std::cerr << "Error when opening file..." << e.what();
+                return false;
             }
+            return file_stream.is_open();
         }
 
-        std::string FileManager::ExtractBuffer() {
-            std::unique_lock<std::mutex> lock(buf_mutex);
-
-            std::size_t size = buf.size();
-            std::string res(buf.substr(size));
-            buf.erase(size);
-
-            lock.unlock();
-            return res;
-        }
-
-        void FileManager::operator<<(std::string str) {
-            buf += str;
-            cv.notify_one();
-        }
-
-        void FileManager::operator<<(int val) {
-            buf += std::to_string(val);
-            cv.notify_one();
-        }
-
-        void FileManager::operator<<(char ch) {
-            buf += ch;
-            cv.notify_one();
-        }
-
-        void FileManager::operator<<(char *str) {
-            buf += str;
-            cv.notify_one();
-        }
-
-        bool FileManager::Start(){
+        bool FileManager::Write(std::string s){
             if(!Open()){
                 return false;
             }
-
             try {
-                is_stop = false;
-                thread = std::thread(&FileManager::Write, this);
-            } catch (const std::system_error &e) {
-                is_stop = true;
+                std::lock_guard<std::mutex> lock(file_mutex);
+                file_stream << s << std::flush;
+            }catch (std::fstream::failure& e) {
+                std::cerr << "Exception when writing in file..." << e.what();
                 return false;
             }
 
             return true;
         }
 
+        bool FileManager::operator<<(std::string str) {
+            return Write(std::move(str));
+        }
+
+        bool FileManager::operator<<(int val) {
+            return Write(std::to_string(val));
+        }
+
         FileManager::~FileManager() {
-            is_stop = true;
-            cv.notify_one();
-            thread.join();
             file_stream.close();
         }
     }
