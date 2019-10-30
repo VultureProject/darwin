@@ -32,7 +32,7 @@ namespace darwin {
             return file_stream.is_open();
         }
 
-        bool FileManager::Write(std::string s){
+        bool FileManager::Write(std::string& s){
             if(!Open()){
                 return false;
             }
