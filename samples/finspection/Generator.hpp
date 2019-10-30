@@ -13,21 +13,21 @@
 
 #include "Session.hpp"
 #include "data_pool.hpp"
+#include "AGenerator.hpp"
 #include "ContentInspectionTask.hpp"
 
 
-class Generator {
+class Generator: public AGenerator {
 public:
     Generator();
     ~Generator();
 
 public:
-    // The config file is the database here
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) override final noexcept;
 
 private:
     // The cache for already processed request

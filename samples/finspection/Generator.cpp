@@ -29,25 +29,10 @@ Generator::Generator() {
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: successfully initialised");
 }
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
+bool Generator::LoadConfig(const rapidjson::Document &config) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Configuring...");
-
-    rapidjson::Document config;
-
-    std::ifstream file(configFile.c_str());
-    std::string content((std::istreambuf_iterator<char>(file)),
-                        (std::istreambuf_iterator<char>()));
-
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: parsing file...");
-    config.Parse(content.c_str());
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: file parsed");
-
-    if (!config.IsObject()) {
-        DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
-
+    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Loading configuration...");
+    
     char str[2048];
     if(config.HasMember("maxConnections")) {
         if(config["maxConnections"].IsUint()) {
@@ -151,11 +136,6 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
         DARWIN_LOG_ERROR("ContentInspection:: Generator:: missing parameters: if 'yaraScanType' is given, you must provide a rule file with "
                          "the 'yaraRuleFile' parameter");
         return false;
-    }
-
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
     }
 
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Configured");

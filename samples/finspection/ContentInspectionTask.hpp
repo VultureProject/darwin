@@ -38,7 +38,7 @@ public:
     explicit ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                            Configurations configurations);
+                            Configurations& configurations);
 
     ~ContentInspectionTask() override = default;
 

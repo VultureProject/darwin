@@ -18,7 +18,7 @@
 ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                               Configurations configurations)
+                               Configurations& configurations)
         : Session{"content_inspection", socket, manager, cache} {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
