@@ -60,7 +60,7 @@ def good_format_tokens_test():
     if not dga_filter.start():
         return False
 
-    if not dga_filter.start():
+    if not dga_filter.stop():
         ret = False
 
     dga_filter.clean_files()
