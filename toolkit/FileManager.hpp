@@ -27,7 +27,7 @@ namespace darwin {
 
             /// Write in the file
             /// \return true if successful, else false
-            bool Write(std::string s);
+            bool Write(std::string& s);
 
             /// Add a value to add in the file
             /// \param val the value to add
