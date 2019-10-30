@@ -39,24 +39,24 @@ long LogsTask::GetFilterCode() noexcept {
 void LogsTask::operator()() {
     DARWIN_LOGGER;
 
-    if (header.body_size > 0) {
-        DARWIN_LOG_DEBUG("LogsTask:: got log: " + body);
+    if (_header.body_size > 0) {
+        DARWIN_LOG_DEBUG("LogsTask:: got log: " + _raw_body);
 
         if (_log){
             WriteLogs();
         }
         if (_redis){
-            REDISAddLogs(body);
+            REDISAddLogs(_raw_body);
         }
     } else {
-        DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(header.body_size));
+        DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(_header.body_size));
     }
 
     Workflow();
 }
 
 void LogsTask::Workflow() {
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -96,7 +96,7 @@ bool LogsTask::WriteLogs() {
         return false;
     }
 
-    _log_file << body << std::flush;
+    _log_file << _raw_body << std::flush;
 
     return true;
 }
@@ -132,6 +132,6 @@ bool LogsTask::REDISAddLogs(const std::string& logs) {
 
 bool LogsTask::ParseBody() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("LogsTask:: ParseBody: " + body);
+    DARWIN_LOG_DEBUG("LogsTask:: ParseBody: entry to log = '" + _raw_body + "'");
     return true;
 }

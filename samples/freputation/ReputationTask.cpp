@@ -29,7 +29,7 @@ ReputationTask::ReputationTask(boost::asio::local::stream_protocol::socket& sock
 }
 
 xxh::hash64_t ReputationTask::GenerateHash() {
-    return xxh::xxhash<64>(_current_ip_address + "|" + boost::join(_current_tags, "-"));
+    return xxh::xxhash<64>(_ip_address + "|" + boost::join(_tags, "-"));
 }
 
 long ReputationTask::GetFilterCode() noexcept {
@@ -40,77 +40,73 @@ void ReputationTask::operator()() {
     DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    // We have a generic hash function, which takes no arguments as these can be of very different types depending
-    // on the nature of the filter
-    // So instead, we set an attribute corresponding to the current IP address and tags being processed, to compute the
-    // hash accordingly
-    for (std::size_t index = 0; index < _ip_addresses.size(); ++index) {
-        SetStartingTime();
-        _current_ip_address = _ip_addresses[index];
-        _current_tags = _tags_list[index];
+    // Should not fail, as the Session body parser MUST check for validity !
+    auto array = _body.GetArray();
+
+    for (auto &line : array) {
         unsigned int certitude;
         xxh::hash64_t hash;
 
-        if (_is_cache) {
-            hash = GenerateHash();
+        if(ParseLine(line)) {
+            SetStartingTime();
+            if (_is_cache) {
+                hash = GenerateHash();
 
-            if (GetCacheResult(hash, certitude)) {
-                if (is_log && (certitude>=_threshold)){
-                    bool tag_found = false;
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                            R"(", "filter": ")" + GetFilterName() + R"(", "ip" :")" + _current_ip_address + R"(", "tags": [)";
+                if (GetCacheResult(hash, certitude)) {
+                    if (is_log && (certitude>=_threshold)){
+                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "ip" :")" + _ip_address + R"(", "tags": [)";
 
-                    for (auto const& tag: _current_tags) {
-                        _logs += "\"" + tag + "\",";
-                        tag_found = true;
+                        for (auto const& tag: _tags) {
+                            _logs += "\"" + tag + "\",";
+                        }
+
+                        if (not _tags.empty()){
+                            _logs.pop_back();
+                        }
+
+                        _logs += "], \"certitude\": " + std::to_string(certitude) + "}\n";
                     }
-
-                    if (tag_found){
-                        _logs.pop_back();
-                    }
-
-                    _logs += "], \"certitude\": " + std::to_string(certitude) + "}\n";
+                    _certitudes.push_back(certitude);
+                    DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
+                                    + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+                    continue;
                 }
-                _certitudes.push_back(certitude);
-                DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
-                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
-                continue;
-            }
-        }
-
-        certitude = GetReputation(_current_ip_address);
-        if (is_log && (certitude>=_threshold)){
-            bool tag_found = false;
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                            R"(", "filter": ")" + GetFilterName() + R"(", "ip": ")" + _current_ip_address + R"(", "tags": [)";
-
-            for (auto const& tag: _current_tags) {
-                _logs += "\"" + tag + "\",";
-                tag_found = true;
             }
 
-            if (tag_found){
-                _logs.pop_back();
+            certitude = GetReputation(_ip_address);
+            if (is_log && (certitude>=_threshold)){
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "ip": ")" + _ip_address + R"(", "tags": [)";
+
+                for (auto const& tag: _tags) {
+                    _logs += "\"" + tag + "\",";
+                }
+
+                if (not _tags.empty()){
+                    _logs.pop_back();
+                }
+
+                _logs += "], \"certitude\": " + std::to_string(certitude) + "}\n";
             }
+            _certitudes.push_back(certitude);
 
-            _logs += "], \"certitude\": " + std::to_string(certitude) + "}\n";
+            if (_is_cache) {
+                SaveToCache(hash, certitude);
+            }
+            DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
+                            + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
-        _certitudes.push_back(certitude);
-
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
-        DARWIN_LOG_DEBUG("ReputationTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
     Workflow();
-    _ip_addresses = std::vector<std::string>();
-    _tags_list = std::vector<std::unordered_set<std::string>>();
 }
 
 void ReputationTask::Workflow(){
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -185,7 +181,7 @@ unsigned int ReputationTask::GetReputation(const std::string &ip_address) noexce
     MMDB_lookup_result_s result;
     MMDB_entry_data_s entry_data;
 
-    if (!ReadFromSession(ip_address, result)) return 101;
+    if (!ReadFromSession(ip_address, result)) return DARWIN_ERROR_RETURN;
 
     DARWIN_LOG_DEBUG("ReputationTask:: Searching reputation");
     if (!result.found_entry) {
@@ -207,75 +203,55 @@ unsigned int ReputationTask::GetReputation(const std::string &ip_address) noexce
 
     std::string tag;
     tag.assign(entry_data.utf8_string, entry_data.data_size);
-    DARWIN_LOG_DEBUG(std::string("ReputationTask:: Reputation tag: ") + tag);
-    bool is_malicious = _current_tags.find(tag) != _current_tags.end(); // The tag found matches our list... or not
-    DARWIN_LOG_DEBUG(_current_ip_address + " in database with a matching tag: " + (is_malicious ? "true" : "false"));
+    DARWIN_LOG_DEBUG("ReputationTask:: GetReputation:: tag is " + tag);
+    bool is_malicious = _tags.find(tag) != _tags.end(); // The tag found matches our list... or not
+    DARWIN_LOG_DEBUG("ReputationTask:: GetReputation:: " + _ip_address + " in database with a matching tag: " + (is_malicious ? "true" : "false"));
     return is_malicious ? 100 : 0;
 }
 
-bool ReputationTask::ParseBody() {
+bool ReputationTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ReputationTask:: ParseBody: " + body);
 
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
-
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("ReputationTask:: ParseBody: You must provide a list");
-            return false;
-        }
-
-        auto values = document.GetArray();
-
-        if (values.Size() <= 0) {
-            DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The list provided is empty");
-            return false;
-        }
-
-        for (auto &request : values) {
-            if (!request.IsArray()) {
-                DARWIN_LOG_ERROR("ReputationTask:: ParseBody: For each request, you must provide a list");
-                return false;
-            }
-
-            auto items = request.GetArray();
-
-            if (items.Size() != 2) {
-                DARWIN_LOG_ERROR(
-                        "ReputationTask:: ParseBody: You must provide exactly two arguments per request: the IP address and"
-                        " the tags"
-                );
-
-                return false;
-            }
-
-            if (!items[0].IsString()) {
-                DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The IP address must be a string");
-                return false;
-            }
-
-            std::string ip_address = items[0].GetString();
-
-            if (!items[1].IsString()) {
-                DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The tags sent must be a string in the following format: "
-                                 "TAG1;TAG2;...");
-                return false;
-            }
-
-            _ip_addresses.push_back(ip_address);
-            std::unordered_set<std::string> tags;
-            std::string raw_tags = items[1].GetString();
-            boost::split(tags, raw_tags, [](char c) {return c == ';';});
-            _tags_list.push_back(tags);
-
-            DARWIN_LOG_DEBUG("ReputationTask:: Parsed body: " + ip_address + ", " + raw_tags);
-
-        }
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("ReputationTask:: ParseBody: Unknown Error");
+    if(not line.IsArray()) {
+        DARWIN_LOG_ERROR("ReputationTask:: ParseBody:: The input line is not an array");
         return false;
     }
+
+    _ip_address.clear();
+    _tags.clear();
+    auto values = line.GetArray();
+
+    if (values.Size() <= 0) {
+        DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The list provided is empty");
+        return false;
+    }
+
+    if (values.Size() != 2) {
+        DARWIN_LOG_ERROR(
+                "ReputationTask:: ParseBody: You must provide exactly two arguments per request: the IP address and"
+                " the tags (separated by a colon)"
+        );
+
+        return false;
+    }
+
+    if (!values[0].IsString()) {
+        DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The IP address must be a string");
+        return false;
+    }
+
+    _ip_address = values[0].GetString();
+
+    if (!values[1].IsString()) {
+        DARWIN_LOG_ERROR("ReputationTask:: ParseBody: The tags sent must be a string in the following format: "
+                            "TAG1;TAG2;...");
+        return false;
+    }
+
+    std::string raw_tags = values[1].GetString();
+    boost::split(_tags, raw_tags, [](char c) {return c == ';';});
+
+    DARWIN_LOG_DEBUG("ReputationTask:: Parsed body: [IP] " + _ip_address + ", [TAGS] " + raw_tags);
 
     return true;
 }

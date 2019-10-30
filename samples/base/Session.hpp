@@ -15,10 +15,14 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
+#include "../../toolkit/rapidjson/document.h"
+#include "../../toolkit/rapidjson/writer.h"
+#include "../../toolkit/rapidjson/stringbuffer.h"
 #include "Time.hpp"
 
 #define DARWIN_SESSION_BUFFER_SIZE 2048
 #define DARWIN_DEFAULT_THRESHOLD 80
+#define DARWIN_ERROR_RETURN 101
 
 namespace darwin {
 
@@ -58,7 +62,7 @@ namespace darwin {
         /// Set the filter's threshold
         ///
         /// \param threshold The threshold wanted.
-        virtual  void SetThreshold(std::size_t const& threshold) final;
+        virtual void SetThreshold(std::size_t const& threshold) final;
 
         /// Set the path to the associated decision module UNIX socket
         ///
@@ -138,6 +142,20 @@ namespace darwin {
         /// Get the name of the filter
         std::string GetFilterName();
 
+        /// Get the string representation of a rapidjson document
+        std::string JsonStringify(rapidjson::Document &json);
+
+        /// Parse the body received.
+        /// This is the default function, trying to get a JSON array from the _raw_body,
+        /// if you wan't to recover something else (full/complex JSON, custom data),
+        /// override the function in the child class.
+        virtual bool ParseBody();
+
+        /// Parse a line in the body.
+        /// This function should be implemented in each child,
+        /// and should be called between every entry to check validity (no early parsing).
+        virtual bool ParseLine(rapidjson::Value &line) = 0;
+
     private:
 
         /// Called when data is sent using Send() method.
@@ -179,9 +197,6 @@ namespace darwin {
         /// Execute the filter and
         virtual void ExecuteFilter() final;
 
-        /// Parse the body received.
-        virtual bool ParseBody() = 0;
-
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
@@ -196,11 +211,11 @@ namespace darwin {
 
         // Accessible by children
     protected:
-        darwin_filter_packet_t header; //!< Header received from the session.
-        std::string body; //!< Body received from session (if any).
-        std::string raw_body; //!< Body received from session (if any), that will not be parsed.
-        std::string _logs = ""; //!< Represents data given in the logs by the Session
-        std::chrono::time_point<std::chrono::high_resolution_clock> starting_time;
+        darwin_filter_packet_t _header; //!< Header received from the session.
+        rapidjson::Document _body; //!< Body received from session (if any).
+        std::string _raw_body; //!< Body received from session (if any), that will not be parsed.
+        std::string _logs; //!< Represents data given in the logs by the Session
+        std::chrono::time_point<std::chrono::high_resolution_clock> _starting_time;
         std::vector<unsigned int> _certitudes; //!< The Darwin results obtained.
         //!< Cache received from the Generator
         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;

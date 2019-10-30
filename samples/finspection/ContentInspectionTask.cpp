@@ -101,14 +101,12 @@ void ContentInspectionTask::operator()() {
 
     DARWIN_LOG_DEBUG("ContentInspectionTask:: task finished");
     Workflow();
-
-    _packetList = std::vector<Packet *>();
 }
 
 void ContentInspectionTask::Workflow() {
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -129,7 +127,7 @@ void ContentInspectionTask::Workflow() {
 
 bool ContentInspectionTask::ParseBody() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: '" + body + "'");
+    _packetList.clear();
 
     try {
         std::size_t packetMeta = 0, packetMetaEnd;
@@ -137,21 +135,21 @@ bool ContentInspectionTask::ParseBody() {
         std::size_t openingBracket;
 
         do {
-            packetMeta = body.find("\"{", packetMeta + 1);
+            packetMeta = _raw_body.find("\"{", packetMeta + 1);
             if(packetMeta == std::string::npos) break;
 
-            packetMetaEnd = body.find("}\",", packetMeta);
+            packetMetaEnd = _raw_body.find("}\",", packetMeta);
             if(packetMetaEnd == std::string::npos) break;
 
-            packetData = body.find("\"{", packetMetaEnd);
+            packetData = _raw_body.find("\"{", packetMetaEnd);
             if(packetData == std::string::npos) break;
 
-            packetDataEnd = body.find("}\"", packetData);
+            packetDataEnd = _raw_body.find("}\"", packetData);
             if(packetDataEnd == std::string::npos) break;
 
             _packetList.push_back(getImpcapData(
-                    body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
-                    body.substr(packetData + 1, packetDataEnd - packetData)
+                    _raw_body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
+                    _raw_body.substr(packetData + 1, packetDataEnd - packetData)
             ));
         } while(true);
 

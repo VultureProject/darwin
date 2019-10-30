@@ -26,7 +26,7 @@ HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& sock
 }
 
 xxh::hash64_t HostLookupTask::GenerateHash() {
-    return xxh::xxhash<64>(_current_host);
+    return xxh::xxhash<64>(_host);
 }
 
 long HostLookupTask::GetFilterCode() noexcept {
@@ -37,51 +37,54 @@ void HostLookupTask::operator()() {
     DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    // We have a generic hash function, which takes no arguments as these can be of very different types depending
-    // on the nature of the filter
-    // So instead, we set an attribute corresponding to the current host being processed, to compute the hash
-    // accordingly
-    for (const std::string &host : _hosts) {
+    // Should not fail, as the Session body parser MUST check for validity !
+    auto array = _body.GetArray();
+
+    for (auto &line : array) {
         SetStartingTime();
-        _current_host = host;
-        unsigned int certitude;
         xxh::hash64_t hash;
+        unsigned int certitude;
 
-        if (_is_cache) {
-            hash = GenerateHash();
+        if(ParseLine(line)) {
+            if (_is_cache) {
+                hash = GenerateHash();
 
-            if (GetCacheResult(hash, certitude)) {
-                if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                            R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                if (GetCacheResult(hash, certitude)) {
+                    if (is_log && (certitude>=_threshold)){
+                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                    }
+                    _certitudes.push_back(certitude);
+                    DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
+                                    + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+                    continue;
                 }
-                _certitudes.push_back(certitude);
-                DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
-                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
-                continue;
+            }
+
+            certitude = DBLookup();
+            if (is_log && (certitude>=_threshold)){
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                        R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+            }
+            _certitudes.push_back(certitude);
+
+            if (_is_cache) {
+                SaveToCache(hash, certitude);
             }
         }
-
-        certitude = DBLookup(host);
-        if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                    R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
-        _certitudes.push_back(certitude);
 
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
-        }
         DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
     }
 
     Workflow();
-    _hosts = std::vector<std::string>();
 }
 
 void HostLookupTask::Workflow() {
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -98,12 +101,12 @@ void HostLookupTask::Workflow() {
     }
 }
 
-unsigned int HostLookupTask::DBLookup(const std::string &host) noexcept {
+unsigned int HostLookupTask::DBLookup() noexcept {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("HostLookupTask:: Looking up '" +  host + "' in the database");
+    DARWIN_LOG_DEBUG("HostLookupTask:: Looking up '" +  _host + "' in the database");
     unsigned int certitude = 0;
 
-    if(_database.find(host) != _database.end()) {
+    if(_database.find(_host) != _database.end()) {
         certitude = 100;
     }
 
@@ -111,55 +114,30 @@ unsigned int HostLookupTask::DBLookup(const std::string &host) noexcept {
     return certitude;
 }
 
-bool HostLookupTask::ParseBody() {
+bool HostLookupTask::ParseLine(rapidjson::Value& line) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("HostLookupTask:: ParseBody: " + body);
 
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
-
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: You must provide a list");
-            return false;
-        }
-
-        auto values = document.GetArray();
-
-        if (values.Size() <= 0) {
-            DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: The list provided is empty");
-            return false;
-        }
-
-        for (auto &request : values) {
-            if (!request.IsArray()) {
-                DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: For each request, you must provide a list");
-                return false;
-            }
-
-            auto items = request.GetArray();
-
-            if (items.Size() != 1) {
-                DARWIN_LOG_ERROR(
-                        "HostLookupTask:: ParseBody: You must provide exactly one argument per request: the host"
-                );
-
-                return false;
-            }
-
-            if (!items[0].IsString()) {
-                DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: The host sent must be a string");
-                return false;
-            }
-
-            std::string host = items[0].GetString();
-            _hosts.push_back(host);
-            DARWIN_LOG_DEBUG("HostLookupTask:: ParseBody: Parsed element: " + host);
-        }
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("HostLookupTask:: ParseBody: Unknown Error");
+    if(not line.IsArray()) {
+        DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: The input line is not an array");
         return false;
     }
+
+    _host.clear();
+    auto values = line.GetArray();
+
+    if (values.Size() != 1) {
+        DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: You must provide only the host in the list");
+        return false;
+    }
+
+    if (!values[0].IsString()) {
+        DARWIN_LOG_ERROR("HostLookupTask:: ParseBody: The host sent must be a string");
+        return false;
+    }
+
+    _host = values[0].GetString();
+    DARWIN_LOG_DEBUG("HostLookupTask:: ParseBody: Parsed element: " + _host);
+
 
     return true;
 }
