@@ -57,10 +57,10 @@ def good_format_tokens_test():
     dga_filter.configure()
 
     # START FILTER
-    if not dga_filter.valgrind_start():
+    if not dga_filter.start():
         return False
 
-    if not dga_filter.valgrind_stop():
+    if not dga_filter.start():
         ret = False
 
     dga_filter.clean_files()
@@ -79,7 +79,7 @@ def bad_format_tokens_test():
     dga_filter.configure()
 
     # START FILTER
-    dga_filter.valgrind_start()
+    dga_filter.start()
 
     # THE FILTER HAVE TO QUIT GRACEFULLY, SO REMOVE ITS PID
     if os.path.exists(dga_filter.pid):
