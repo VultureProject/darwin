@@ -27,7 +27,6 @@ bool Generator::Configure(const std::string &configuration_file_path, const std:
         _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
     }
 
-
     DARWIN_LOG_DEBUG("DGA:: Generator:: Initializing faup handler...");
     faup_options_t *faup_options = faup_options_new();
 
@@ -144,7 +143,33 @@ bool Generator::LoadTokenMap(const std::string &token_map_path) {
 
     while (!token_map_stream.eof() && std::getline(token_map_stream, current_line)) {
         boost::tokenizer<boost::char_separator<char>> tokens(current_line, separator);
-        _token_map[*tokens.begin()] = (unsigned int)std::stoi(*(++tokens.begin()));
+
+        boost::tokenizer<boost::char_separator<char>>::iterator key(tokens.begin());
+        if (key==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when load token map : Blank line");
+            token_map_stream.close();
+            return false;
+        }
+
+        boost::tokenizer<boost::char_separator<char>>::iterator value(++tokens.begin());
+        if (value==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when load token map on this line : "
+                                + current_line);
+            token_map_stream.close();
+            return false;
+        }
+
+        _token_map[*key] = (unsigned int)std::stoi(*value);
+
+        try{
+            _token_map[*key] = (unsigned int)std::stoi(*value);
+        }catch(const std::invalid_argument& ia){
+            std::string exc(ia.what());
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Value " + *value + " is invalid : " + exc);
+        }catch(const std::out_of_range& oor){
+            std::string exc(oor.what());
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Value is out of range : " + exc);
+        }
     }
 
     token_map_stream.close();
@@ -184,5 +209,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
 }
 
 Generator::~Generator() {
-    faup_terminate(_faup_handler);
+    if(_faup_handler){
+        faup_terminate(_faup_handler);
+    }
 }
