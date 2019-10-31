@@ -43,7 +43,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("connection: " + i.__name__, i)
+        print_result("dga: " + i.__name__, i)
 
 def good_format_tokens_test():
     ret = True
