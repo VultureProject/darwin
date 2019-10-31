@@ -551,7 +551,6 @@ set(
 if (NOT DEFINED FILTER)
     set(
         FILTERS
-        USER_AGENT
         HOSTLOOKUP
         SESSION
         REPUTATION
