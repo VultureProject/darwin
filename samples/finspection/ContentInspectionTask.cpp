@@ -18,8 +18,9 @@
 ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+							   std::mutex& cache_mutex,
                                Configurations& configurations)
-        : Session{"content_inspection", socket, manager, cache} {
+        : Session{"content_inspection", socket, manager, cache, cache_mutex} {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
 }
@@ -94,7 +95,7 @@ void ContentInspectionTask::operator()() {
         }
 
         _certitudes.push_back(certitude);
-        DARWIN_LOG_DEBUG("ContentInspectionTask:: processed entry in "
+        DARWIN_LOG_INFO("ContentInspectionTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         freePacket(pkt);
     }

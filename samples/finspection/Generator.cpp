@@ -32,7 +32,12 @@ Generator::Generator() {
 bool Generator::LoadConfig(const rapidjson::Document &config) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Loading configuration...");
-    
+
+	if(not config.HasMember("yaraRuleFile")) {
+		DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: 'yaraRuleFile' parameter missing");
+		return false;
+	}
+
     char str[2048];
     if(config.HasMember("maxConnections")) {
         if(config["maxConnections"].IsUint()) {
@@ -147,7 +152,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     DARWIN_LOGGER;
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ContentInspectionTask>(socket, manager, _cache, _configurations));
+            std::make_shared<ContentInspectionTask>(socket, manager, _cache, _cache_mutex, _configurations));
 }
 
 Generator::~Generator() {
