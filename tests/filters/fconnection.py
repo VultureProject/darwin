@@ -103,7 +103,7 @@ def new_connection_test():
     return ret
 
 """
-We give a connection that have already 
+We give a connection that have already
 been given in the init data file
 """
 def known_connection_test():

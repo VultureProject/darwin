@@ -38,29 +38,34 @@ void ConnectionSupervisionTask::operator()() {
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
     unsigned int certitude;
 
-    for (const std::string &connection : _connections) {
+    // Should not fail, as the Session body parser MUST check for validity !
+    auto array = _body.GetArray();
+
+    for (auto &line : array) {
         SetStartingTime();
 
-        _current_connection = connection;
+        if(ParseLine(line)) {
+            certitude = REDISLookup(_connection);
 
-        certitude = REDISLookup(connection);
+            if(is_log && certitude>=_threshold){
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                        R"(", "connection": ")" + _connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+            }
 
-        if(is_log && certitude>=_threshold){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
-                     R"(", "connection": ")" + connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+            _certitudes.push_back(certitude);
+            DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: processed entry in "
+                            + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
-
-        _certitudes.push_back(certitude);
-        DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
+        }
     }
 
     Workflow();
-    _connections = std::vector<std::string>();
 }
 
 void ConnectionSupervisionTask::Workflow() {
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -77,70 +82,41 @@ void ConnectionSupervisionTask::Workflow() {
     }
 }
 
-bool ConnectionSupervisionTask::ParseBody() {
+bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseBody: " + body);
-    std::string connection;
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
 
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: You must provide a list");
-            return false;
-        }
-
-        if(!ParseData(document)){
-            DARWIN_LOG_CRITICAL("ConnectionSupervisionTask:: ParseBody:: Error when parsing data");
-            return false;
-        }
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervisionTask:: ParseBody: Unknown Error");
+    if(not line.IsArray()) {
+        DARWIN_LOG_ERROR("DGATask:: ParseBody: The input line is not an array");
         return false;
     }
 
-    return true;
-}
+    _connection.clear();
+    auto values = line.GetArray();
 
-bool ConnectionSupervisionTask::ParseData(const rapidjson::Value& data){
-    DARWIN_LOGGER;
-    std::string arg, line;
-    std::vector<std::string> values;
-
-    for (auto& d: data.GetArray()){
-        line = "";
-
-        if (!d.IsArray()) {
-            DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: Not array type encounter in data, ignored");
+    for (auto& a: values){
+        if (!a.IsString()) {
+            DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLine:: Not string type encounter in data, ignored");
             continue;
         }
-
-        for (auto& a: d.GetArray()){
-            if (!a.IsString()) {
-                DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: Not string type encounter in data, ignored");
-                continue;
-            }
-            line += a.GetString();
-            line += ";";
-        }
-
-        if(!line.empty()) line.pop_back();
-
-        if (!std::regex_match (line, std::regex(
-                "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
-                "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
-                "(([0-9]+;(17|6))|([0-9]*;*1))")))
-        {
-            DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLogs:: The data: "+ line +", isn't valid, ignored. "
-                                                                                           "Format expected : "
-                                                                                           "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
-                                                                                           "\"[ip_protocol udp or tcp]\")|"
-                                                                                           "\"[ip_protocol icmp]\")]");
-            continue;
-        }
-        DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseBody: Parsed element: " + line);
-        _connections.push_back(line);
+        _connection += a.GetString();
+        _connection += ";";
     }
+
+    if(!_connection.empty()) _connection.pop_back();
+
+    if (!std::regex_match (_connection, std::regex(
+            "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\."
+            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
+            "(([0-9]+;(17|6))|([0-9]*;*1))")))
+    {
+        DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLine:: The data: "+ _connection +", isn't valid, ignored. "
+                                                                                        "Format expected : "
+                                                                                        "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
+                                                                                        "\"[ip_protocol udp or tcp]\")|"
+                                                                                        "\"[ip_protocol icmp]\")]");
+        return false;
+    }
+    DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseLine: Parsed element: " + _connection);
 
     return true;
 }
@@ -159,7 +135,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong while querying Redis");
         freeReplyObject(reply);
         reply = nullptr;
-        return 101;
+        return DARWIN_ERROR_RETURN;
     }
 
     // When doubt, everything is ok
@@ -190,7 +166,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
                              "while adding a new connection to Redis");
             freeReplyObject(reply);
             reply = nullptr;
-            return 101;
+            return DARWIN_ERROR_RETURN;
         }
     }
 

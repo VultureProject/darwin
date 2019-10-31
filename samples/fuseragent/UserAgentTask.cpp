@@ -161,7 +161,7 @@ unsigned int UserAgentTask::Predict(const std::string &user_agent) {
 
     if (!run_status.ok()) {
         DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
-        return 101;
+        return DARWIN_ERROR_RETURN;
     }
 
     std::map<std::string, float> result;

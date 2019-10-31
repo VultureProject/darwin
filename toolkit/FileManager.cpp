@@ -52,7 +52,8 @@ namespace darwin {
         }
 
         bool FileManager::operator<<(int val) {
-            return Write(std::to_string(val));
+            std::string val_str = std::to_string(val);
+            return Write(val_str);
         }
 
         FileManager::~FileManager() {

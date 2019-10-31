@@ -53,6 +53,8 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
+    bool ParseLine(rapidjson::Value &line) final {}
+
     /// Write the logs in file
     bool WriteLogs();
 

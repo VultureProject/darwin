@@ -41,7 +41,7 @@ class Filter():
 
     def start(self):
         self.process = subprocess.Popen(self.cmd)
-        sleep(1)
+        sleep(2)
         return self.check_start()
 
     def stop(self):
