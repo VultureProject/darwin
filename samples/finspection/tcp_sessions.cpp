@@ -132,7 +132,7 @@ static inline void tcpConnectionReset(void *connObject) {
     if(connObject) {
         TcpConnection *conn = (TcpConnection *)connObject;
         conn->sPort = 0;
-        conn->state = TCP_NONE;
+        conn->state = TCP_SESS_NONE;
         conn->initSeq = 0;
         conn->nextSeq = 0;
         conn->lastAck = 0;
@@ -309,29 +309,29 @@ int tcpSessionInitFromPacket(TcpSession *tcpSession, Packet *pkt) {
                 // connection was initiated by the destination, we need to swap connections
                 swapTcpConnections(tcpSession);
                 swapFlowDirection(tcpSession->flow);
-                srcCon->state = TCP_SYN_SENT;
-                dstCon->state = TCP_SYN_RECV;
+                srcCon->state = TCP_SESS_SYN_SENT;
+                dstCon->state = TCP_SESS_SYN_RECV;
                 srcCon->initSeq = header->ack-1;
                 srcCon->nextSeq = header->ack;
                 dstCon->nextSeq = header->seq + 1;
             }
             else if(HAS_TCP_FLAG(flags, 'S')) {
                 // connection is beginning
-                srcCon->state = TCP_SYN_SENT;
-                dstCon->state = TCP_LISTEN;
+                srcCon->state = TCP_SESS_SYN_SENT;
+                dstCon->state = TCP_SESS_LISTEN;
                 srcCon->nextSeq = srcCon->initSeq + 1;
             }
             else if(HAS_TCP_FLAG(flags, 'F')) {
                 /* connection is closing, but specific state is unknown
                  * it's not a problem as there is still at least one packet to receive */
-                dstCon->state = TCP_FIN_WAIT1;
-                srcCon->state = TCP_CLOSE_WAIT;
+                dstCon->state = TCP_SESS_FIN_WAIT1;
+                srcCon->state = TCP_SESS_CLOSE_WAIT;
 
                 srcCon->nextSeq = header->seq + 1;
             }
             else if(HAS_TCP_FLAG(flags, 'A')) {
                 // connection is established or closing
-                srcCon->state = TCP_ESTABLISHED;
+                srcCon->state = TCP_SESS_ESTABLISHED;
             }
             else {
                 // probably RST or illegal state, dropping
@@ -373,7 +373,7 @@ int tcpConnectionsUpdateFromQueueElem(TcpConnection *srcCon, TcpConnection *dstC
         if(tcpDataLength) {
             uint32_t dataLength = tcpDataLength;
             uint32_t offset = queue->seq - srcCon->initSeq - 1 /* SYN packet = seq+1 but no data */;
-            if(srcCon->state > TCP_ESTABLISHED && offset > 0) {
+            if(srcCon->state > TCP_SESS_ESTABLISHED && offset > 0) {
                 offset--; /* FIN packet = seq+1 but no data */
             }
 
@@ -382,47 +382,47 @@ int tcpConnectionsUpdateFromQueueElem(TcpConnection *srcCon, TcpConnection *dstC
         }
 
         if(HAS_TCP_FLAG(flags, 'R')){
-            srcCon->state = TCP_CLOSED;
-            dstCon->state = TCP_CLOSED;
+            srcCon->state = TCP_SESS_CLOSED;
+            dstCon->state = TCP_SESS_CLOSED;
             DARWIN_LOG_INFO("tcp_sessions::tcp session RESET");
         }
         else if(HAS_TCP_FLAG(flags, 'S') && HAS_TCP_FLAG(flags, 'A')) {
-            srcCon->state = TCP_SYN_RECV;
+            srcCon->state = TCP_SESS_SYN_RECV;
             srcCon->initSeq = queue->seq;
             srcCon->nextSeq = srcCon->initSeq + 1;
         }
         else if(HAS_TCP_FLAG(flags, 'F')) {
             srcCon->nextSeq += 1;
 
-            if(srcCon->state == TCP_CLOSE_WAIT) {
-                srcCon->state = TCP_LAST_ACK;
+            if(srcCon->state == TCP_SESS_CLOSE_WAIT) {
+                srcCon->state = TCP_SESS_LAST_ACK;
             }
-            else if(srcCon->state <= TCP_ESTABLISHED) {
-                srcCon->state = TCP_FIN_WAIT1;
+            else if(srcCon->state <= TCP_SESS_ESTABLISHED) {
+                srcCon->state = TCP_SESS_FIN_WAIT1;
                 /* to ease computation, we assume destination
                  * received this packet */
-                dstCon->state = TCP_CLOSE_WAIT;
+                dstCon->state = TCP_SESS_CLOSE_WAIT;
             }
         }
         else if(HAS_TCP_FLAG(flags, 'A')) {
-            if(srcCon->state == TCP_FIN_WAIT1) {
-                srcCon->state = TCP_CLOSING;
+            if(srcCon->state == TCP_SESS_FIN_WAIT1) {
+                srcCon->state = TCP_SESS_CLOSING;
             }
-            else if(srcCon->state == TCP_FIN_WAIT2) {
-                srcCon->state = TCP_TIME_WAIT;
+            else if(srcCon->state == TCP_SESS_FIN_WAIT2) {
+                srcCon->state = TCP_SESS_TIME_WAIT;
             }
-            else if(srcCon->state <= TCP_SYN_SENT) {
-                srcCon->state = TCP_ESTABLISHED;
+            else if(srcCon->state <= TCP_SESS_SYN_SENT) {
+                srcCon->state = TCP_SESS_ESTABLISHED;
             }
 
-            if(dstCon->state == TCP_TIME_WAIT) {
-                dstCon->state = TCP_CLOSED;
+            if(dstCon->state == TCP_SESS_TIME_WAIT) {
+                dstCon->state = TCP_SESS_CLOSED;
             }
-            else if(dstCon->state == TCP_LAST_ACK) {
-                dstCon->state = TCP_CLOSED;
+            else if(dstCon->state == TCP_SESS_LAST_ACK) {
+                dstCon->state = TCP_SESS_CLOSED;
             }
-            else if(dstCon->state == TCP_SYN_RECV) {
-                dstCon->state = TCP_ESTABLISHED;
+            else if(dstCon->state == TCP_SESS_SYN_RECV) {
+                dstCon->state = TCP_SESS_ESTABLISHED;
             }
         }
         else {
@@ -431,7 +431,7 @@ int tcpConnectionsUpdateFromQueueElem(TcpConnection *srcCon, TcpConnection *dstC
 
         srcCon->lastAck = queue->ack;
 
-        if(srcCon->state >= TCP_CLOSING && dstCon->state >= TCP_CLOSING) {
+        if(srcCon->state >= TCP_SESS_CLOSING && dstCon->state >= TCP_SESS_CLOSING) {
             return 1;
         }
 
@@ -477,7 +477,7 @@ static inline TcpQueue *tcpConnectionGetNextInQueue(TcpConnection *connection) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("tcp_sessions::tcpConnectionGetNextInQueue");
 
-    if(connection->state <= TCP_LISTEN) return connection->queueTail;
+    if(connection->state <= TCP_SESS_LISTEN) return connection->queueTail;
 
     TcpQueue *scan = connection->queueHead;
     while(scan != NULL) {
@@ -576,8 +576,8 @@ int handleTcpFromPacket(Packet *pkt) {
                 }
 
                 if(streamsCnf->streamStoreFolder &&
-                   srcCon->state >= TCP_ESTABLISHED &&
-                   dstCon->state >= TCP_ESTABLISHED &&
+                   srcCon->state >= TCP_SESS_ESTABLISHED &&
+                   dstCon->state >= TCP_SESS_ESTABLISHED &&
                    (!srcCon->streamBuffer->bufferDump || !dstCon->streamBuffer->bufferDump)) {
                     char fileNameClient[100], fileNameServer[100];
 
