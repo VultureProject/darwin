@@ -74,6 +74,11 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
                 std::snprintf(str, 2048, "yaraRuleFile set to '%s'", config["yaraRuleFile"].GetString());
                 DARWIN_LOG_DEBUG(str);
             }
+			else {
+				DARWIN_LOG_ERROR("ContentInspection:: Generator:: could not open yara rules '" +
+					std::string(_configurations.yaraCnf->ruleFilename) + "'");
+				return false;
+			}
         }
         else {
             DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraRuleFile' parameter must be a string");
