@@ -40,19 +40,26 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
+    /// According to the header response,
+    /// init the following Darwin workflow
+    void Workflow();
+
+    /// Parse a line from the body.
+    /// \return true on parsing success, false otherwise
+    /// \warning modifies _entry class attribute
+    bool ParseLine(rapidjson::Value& line) final;
+
     /// Parse the body received.
     bool ParseBody() override;
 
-    /// Parse the data received in the body.
-    bool ParseData(const rapidjson::Value& data);
-
-    /// Add the data parsed to REDIS
+    /// Add the _entry parsed to REDIS
     /// \return true on success, false otherwise.
-    bool REDISAdd(std::vector<std::string> values) noexcept;
+    bool REDISAddEntry() noexcept;
 
 private:
     bool _learning_mode = true;
     std::string _redis_list_name;
+    std::string _entry;
     std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;
 };

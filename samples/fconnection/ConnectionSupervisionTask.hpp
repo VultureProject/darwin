@@ -43,11 +43,8 @@ private:
     /// init the following Darwin workflow
     void Workflow();
 
-    /// Parse the body received.
-    bool ParseBody() override;
-
-    /// Parse the data received in the body.
-    bool ParseData(const rapidjson::Value& data);
+    /// Parse a line in the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
     /// Read a connection description from the session and
     /// perform a redis lookup.
@@ -57,7 +54,6 @@ private:
 
 private:
     unsigned int _redis_expire;
-    std::string _current_connection; // The current connection to process
-    std::vector<std::string> _connections;
+    std::string _connection;
     std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager;
 };

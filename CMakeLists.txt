@@ -70,6 +70,7 @@ set(
         toolkit/Network.cpp toolkit/Network.hpp
         toolkit/Validators.cpp toolkit/Validators.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
+        toolkit/FileManager.cpp toolkit/FileManager.hpp
         toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
         toolkit/Time.cpp toolkit/Time.hpp
         toolkit/Files.cpp toolkit/Files.hpp
@@ -550,7 +551,6 @@ set(
 if (NOT DEFINED FILTER)
     set(
         FILTERS
-        USER_AGENT
         HOSTLOOKUP
         SESSION
         REPUTATION

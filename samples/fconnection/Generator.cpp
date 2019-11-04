@@ -68,7 +68,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
-    std::string init_data_path = "";
+    std::string init_data_path;
 
     if (!configuration.IsObject()) {
         DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Configuration is not a JSON object");

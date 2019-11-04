@@ -31,7 +31,7 @@ void EndTask::operator()() {
     std::string evt_id, nb_result;
 
     evt_id = Evt_idToString();
-    nb_result = std::to_string(header.certitude_size);
+    nb_result = std::to_string(_header.certitude_size);
     REDISAdd(evt_id, nb_result);
     Workflow();
 }
@@ -41,7 +41,7 @@ long EndTask::GetFilterCode() noexcept {
 }
 
 void EndTask::Workflow() {
-    switch (header.response) {
+    switch (_header.response) {
         case DARWIN_RESPONSE_SEND_BOTH:
             SendToDarwin();
             SendResToSession();
@@ -56,12 +56,6 @@ void EndTask::Workflow() {
         default:
             break;
     }
-}
-
-bool EndTask::ParseBody() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("EndTask:: ParseBody: " + body);
-    return true;
 }
 
 bool EndTask::REDISAdd(const std::string& evt_id, const std::string& nb_result) noexcept {

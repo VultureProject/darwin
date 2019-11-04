@@ -58,6 +58,9 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
+    // Implemented but not used.
+    bool ParseLine(rapidjson::Value& line) final {}
+
 private:
     Configurations _configurations;
     std::vector<Packet *> _packetList;
