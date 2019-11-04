@@ -13,19 +13,17 @@
 
 #include "../toolkit/rapidjson/document.h"
 #include "Session.hpp"
+#include "AGenerator.hpp"
 
-class Generator {
+class Generator: public AGenerator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
-
-private:
-    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; // The cache for already processed request
+               darwin::Manager& manager) noexcept override final;
 };

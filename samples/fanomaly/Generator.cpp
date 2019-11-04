@@ -14,7 +14,7 @@
 
 #include "../../toolkit/lru_cache.hpp"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Anomaly:: Generator:: Configured");
     return true;
@@ -24,8 +24,5 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<AnomalyTask>(socket, manager, _cache));
+            std::make_shared<AnomalyTask>(socket, manager, _cache, _cache_mutex));
 }
-
-Generator::~Generator() = default;;
-

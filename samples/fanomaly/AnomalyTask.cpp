@@ -17,8 +17,9 @@
 
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
-        : Session{"anomaly", socket, manager, cache}{}
+                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                         std::mutex& cache_mutex)
+        : Session{"anomaly", socket, manager, cache, cache_mutex}{}
 
 void AnomalyTask::operator()() {
     DARWIN_LOGGER;
@@ -29,31 +30,12 @@ void AnomalyTask::operator()() {
     }
 
     DARWIN_LOG_DEBUG("AnomalyTask:: processed task in " + std::to_string(GetDurationMs()));
-    Workflow();
     _matrixies = std::vector<arma::mat>();
     _ips = std::vector<std::vector<std::string>>();
 }
 
 long AnomalyTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_ANOMALY;
-}
-
-void AnomalyTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendResToSession();
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool AnomalyTask::Detection(arma::mat matrix, const std::vector<std::string> &ips){
