@@ -27,8 +27,9 @@ extern "C" {
 
 SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
-        : Session{"session", socket, manager, cache}{
+                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                         std::mutex& cache_mutex)
+        : Session{"session", socket, manager, cache, cache_mutex}{
     _is_cache = _cache != nullptr;
 }
 
@@ -75,27 +76,8 @@ void SessionTask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _tokens = std::vector<std::string>();
     _repo_ids_list = std::vector<std::vector<std::string>>();
-}
-
-void SessionTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {

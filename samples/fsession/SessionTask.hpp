@@ -35,8 +35,9 @@ extern "C" {
 class SessionTask : public darwin::Session {
 public:
     explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
-                       darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
+                         darwin::Manager& manager,
+                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                         std::mutex& cache_mutex);
     ~SessionTask() override = default;
 
 
@@ -54,10 +55,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Read header from the session and
     /// call the method appropriate to the data type received.
     ///
