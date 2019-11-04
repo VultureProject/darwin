@@ -123,6 +123,7 @@ int yaraDeleteConfig(YaraCnf *conf) {
     }
 
     DARWIN_LOG_INFO("successfully cleared yara configuration");
+    free(conf);
     return 0;
 }
 
