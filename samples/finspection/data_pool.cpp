@@ -307,7 +307,6 @@ void *memoryManagerDoWork(void *pData) {
         if(params->sigStop) {
             DARWIN_LOG_INFO("memory manager: closing");
             pthread_mutex_unlock(&(params->mSignal));
-            free(params);
             pthread_exit(0);
         }
 

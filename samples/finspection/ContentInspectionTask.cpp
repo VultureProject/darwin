@@ -18,7 +18,7 @@
 ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-							   std::mutex& cache_mutex,
+                               std::mutex& cache_mutex,
                                Configurations& configurations)
         : Session{"content_inspection", socket, manager, cache, cache_mutex} {
     _is_cache = _cache != nullptr;
@@ -34,10 +34,9 @@ void ContentInspectionTask::operator()() {
     DARWIN_LOG_DEBUG("ContentInspectionTask:: started task");
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    int tcpStatus;
-
     for(Packet *pkt : _packetList) {
         unsigned int certitude = 0;
+        int tcpStatus = 0;
         SetStartingTime();
 
         pkt->enterTime = std::time(NULL);
@@ -101,31 +100,6 @@ void ContentInspectionTask::operator()() {
     }
 
     DARWIN_LOG_DEBUG("ContentInspectionTask:: task finished");
-    Workflow();
-
-    _packetList = std::vector<Packet *>();
-}
-
-void ContentInspectionTask::Workflow() {
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
-
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            if(is_log) SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-            if(is_log) SendToDarwin();
-        default:
-            break;
-    }
 }
 
 bool ContentInspectionTask::ParseBody() {
@@ -133,6 +107,8 @@ bool ContentInspectionTask::ParseBody() {
     DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: '" + body + "'");
 
     try {
+        _packetList = std::vector<Packet *>();
+        _logs.clear();
         std::size_t packetMeta = 0, packetMetaEnd;
         std::size_t packetData, packetDataEnd;
         std::size_t openingBracket;

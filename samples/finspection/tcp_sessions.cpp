@@ -58,6 +58,7 @@ static inline void tcpQueueDelete(void *queueObject) {
     if(queueObject) {
         TcpQueue *queue = (TcpQueue *)queueObject;
         if(queue->data) free(queue->data);
+        free(queue);
     }
     return;
 }
@@ -233,9 +234,9 @@ void destroyTCPPools() {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("tcp_sessions::destroyTCPPools");
 
-    destroyPool(queuePool);
-    destroyPool(connPool);
     destroyPool(sessPool);
+    destroyPool(connPool);
+    destroyPool(queuePool);
     return;
 }
 
