@@ -60,15 +60,15 @@ class Services:
         """
         with self._lock:
             for _, filter in self._filters.items():
-                self.start_one(filter, True)
-                ret = Services._wait_process_ready(filter)
-                if ret:
-                    logger.error("Error when starting filter {}: {}".format(filter['name'], ret))
-                    self.stop_one(filter, no_lock=True)
-                    self.clean_one(filter, no_lock=True)
-                else:
-                    filter['status'] = psutil.STATUS_RUNNING
-                    call(['ln', '-s', filter['socket'], filter['socket_link']])
+                if self.start_one(filter, True):
+                    ret = Services._wait_process_ready(filter)
+                    if ret:
+                        logger.error("Error when starting filter {}: {}".format(filter['name'], ret))
+                        self.stop_one(filter, no_lock=True)
+                        self.clean_one(filter, no_lock=True)
+                    else:
+                        filter['status'] = psutil.STATUS_RUNNING
+                        call(['ln', '-s', filter['socket'], filter['socket_link']])
 
     def rotate_logs_all(self):
         """
@@ -195,7 +195,13 @@ class Services:
         # start process
         logger.debug("Starting {}".format(" ".join(cmd)))
         filter['status'] = psutil.STATUS_WAKING
-        p = Popen(cmd)
+
+        try:
+            p = Popen(cmd)
+        except OSError as e:
+            logger.error("cannot start filter: " + str(e))
+            filter['status'] = psutil.STATUS_DEAD
+            return False
         try:
             p.wait(timeout=1)
         except TimeoutExpired:
@@ -206,7 +212,9 @@ class Services:
                 p.kill()
                 p.wait()
                 filter['status'] = psutil.STATUS_DEAD
-                return
+                return False
+
+        return True
 
     @staticmethod
     def rotate_logs(name, pid_file):
