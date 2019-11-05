@@ -49,8 +49,6 @@ public:
     static constexpr unsigned int TOKEN_SIZE = (2*SHA256_DIGEST_LENGTH);
 
 protected:
-    /// Get the result from the cache
-    virtual xxh::hash64_t GenerateHash() override;
     /// Return filter code
     long GetFilterCode() noexcept override;
 

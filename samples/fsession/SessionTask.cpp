@@ -30,15 +30,10 @@ SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                          std::mutex& cache_mutex)
         : Session{"session", socket, manager, cache, cache_mutex}{
-    _is_cache = _cache != nullptr;
 }
 
 long SessionTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_SESSION;
-}
-
-xxh::hash64_t SessionTask::GenerateHash() {
-    return xxh::xxhash<64>(_current_token + "|" + boost::join(_current_repo_ids, "-"));
 }
 
 void SessionTask::operator()() {
@@ -53,25 +48,10 @@ void SessionTask::operator()() {
         _current_token = _tokens[index];
         _current_repo_ids = _repo_ids_list[index];
         unsigned int certitude;
-        xxh::hash64_t hash;
-
-        if (_is_cache) {
-            hash = GenerateHash();
-
-            if (GetCacheResult(hash, certitude)) {
-                _certitudes.push_back(certitude);
-                DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
-                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
-                continue;
-            }
-        }
 
         certitude = ReadFromSession(_current_token, _current_repo_ids);
         _certitudes.push_back(certitude);
 
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
-        }
         DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
@@ -123,7 +103,6 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
     arguments.emplace_back("HMGET");
     arguments.emplace_back(token);
     arguments.insert(arguments.end(), repo_ids.begin(), repo_ids.end());
-    std::string parsed_repo_ids = JoinRepoIDs(repo_ids);
     /*
         KEY                 HMAP
         sess_<SHA256>       login, authenticated
@@ -164,7 +143,7 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
     }
 
     DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " authenticated on repository IDs " +
-                    parsed_repo_ids + " = " + std::to_string(session_status));
+                    JoinRepoIDs(repo_ids) + " = " + std::to_string(session_status));
 
     return session_status;
 }
