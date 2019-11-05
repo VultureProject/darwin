@@ -200,6 +200,7 @@ class Services:
             p = Popen(cmd)
         except OSError as e:
             logger.error("cannot start filter: " + str(e))
+            filter['status'] = psutil.STATUS_DEAD
             return False
         try:
             p.wait(timeout=1)
