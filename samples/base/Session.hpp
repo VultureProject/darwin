@@ -72,29 +72,6 @@ namespace darwin {
         virtual void SetOutputType(std::string const& output) final;
 
     protected:
-        /// Send the packet header & size bytes of data to the configured filter.
-        ///
-        /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
-        /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
-        virtual void SendToFilter(darwin_filter_packet_t const* hdr, void const* data,
-                                    std::size_t packet_size) final;
-
-        /// Send the packet header & size bytes of data to the session.
-        ///
-        /// \param header Pointer to the header of the packet. If the size field is <= 0, does not send data.
-        /// \param data Pointer to the data to send after the header. If equals to nullptr, does not send it.
-        /// \return Upon critical error involving closing the Session return false, return true otherwise.
-        virtual bool Send(darwin_filter_packet_t const* hdr, void const* data,
-                            std::size_t packet_size) final;
-
-        /// Send result into the session.
-        ///
-        /// \return Upon critical error involving closing the Session return false, return true otherwise.
-        virtual bool SendResToSession() noexcept;
-
-        /// Send result into DARWIN.
-        virtual void SendToDarwin() noexcept;
-
         /// Return filter code.
         virtual long GetFilterCode() noexcept = 0;
 
@@ -140,16 +117,26 @@ namespace darwin {
         /// Get the name of the filter
         std::string GetFilterName();
 
-        bool Workflow();
-
     private:
+        /// Send
+        virtual void SendNext() final;
+
+        /// Send result to the client.
+        ///
+        /// \return false if the function could not send the data, true otherwise.
+        virtual bool SendToClient() noexcept;
+
+        /// Send result to next filter.
+        ///
+        /// \return false if the function could not send the data, true otherwise.
+        virtual bool SendToFilter() noexcept;
 
         /// Called when data is sent using Send() method.
         /// Terminate the session on failure.
         ///
         /// \param size The number of byte sent.
         virtual void
-        SendCallback(const boost::system::error_code& e,
+        SendToClientCallback(const boost::system::error_code& e,
                      std::size_t size) final;
 
         /// Called when data is sent using SendToFilter() method.
