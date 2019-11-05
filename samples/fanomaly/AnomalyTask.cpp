@@ -123,7 +123,7 @@ bool AnomalyTask::ParseLine(rapidjson::Value &cluster) {
     size_t size;
 
     if(not cluster.IsArray()) {
-        DARWIN_LOG_ERROR("AnomalyTask:: ParseBody: The input line is not an array");
+        DARWIN_LOG_ERROR("AnomalyTask:: ParseLine: The input line is not an array");
         return false;
     }
 

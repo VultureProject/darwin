@@ -41,9 +41,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// Parse the body received.
-    bool ParseBody() override;
-
     /// Generate the logs from the anomalies found
     void GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts);
 
