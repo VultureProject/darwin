@@ -20,6 +20,7 @@ namespace darwin {
 
         bool ThreadManager::Start() {
             DARWIN_LOGGER;
+            std::lock_guard<std::mutex> lck(_thread_mutex);
             DARWIN_LOG_DEBUG("ThreadManager:: Start thread");
 
             if (!_is_stop) {
@@ -43,6 +44,7 @@ namespace darwin {
 
         bool ThreadManager::Stop() {
             DARWIN_LOGGER;
+            std::lock_guard<std::mutex> lck(_thread_mutex);
             DARWIN_LOG_DEBUG("ThreadManager:: Stop thread");
 
             if (_is_stop) {

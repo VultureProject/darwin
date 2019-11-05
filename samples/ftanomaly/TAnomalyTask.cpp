@@ -19,9 +19,10 @@
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                              darwin::Manager& manager,
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                             std::mutex& cache_mutex,
                              std::shared_ptr<AnomalyThreadManager> vat,
                              std::string redis_list_name)
-        : Session{"tanomaly", socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
+        : Session{"tanomaly", socket, manager, cache, cache_mutex}, _redis_list_name{std::move(redis_list_name)},
         _anomaly_thread_manager{std::move(vat)}
 {
 }
