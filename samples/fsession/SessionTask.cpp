@@ -39,25 +39,24 @@ long SessionTask::GetFilterCode() noexcept {
 void SessionTask::operator()() {
     DARWIN_LOGGER;
 
-    for (std::size_t index = 0; index < _tokens.size(); ++index) {
-        SetStartingTime();
-        // We have a generic hash function, which takes no arguments as these can be of very different types depending
-        // on the nature of the filter
-        // So instead, we set an attribute corresponding to the current token and repository IDs being processed, to
-        // compute the hash accordingly
-        _current_token = _tokens[index];
-        _current_repo_ids = _repo_ids_list[index];
-        unsigned int certitude;
+    // Should not fail, as the Session body parser MUST check for validity !
+    auto array = _body.GetArray();
 
-        certitude = ReadFromSession(_current_token, _current_repo_ids);
-        _certitudes.push_back(certitude);
+    for (auto &line : array) {
+        if(ParseLine(line)) {
+            SetStartingTime();
+            unsigned int certitude;
 
-        DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+            certitude = ReadFromSession(_token, _repo_ids);
+            _certitudes.push_back(certitude);
+
+            DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
+                            + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+        }
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
+        }
     }
-
-    _tokens = std::vector<std::string>();
-    _repo_ids_list = std::vector<std::vector<std::string>>();
 }
 
 bool SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
@@ -96,7 +95,7 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
 
     if (repo_ids.empty()) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: No repository ID given");
-        return 101;
+        return DARWIN_ERROR_RETURN;
     }
 
     std::vector<std::string> arguments;
@@ -110,7 +109,7 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
 
    if(redis.Query(arguments, result) != REDIS_REPLY_ARRAY) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: Something went wrong while querying Redis");
-        return 0;
+        return DARWIN_ERROR_RETURN;
     }
 
     try {
@@ -148,70 +147,48 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
     return session_status;
 }
 
-bool SessionTask::ParseBody() {
+bool SessionTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("SessionTask:: ParseBody: " + body);
 
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
-
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("SessionTask:: ParseBody: You must provide a list");
-            return false;
-        }
-
-        auto values = document.GetArray();
-
-        if (values.Size() <= 0) {
-            DARWIN_LOG_ERROR("SessionTask:: ParseBody: The list provided is empty");
-            return false;
-        }
-
-        for (auto &request : values) {
-            if (!request.IsArray()) {
-                DARWIN_LOG_ERROR("SessionTask:: ParseBody: For each request, you must provide a list");
-                return false;
-            }
-
-            auto items = request.GetArray();
-
-            if (items.Size() != 2) {
-                DARWIN_LOG_ERROR(
-                        "SessionTask:: ParseBody: You must provide exactly two arguments per request: the token and"
-                        " repository IDs"
-                );
-
-                return false;
-            }
-
-            if (!items[0].IsString()) {
-                DARWIN_LOG_ERROR("SessionTask:: ParseBody: The token must be a string");
-                return false;
-            }
-
-            std::string token = items[0].GetString();
-
-            if (!items[1].IsString()) {
-                DARWIN_LOG_ERROR("SessionTask:: ParseBody: The repository IDs sent must be a string in the following "
-                                 "format: REPOSITORY1;REPOSITORY2;...");
-                return false;
-            }
-
-            std::vector<std::string> repo_ids;
-            std::string raw_repo_ids = items[1].GetString();
-            boost::split(repo_ids, raw_repo_ids, [](char c) {return c == ';';});
-
-            _tokens.push_back(token);
-            _repo_ids_list.push_back(repo_ids);
-
-            DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + token + " | " + raw_repo_ids);
-
-        }
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("SessionTask:: ParseBody: Unknown Error");
+    if(not line.IsArray()) {
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The input line is not an array");
         return false;
     }
+
+    _token.clear();
+    _repo_ids.clear();
+    auto values = line.GetArray();
+
+    if (values.Size() <= 0) {
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The list provided is empty");
+        return false;
+    }
+
+    if (values.Size() != 2) {
+        DARWIN_LOG_ERROR(
+                "SessionTask:: ParseBody: You must provide exactly two arguments per request: the token and"
+                " repository IDs"
+        );
+
+        return false;
+    }
+
+    if (!values[0].IsString()) {
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The token must be a string");
+        return false;
+    }
+
+    if (!values[1].IsString()) {
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The repository IDs sent must be a string in the following "
+                            "format: REPOSITORY1;REPOSITORY2;...");
+        return false;
+    }
+
+    _token = values[0].GetString();
+    std::string raw_repo_ids = values[1].GetString();
+    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';});
+
+    DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + _token + " | " + raw_repo_ids);
 
     return true;
 }

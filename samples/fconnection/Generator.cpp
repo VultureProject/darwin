@@ -21,7 +21,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
-    std::string init_data_path = "";
+    std::string init_data_path;
 
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: \"redis_socket_path\"");

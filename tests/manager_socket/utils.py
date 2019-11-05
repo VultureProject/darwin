@@ -127,6 +127,36 @@ CONF_THREE = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_THREE_ONE_WRONG = """{{
+  "logs_1": {{
+        "exec_path": "{0}darwin_logs",
+        "config_file":"{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    "logs_2": {{
+        "exec_path": "wrong_path",
+        "config_file":"{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    "logs_3": {{
+        "exec_path": "{0}darwin_logs",
+        "config_file":"{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_FLOGS = """{
     "log_file_path": "/tmp/logs_test.log"
 }"""

@@ -8,13 +8,13 @@
 #pragma once
 
 #include <string>
-#include <fstream>
 
 #include "protocol.h"
 #include "Session.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "../../toolkit/lru_cache.hpp"
+#include "../../toolkit/FileManager.hpp"
 #include "../../toolkit/RedisManager.hpp"
 
 #define DARWIN_FILTER_LOGS 0x4C4F4753
@@ -31,10 +31,9 @@ public:
                       std::mutex& cache_mutex,
                       bool log,
                       bool redis,
-                      std::string log_file_path,
-                      std::ofstream& log_file,
-                      std::string redis_list_name);
-
+                      std::string& log_file_path,
+                      std::shared_ptr<darwin::toolkit::FileManager>& log_file,
+                      std::string& redis_list_name);
     ~LogsTask() override = default;
 
 public:
@@ -49,6 +48,8 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
+    bool ParseLine(rapidjson::Value &line) final {}
+
     /// Write the logs in file
     bool WriteLogs();
 
@@ -62,7 +63,6 @@ private:
     bool _log; // If the filter will stock the data in a log file
     bool _redis; // If the filter will stock the data in a REDIS
     std::string _log_file_path;
-    std::ofstream& _log_file;
-    std::mutex _file_mutex;
     std::string _redis_list_name;
+    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
 };

@@ -102,7 +102,8 @@ def run():
 def single_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'Science is what we understand well enough to explain to a computer. Art is everything else we do. Donald Knuth\n')
@@ -122,7 +123,8 @@ def single_log_to_file():
 def single_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'If you think your users are idiots, only idiots will use it. Linus Torvald\n')
@@ -142,7 +144,8 @@ def single_log_to_redis():
 def single_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n')
@@ -167,7 +170,8 @@ def single_log_to_both():
 def multiple_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'I define UNIX as 30 definitions of regular expressions living under one roof. Donald Knuth\n')
@@ -191,7 +195,8 @@ def multiple_log_to_file():
 def multiple_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n')
@@ -217,7 +222,8 @@ def multiple_log_to_redis():
 def multiple_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n')
@@ -251,7 +257,8 @@ def multiple_log_to_both():
 def empty_log_to_file():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_FILE)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'')
@@ -271,7 +278,8 @@ def empty_log_to_file():
 def empty_log_to_redis():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'')
@@ -291,7 +299,8 @@ def empty_log_to_redis():
 def empty_log_to_both():
     filter = Logs()
     filter.configure(FLOGS_CONFIG_BOTH)
-    filter.valgrind_start()
+    if not filter.valgrind_start():
+        return False
 
     try:
         filter.log(b'')

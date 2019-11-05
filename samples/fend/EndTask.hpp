@@ -41,8 +41,8 @@ private:
     /// init the following Darwin workflow
     void Workflow();
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse the line received. Useless for this filter.
+    bool ParseLine(rapidjson::Value& line) final {}
 
     /// Add to REDIS the evt id and the certitude list size received by the filter
     ///

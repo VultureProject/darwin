@@ -14,13 +14,14 @@
 
 #include "Session.hpp"
 #include "AGenerator.hpp"
+#include "../../toolkit/FileManager.hpp"
 #include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/rapidjson/document.h"
 
 class Generator: public AGenerator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
     virtual darwin::session_ptr_t
@@ -35,7 +36,7 @@ private:
 
     bool _log; // If the filter will stock the data in a log file
     bool _redis; // If the filter will stock the data in a REDIS
-    std::string _log_file_path = "";
-    std::string _redis_list_name = "";
-    std::ofstream _log_file;
+    std::string _log_file_path;
+    std::string _redis_list_name;
+    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
 };

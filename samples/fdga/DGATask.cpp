@@ -37,7 +37,7 @@ DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
 }
 
 xxh::hash64_t DGATask::GenerateHash() {
-    return xxh::xxhash<64>(_current_domain);
+    return xxh::xxhash<64>(_domain);
 }
 
 long DGATask::GetFilterCode() noexcept {
@@ -48,63 +48,70 @@ void DGATask::operator()() {
     DARWIN_LOGGER;
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    for (const std::string &domain : _domains) {
+    // Should not fail, as the Session body parser MUST check for validity !
+    rapidjson::GenericArray<false, rapidjson::Value> array = _body.GetArray();
+
+    for (rapidjson::Value &value : array) {
         SetStartingTime();
         // We have a generic hash function, which takes no arguments as these can be of very different types depending
         // on the nature of the filter
         // So instead, we set an attribute corresponding to the current domain being processed, to compute the hash
         // accordingly
-        _current_domain = domain;
-        unsigned int certitude;
-        xxh::hash64_t hash;
 
-        if (_is_cache) {
-            hash = GenerateHash();
+        if(ParseLine(value)) {
+            unsigned int certitude;
+            xxh::hash64_t hash;
 
-            if (GetCacheResult(hash, certitude)) {
-                if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                            R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+            if (_is_cache) {
+                hash = GenerateHash();
+
+                if (GetCacheResult(hash, certitude)) {
+                    if (is_log && (certitude>=_threshold)){
+                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                    }
+                    _certitudes.push_back(certitude);
+                    DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                                    + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+                    continue;
                 }
-                _certitudes.push_back(certitude);
-                DARWIN_LOG_DEBUG("DGATask:: processed entry in "
-                                 + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
-                continue;
             }
+
+            certitude = Predict();
+            if (is_log && (certitude>=_threshold)){
+                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+            }
+            _certitudes.push_back(certitude);
+            if (_is_cache) {
+                SaveToCache(hash, certitude);
+            }
+            DARWIN_LOG_DEBUG("DGATask:: processed entry in "
+                            + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
+        }
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
 
-        certitude = Predict();
-        if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                            R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
-        }
-        _certitudes.push_back(certitude);
-        if (_is_cache) {
-            SaveToCache(hash, certitude);
-        }
-        DARWIN_LOG_DEBUG("DGATask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
-
-    _domains = std::vector<std::string>();
 }
 
 DGATask::~DGATask() = default;
 
 bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Analyzing domain \"" + _current_domain + "\"");
+    DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Analyzing domain \"" + _domain + "\"");
 
-    bool is_domain_valid = darwin::validator::IsDomainValid(_current_domain);
+    bool is_domain_valid = darwin::validator::IsDomainValid(_domain);
 
     if (!is_domain_valid) return false;
 
     faup_handler_t* fh = faup_init(_faup_options);
 
     try {
-        faup_decode(fh, _current_domain.c_str(), _current_domain.size());
+        faup_decode(fh, _domain.c_str(), _domain.size());
 
-        std::string tld = _current_domain.substr(
+        std::string tld = _domain.substr(
                 faup_get_tld_pos(fh),
                 faup_get_tld_size(fh)
         );
@@ -117,7 +124,7 @@ bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
 
         DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: TLD found is \"" + tld + "\"");
 
-        std::string registered_domain = _current_domain.substr(
+        std::string registered_domain = _domain.substr(
                 faup_get_domain_without_tld_pos(fh),
                 faup_get_domain_without_tld_size(fh)
         );
@@ -127,17 +134,17 @@ bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
         to_predict = registered_domain + "." + tld;
 
     } catch (const std::out_of_range& exception) {
-        DARWIN_LOG_INFO("ExtractRegisteredDomain:: domain appears to be invalid: \"" + _current_domain + "\"");
+        DARWIN_LOG_INFO("ExtractRegisteredDomain:: domain appears to be invalid: \"" + _domain + "\"");
         faup_terminate(fh);
         return false;
 
     } catch (const std::exception& exception) {
-        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unexpected error with domain \"" + _current_domain + "\": \"" +
+        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unexpected error with domain \"" + _domain + "\": \"" +
                          exception.what() + "\"");
         faup_terminate(fh);
         return false;
     } catch (...) {
-        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unknown error with domain \"" + _current_domain + "\"");
+        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unknown error with domain \"" + _domain + "\"");
         faup_terminate(fh);
         return false;
     }
@@ -175,7 +182,7 @@ unsigned int DGATask::Predict() {
     std::string to_predict;
 
     if (!ExtractRegisteredDomain(to_predict)) {
-        return 101;
+        return DARWIN_ERROR_RETURN;
     }
 
     DARWIN_LOGGER;
@@ -200,16 +207,15 @@ unsigned int DGATask::Predict() {
                                                     {"activation_1/Sigmoid"},
                                                     {},
                                                     &output_tensors);
-
         if (!run_status.ok()) {
             DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
-            return 101;
+            return DARWIN_ERROR_RETURN;
         }
     }
     catch(const std::exception& e)
     {
         DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
-        return 101;
+        return DARWIN_ERROR_RETURN;
     }
 
     std::map<std::string, float> result;
@@ -220,55 +226,29 @@ unsigned int DGATask::Predict() {
     return certitude;
 }
 
-bool DGATask::ParseBody() {
+bool DGATask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("DGATask:: ParseBody: " + body);
 
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
-
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("DGATask:: ParseBody: You must provide a list");
-            return false;
-        }
-
-        auto values = document.GetArray();
-
-        if (values.Size() <= 0) {
-            DARWIN_LOG_ERROR("DGATask:: ParseBody: The list provided is empty");
-            return false;
-        }
-
-        for (auto &request : values) {
-            if (!request.IsArray()) {
-                DARWIN_LOG_ERROR("DGATask:: ParseBody: For each request, you must provide a list");
-                return false;
-            }
-
-            auto items = request.GetArray();
-
-            if (items.Size() != 1) {
-                DARWIN_LOG_ERROR(
-                        "DGATask:: ParseBody: You must provide exactly one argument per request: the domain"
-                );
-
-                return false;
-            }
-
-            if (!items[0].IsString()) {
-                DARWIN_LOG_ERROR("DGATask:: ParseBody: The domain sent must be a string");
-                return false;
-            }
-
-            std::string domain = items[0].GetString();
-            _domains.push_back(domain);
-            DARWIN_LOG_DEBUG("DGATask:: ParseBody: Parsed element: " + domain);
-        }
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("DGATask:: ParseBody: Unknown Error");
+    if(not line.IsArray()) {
+        DARWIN_LOG_ERROR("DGATask:: ParseBody: The input line is not an array");
         return false;
     }
+
+    _domain.clear();
+    auto values = line.GetArray();
+
+    if (values.Size() != 1) {
+        DARWIN_LOG_ERROR("DGATask:: ParseLine: You must provide only the domain name in the list");
+        return false;
+    }
+
+    if (!values[0].IsString()) {
+        DARWIN_LOG_ERROR("DGATask:: ParseLine: The domain sent must be a string");
+        return false;
+    }
+
+    _domain = values[0].GetString();
+    DARWIN_LOG_DEBUG("DGATask:: ParseLine: Parsed element: " + _domain);
 
     return true;
 }

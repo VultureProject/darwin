@@ -104,7 +104,7 @@ void ContentInspectionTask::operator()() {
 
 bool ContentInspectionTask::ParseBody() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: '" + body + "'");
+    _packetList.clear();
 
     try {
         _packetList = std::vector<Packet *>();
@@ -114,21 +114,21 @@ bool ContentInspectionTask::ParseBody() {
         std::size_t openingBracket;
 
         do {
-            packetMeta = body.find("\"{", packetMeta + 1);
+            packetMeta = _raw_body.find("\"{", packetMeta + 1);
             if(packetMeta == std::string::npos) break;
 
-            packetMetaEnd = body.find("}\",", packetMeta);
+            packetMetaEnd = _raw_body.find("}\",", packetMeta);
             if(packetMetaEnd == std::string::npos) break;
 
-            packetData = body.find("\"{", packetMetaEnd);
+            packetData = _raw_body.find("\"{", packetMetaEnd);
             if(packetData == std::string::npos) break;
 
-            packetDataEnd = body.find("}\"", packetData);
+            packetDataEnd = _raw_body.find("}\"", packetData);
             if(packetDataEnd == std::string::npos) break;
 
             _packetList.push_back(getImpcapData(
-                    body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
-                    body.substr(packetData + 1, packetDataEnd - packetData)
+                    _raw_body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
+                    _raw_body.substr(packetData + 1, packetDataEnd - packetData)
             ));
         } while(true);
 

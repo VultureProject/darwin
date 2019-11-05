@@ -70,13 +70,11 @@ private:
     /// \return The concatenated string.
     std::string JoinRepoIDs(const std::vector<std::string> &repo_ids);
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse a line of the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
 private:
     // Session_status in Redis
-    std::string _current_token; // The token to check
-    std::vector<std::string> _tokens;
-    std::vector<std::string> _current_repo_ids; // The associated repository IDs to check
-    std::vector<std::vector<std::string>> _repo_ids_list;
+    std::string _token; // The token to check
+    std::vector<std::string> _repo_ids; // The associated repository IDs to check
 };

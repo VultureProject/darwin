@@ -24,21 +24,30 @@ AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
 void AnomalyTask::operator()() {
     DARWIN_LOGGER;
     SetStartingTime();
-    for (size_t i = 0; i < _matrixies.size(); ++i)
+
+    DARWIN_LOG_DEBUG("AnomalyTask:: body: " + JsonStringify(_body));
+
+    // Should not fail, as the Session body parser MUST check for validity !
+    auto array = _body.GetArray();
+
+    for (auto &value : array)
     {
-        Detection(_matrixies[i], _ips[i]);
+        if(ParseLine(value)) {
+            Detection();
+        }
+        else {
+            _certitudes.push_back(DARWIN_ERROR_RETURN);
+        }
     }
 
     DARWIN_LOG_DEBUG("AnomalyTask:: processed task in " + std::to_string(GetDurationMs()));
-    _matrixies = std::vector<arma::mat>();
-    _ips = std::vector<std::vector<std::string>>();
 }
 
 long AnomalyTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_ANOMALY;
 }
 
-bool AnomalyTask::Detection(arma::mat matrix, const std::vector<std::string> &ips){
+bool AnomalyTask::Detection(){
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyTask::Detection:: Start detection ...");
     double epsilon = 100;
@@ -52,14 +61,14 @@ bool AnomalyTask::Detection(arma::mat matrix, const std::vector<std::string> &ip
     mlpack::pca::PCA<> pcaa;
     mlpack::dbscan::DBSCAN<> db(epsilon, sizePoint);
 
-    alerts = matrix;
+    alerts = _matrix;
 
     // reduce matrix' dimension from 5 to 2
-    pcaa.Apply(matrix, newDataDimension);
-    db.Cluster(matrix, assignments);
+    pcaa.Apply(_matrix, newDataDimension);
+    db.Cluster(_matrix, assignments);
 
-    no_anomalies = matrix;
-    anomalies    = matrix;
+    no_anomalies = _matrix;
+    anomalies    = _matrix;
 
     index_anomalies = arma::find(assignments == SIZE_MAX); // index of noises find by the clustering in the _matrix
     if (index_anomalies.is_empty()){
@@ -83,7 +92,7 @@ bool AnomalyTask::Detection(arma::mat matrix, const std::vector<std::string> &ip
     _certitudes.push_back(100);
 
     if(GetOutputType() == darwin::config::output_type::LOG){
-        GenerateLogs(ips, index_anomalies, alerts);
+        GenerateLogs(_ips, index_anomalies, alerts);
     }
     return true;
 }
@@ -106,77 +115,63 @@ void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_an
     }
 };
 
-bool AnomalyTask::ParseBody() {
+bool AnomalyTask::ParseLine(rapidjson::Value &cluster) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AnomalyTask::ParseBody:: " + body);
-    unsigned int i;
+    DARWIN_LOG_DEBUG("AnomalyTask::ParseLine:: parsing cluster");
+    unsigned int i = 0;
     std::string ip;
     size_t size;
 
-    try {
-        rapidjson::Document document;
-        document.Parse(body.c_str());
+    if(not cluster.IsArray()) {
+        DARWIN_LOG_ERROR("AnomalyTask:: ParseBody: The input line is not an array");
+        return false;
+    }
 
-        if (!document.IsArray()) {
-            DARWIN_LOG_ERROR("AnomalyTask::ParseBody:: You must provide a list");
+    size = cluster.Size();
+    DARWIN_LOG_DEBUG("AnomalyTask::ParseLine:: cluster size: " + std::to_string(size));
+    if (size <= MIN_DATA) {
+        DARWIN_LOG_ERROR("AnomalyTask::ParseLine:: The list provided is not enough, "
+                            "need at least " + std::to_string(MIN_DATA) + " data");
+        return false;
+    }
+    _matrix.zeros(5, size);
+    _ips.clear();
+
+    auto requests = cluster.GetArray();
+    for (auto &request: requests) {
+        if (!request.IsArray()) {
+            DARWIN_LOG_ERROR("AnomalyTask::ParseLine:: For each request, you must provide a list");
             return false;
         }
 
-        auto values = document.GetArray();
+        auto data = request.GetArray();
 
-        for (auto &cluster: values) {
-            std::vector<std::string> ips;
-            arma::mat matrix;
-            i = 0;
+        if (data.Size() != 6) {
+            DARWIN_LOG_ERROR("AnomalyTask::ParseLine:: Each list must contain 6 elements");
 
-            size = cluster.Size();
-            if (size <= MIN_DATA) {
-                DARWIN_LOG_ERROR("AnomalyTask::ParseBody:: The list provided is not enough, "
-                                 "need at least " + std::to_string(MIN_DATA) + " data");
-                return false;
-            }
-            matrix.zeros(5, size);
-
-            auto requests = cluster.GetArray();
-            for (auto &request: requests) {
-                if (!request.IsArray()) {
-                    DARWIN_LOG_ERROR("AnomalyTask::ParseBody:: For each request, you must provide a list");
-                    return false;
-                }
-
-                auto data = request.GetArray();
-
-                if (data.Size() != 6) {
-                    DARWIN_LOG_ERROR("AnomalyTask::ParseBody:: Each list must contain 6 elements");
-
-                    return false;
-                }
-
-                if (!data[0].IsString()) {
-                    DARWIN_LOG_ERROR("AnomalyTask:: ParseBody: The first element must be a String");
-                    return false;
-                }
-
-                ip = data[0].GetString();
-                ips.emplace_back(ip);
-
-                for (unsigned int j = 1; j < 6; j++) {
-                    if (!data[j].IsInt()) {
-                        DARWIN_LOG_ERROR("AnomalyTask:: ParseBody: The non-first elements must be integers");
-                        return false;
-                    }
-                    matrix(j - 1, i) = data[j].GetInt();
-                }
-                i++;
-            }
-            _matrixies.emplace_back(matrix);
-            _ips.emplace_back(ips);
+            return false;
         }
 
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody: Unknown Error");
-        return false;
+        if (!data[0].IsString()) {
+            DARWIN_LOG_ERROR("AnomalyTask:: ParseLine: The first element must be a String");
+            return false;
+        }
+
+        ip = data[0].GetString();
+        _ips.emplace_back(ip);
+
+        for (unsigned int j = 1; j < 6; j++) {
+            if (!data[j].IsInt()) {
+                DARWIN_LOG_ERROR("AnomalyTask:: ParseLine: The non-first elements must be integers");
+                return false;
+            }
+            _matrix(j - 1, i) = data[j].GetInt();
+        }
+        i++;
     }
+
+    DARWIN_LOG_DEBUG("AnomalyTask:: matrix size: " + std::to_string(_matrix.size()));
+
 
     return true;
 }

@@ -69,13 +69,11 @@ private:
     /// \return true on success, false otherwise.
     unsigned int GetReputation(const std::string &ip_address) noexcept;
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse a line in the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
 private:
     MMDB_s* _database; // The Reputation database
-    std::string _current_ip_address; // The IP address to check
-    std::vector<std::string> _ip_addresses;
-    std::unordered_set<std::string> _current_tags; // The tags used to check the reputation
-    std::vector<std::unordered_set<std::string>> _tags_list;
+    std::string _ip_address; // The IP address to check
+    std::unordered_set<std::string> _tags; // The tags used to check the reputation
 };
