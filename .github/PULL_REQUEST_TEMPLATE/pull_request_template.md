@@ -1,21 +1,41 @@
 # :sparkles: Pull Request Template
 :bangbang: Once all the **checklist** is **done** you have to:
-  * **stash merge** this pull request 
-  * **delete** the corresponding **branch** 
+  * **stash merge** this pull request
+  * **delete** the corresponding **branch**
   * **close** the associated **issue**
-## :black_nib: Description
-
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context. List any dependencies that are required for this change.
-
-Resolve #(issue number)
 
 ## :page_with_curl: Type of change
 
 Please delete options that are not relevant.
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+**Bug fix**: non-breaking change which fixes an issue.
+**New feature**: non-breaking change which adds functionality.
+**Breaking change**: fix or feature that would cause existing functionality to not work as expected.
+
+## :bulb: Related Issue(s)
+
+- Resolve #(issue number)
+
+## :black_nib: Description
+
+Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context. List any dependencies that are required for this change.
+
+## :dart: Test Environments
+
+### FreeBSD (version)
+- Redis (version)
+- Boost (version)
+- clang++ (or g++) (version)
+- CMake (version)
+- Python (version)
+
+### Ubuntu (version)
+- Redis (version)
+- Boost (version)
+- g++ (or clang++) (version)
+- CMake (version)
+- Python (version)
+- Valgrind (version)
 
 ## :heavy_check_mark: Checklist:
 
