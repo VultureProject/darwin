@@ -256,7 +256,7 @@ namespace darwin {
             packet_size = sizeof(darwin_filter_packet_t);
         }
 
-        DARWIN_LOG_DEBUG("Session::SendResToSession: Computed packet size: " + std::to_string(packet_size));
+        DARWIN_LOG_DEBUG("Session::SendToClient: Computed packet size: " + std::to_string(packet_size));
 
         darwin_filter_packet_t* packet;
         packet = (darwin_filter_packet_t *) malloc(packet_size);
