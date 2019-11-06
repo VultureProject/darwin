@@ -387,7 +387,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (e) {
-            DARWIN_LOG_ERROR("Session::SendCallback:: " + e.message());
+            DARWIN_LOG_ERROR("Session::SendToClientCallback:: " + e.message());
             _manager.Stop(shared_from_this());
             DARWIN_LOG_DEBUG("Session::SendCallback:: Stopped session in manager");
             return;
