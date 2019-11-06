@@ -19,11 +19,11 @@
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                              darwin::Manager& manager,
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                             std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
+                             std::mutex& cache_mutex,
                              std::shared_ptr<AnomalyThreadManager> vat,
                              std::string redis_list_name)
-        : Session{"tanomaly", socket, manager, cache}, _redis_list_name{std::move(redis_list_name)},
-          _redis_manager{std::move(redis_manager)}, _anomaly_thread_manager{std::move(vat)}
+        : Session{"tanomaly", socket, manager, cache, cache_mutex}, _redis_list_name{std::move(redis_list_name)},
+        _anomaly_thread_manager{std::move(vat)}
 {
 }
 
@@ -53,32 +53,11 @@ void AnomalyTask::operator()() {
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }
-
-    Workflow();
-}
-
-void AnomalyTask::Workflow() {
-    switch (_header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool AnomalyTask::ParseBody() {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: parse raw body: " + _raw_body);
-    // _body.Clear();
 
     try {
         rapidjson::Document document;
@@ -189,27 +168,17 @@ bool AnomalyTask::REDISAddEntry() noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyTask::REDISAdd:: Add data in Redis...");
 
-    redisReply *reply = nullptr;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
     std::vector<std::string> arguments;
     arguments.emplace_back("SADD");
     arguments.emplace_back(_redis_list_name);
     arguments.emplace_back(_entry);
 
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("AnomalyTask::REDISAdd:: Something went wrong while querying Redis, data not added");
-        freeReplyObject(reply);
-        return false;
-    }
-
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyTask::REDISAdd:: Not the expected Redis response");
-        freeReplyObject(reply);
         return false;
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     return true;
 }

@@ -50,6 +50,7 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
         _connection.close();
+        _io_context.stop();
         unlink(_socket_path.c_str());
     }
 

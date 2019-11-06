@@ -28,7 +28,8 @@ class AnomalyTask: public darwin::Session {
 public:
     explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                            darwin::Manager& manager,
-                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
+                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                           std::mutex& cache_mutex);
     ~AnomalyTask() override = default;
 
 public:
@@ -40,10 +41,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Generate the logs from the anomalies found
     void GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts);
 

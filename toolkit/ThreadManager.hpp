@@ -9,6 +9,7 @@
 
 #include <thread>
 #include <condition_variable>
+#include <atomic>
 
 /// \namespace darwin
 namespace darwin {
@@ -43,8 +44,9 @@ namespace darwin {
 
         private:
             std::thread _thread;
-            bool _is_stop = true; // To know if the thread is stopped or not
+            std::atomic<bool> _is_stop{true}; // To know if the thread is stopped or not
             std::condition_variable cv;
+            std::mutex _thread_mutex; // The mutex used to manage multiple acces to the _thread member
 
         protected:
             int _interval = 300; // Interval in which the thread main function will be executed (in seconds)

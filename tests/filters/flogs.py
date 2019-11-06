@@ -3,13 +3,14 @@ import os
 import uuid
 import ctypes
 import redis
+from tools.redis_utils import RedisServer
 from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 
 
-REDIS_SOCKET = "/var/sockets/redis/redis.sock"
+REDIS_SOCKET = "/tmp/redis.sock"
 REDIS_LIST_NAME = "logs_darwin"
 LOG_FILE = "/tmp/logs_test.log"
 FLOGS_CONFIG_FILE = '{{"log_file_path": "{0}"}}'.format(LOG_FILE)
@@ -18,9 +19,10 @@ FLOGS_CONFIG_BOTH = '{{"redis_socket_path": "{1}", "redis_list_name": "{2}", "lo
 
 
 class Logs(Filter):
-    def __init__(self):
-        super().__init__(filter_name="logs")
-        self.log_file = LOG_FILE
+    def __init__(self, log_file=None, redis_server=None, nb_threads=1):
+        super().__init__(filter_name="logs", nb_thread=nb_threads)
+        self.log_file = log_file if log_file else LOG_FILE
+        self.redis = redis_server if redis_server else RedisServer(unix_socket=REDIS_SOCKET)
         try:
             os.remove(self.log_file)
         except:
@@ -68,15 +70,15 @@ class Logs(Filter):
 
     def get_log_from_redis(self):
         res = None
-        
+
         try:
-            r = redis.Redis(host='localhost', port=6379, db=0)
+            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
             res = r.rpop(REDIS_LIST_NAME)
             r.close()
         except Exception as e:
             logging.error("Unable to connect to redis: {}".format(e))
             return None
-        
+
         return res
 
 
@@ -243,7 +245,7 @@ def multiple_log_to_both():
     if log != b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n':
         logging.error("single_log_to_file: Log line not matching: {}".format(log))
         return False
-    
+
     log = filter.get_log_from_redis()
     if log != b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n':
         logging.error("single_log_to_file: Log line not matching: {}".format(log))

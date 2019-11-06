@@ -15,71 +15,9 @@
 
 #include "../../toolkit/lru_cache.hpp"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(_redis_socket_path);
-    if(!_redis_manager->ConnectToRedis(true)){
-        DARWIN_LOG_ERROR("TAnomaly:: Generator:: Error when connecting to Redis");
-        return false;
-    }
-
-    _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_redis_manager, _log_file_path, _redis_list_name);
-    if(!_anomaly_thread_manager->Start()) {
-        DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Error when starting thread");
-    }
-
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("TAnomaly:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading classifier...");
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
+    DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading configuration...");
 
     if (!configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Missing parameter: \"redis_socket_path\"");
@@ -91,7 +29,12 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         return false;
     }
 
-    _redis_socket_path = configuration["redis_socket_path"].GetString();
+    std::string redis_socket_path = configuration["redis_socket_path"].GetString();
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    if(not redis.SetUnixPath(redis_socket_path)) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to Redis socket '" + redis_socket_path + "'.");
+        return false;
+    }
 
     if (configuration.HasMember("redis_list_name")) {
 
@@ -115,6 +58,12 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
 
     _log_file_path = configuration["log_file_path"].GetString();
 
+    _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_log_file_path, _redis_list_name);
+    if(!_anomaly_thread_manager->Start()) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Error when starting polling thread");
+        return false;
+    }
+
     return true;
 }
 
@@ -122,9 +71,6 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<AnomalyTask>(socket, manager, _cache, _redis_manager,
+            std::make_shared<AnomalyTask>(socket, manager, _cache, _cache_mutex,
                                           _anomaly_thread_manager, _redis_list_name));
 }
-
-Generator::~Generator() = default;;
-

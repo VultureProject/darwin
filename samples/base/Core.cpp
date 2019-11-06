@@ -19,7 +19,9 @@ namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0}, daemon{true}, _filter_status{FilterStatusEnum::starting} {}
+              _pidPath{}, _nbThread{0},
+              _filter_status{FilterStatusEnum::starting},
+              _threadpool{}, daemon{true} {}
 
     int Core::run() {
         DARWIN_LOGGER;
@@ -40,15 +42,27 @@ namespace darwin {
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
             try {
-                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _nbThread, _threshold, gen};
+                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
                 _filter_status.store(FilterStatusEnum::running);
+
+                DARWIN_LOG_DEBUG("Core::run:: Creating threads...");
+                // Starting from 1 because the current process will run
+                // the io_context too.
+                for (std::size_t i = 1; i < _nbThread; ++i) {
+                    _threadpool.CreateThread(
+                        std::bind(&Server::Run, std::ref(server))
+                    );
+                }
                 server.Run();
+                DARWIN_LOG_DEBUG("Core::run:: Joining threads...");
+                _threadpool.JoinAll();
+                server.Clean();
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
                 ret = 1;
                 raise(SIGTERM);
             }
-
+            DARWIN_LOG_DEBUG("Core::run:: Joining monitoring thread...");
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {
@@ -182,11 +196,6 @@ namespace darwin {
                          strerror(errno));
             return false;
         }
-//        if (endptr == arg) {
-//            DARWIN_LOG_CRITICAL(
-//                    "Core:: Program Arguments:: No digit found");
-//            return false;
-//        }
         return true;
     }
 

@@ -15,11 +15,9 @@
 #include "Time.hpp"
 #include "protocol.h"
 
-AnomalyThreadManager::AnomalyThreadManager(std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
-                                           std::string log_file_path,
+AnomalyThreadManager::AnomalyThreadManager(std::string log_file_path,
                                            std::string redis_list_name)
-        : _log_file_path{std::move(log_file_path)},_redis_manager{std::move(redis_manager)},
-          _redis_list_name{std::move(redis_list_name)}{}
+        : _log_file_path{std::move(log_file_path)}, _redis_list_name{std::move(redis_list_name)}{}
 
 bool AnomalyThreadManager::Main(){
     DARWIN_LOGGER;
@@ -250,29 +248,14 @@ long long int AnomalyThreadManager::REDISListLen() noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::REDISListLen:: Querying Redis for list size...");
 
-    redisReply *reply = nullptr;
     long long int result;
 
-    std::vector<std::string> arguments;
-    arguments.emplace_back("SCARD");
-    arguments.emplace_back(_redis_list_name);
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        freeReplyObject(reply);
-        DARWIN_LOG_ERROR("AnomalyThread::REDISListLen:: Something went wrong while querying Redis");
+    if(redis.Query(std::vector<std::string>{"SCARD", _redis_list_name}, result) != REDIS_REPLY_INTEGER) {
+        DARWIN_LOG_ERROR("AnomalyThread::REDISListLen:: Not the expected Redis response");
         return -1;
     }
-
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
-        freeReplyObject(reply);
-        DARWIN_LOG_ERROR("AnomalyThread::REDISListLen:: Not the expected Redis response ");
-        return -1;
-    }
-
-    result = reply->integer;
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     return result;
 }
@@ -281,32 +264,29 @@ bool AnomalyThreadManager::REDISPopLogs(long long int len, std::vector<std::stri
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::REDISPopLogs:: Querying Redis for logs...");
 
-    redisReply *reply = nullptr;
-    unsigned int j;
+    std::any result;
+    std::vector<std::any> result_vector;
 
-    std::vector<std::string> arguments;
-    arguments.emplace_back("SPOP");
-    arguments.emplace_back(_redis_list_name);
-    arguments.emplace_back(std::to_string(len));
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("AnomalyThread::REDISPopLogs:: Something went wrong while querying Redis");
-        freeReplyObject(reply);
+    if(redis.Query(std::vector<std::string>{"SPOP", _redis_list_name, std::to_string(len)}, result) != REDIS_REPLY_ARRAY) {
+        DARWIN_LOG_ERROR("AnomalyThread::REDISPopLogs:: Not the expected Redis response");
         return -1;
     }
 
-    if (!reply || reply->type != REDIS_REPLY_ARRAY) {
-        DARWIN_LOG_ERROR("AnomalyThread::REDISPopLogs:: Not the expected Redis response ");
-        freeReplyObject(reply);
-        return -1;
+    try {
+        result_vector = std::any_cast<std::vector<std::any>>(result);
     }
+    catch (const std::bad_any_cast&) {}
 
-    for (j=0; j<reply->elements; j++) {
-        logs.emplace_back(reply->element[j]->str);
+    DARWIN_LOG_DEBUG("Got " + std::to_string(result_vector.size()) + " entries from Redis");
+
+    for(auto& object : result_vector) {
+        try {
+            logs.emplace_back(std::any_cast<std::string>(object));
+        }
+        catch(const std::bad_any_cast&) {}
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     return true;
 }
@@ -314,6 +294,8 @@ bool AnomalyThreadManager::REDISPopLogs(long long int len, std::vector<std::stri
 bool AnomalyThreadManager::REDISReinsertLogs(std::vector<std::string> &logs) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::REDISReinsertLogs:: Querying Redis to reinsert logs...");
+
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
     std::vector<std::string> arguments;
     arguments.emplace_back("SADD");
@@ -323,22 +305,9 @@ bool AnomalyThreadManager::REDISReinsertLogs(std::vector<std::string> &logs) noe
         arguments.emplace_back(log);
     }
 
-    redisReply *reply = nullptr;
-
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("AnomalyThread::REDISReinsertLogs:: Something went wrong while querying Redis");
-        freeReplyObject(reply);
-        return false;
-    }
-
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISReinsertLogs:: Not the expected Redis response");
-        freeReplyObject(reply);
-        return false;
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     DARWIN_LOG_DEBUG("AnomalyThread::REDISReinsertLogs:: Reinsertion done");
     return true;

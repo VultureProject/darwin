@@ -26,12 +26,13 @@
 DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
                  std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                 std::mutex& cache_mutex,
                  std::shared_ptr<tensorflow::Session> &session,
-                 faup_handler_t *faup_handler,
+                 faup_options_t *faup_options,
                  std::map<std::string, unsigned int> &token_map,
                  const unsigned int max_tokens)
-        : Session{"dga", socket, manager, cache}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map},
-          _faup_handler(faup_handler) {
+        : Session{"dga", socket, manager, cache, cache_mutex}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map},
+          _faup_options(faup_options) {
     _is_cache = _cache != nullptr;
 }
 
@@ -93,26 +94,6 @@ void DGATask::operator()() {
         }
 
     }
-
-    Workflow();
-}
-
-void DGATask::Workflow(){
-    switch (_header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 DGATask::~DGATask() = default;
@@ -125,24 +106,27 @@ bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
 
     if (!is_domain_valid) return false;
 
+    faup_handler_t* fh = faup_init(_faup_options);
+
     try {
-        faup_decode(_faup_handler, _domain.c_str(), _domain.size());
+        faup_decode(fh, _domain.c_str(), _domain.size());
 
         std::string tld = _domain.substr(
-                faup_get_tld_pos(_faup_handler),
-                faup_get_tld_size(_faup_handler)
+                faup_get_tld_pos(fh),
+                faup_get_tld_size(fh)
         );
 
         if (tld == "yu" || tld == "za") {
             DARWIN_LOG_DEBUG("ExtractRegisteredDomain::TLD found is \"" + tld + "\", returning false");
+            faup_terminate(fh);
             return false;
         }
 
         DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: TLD found is \"" + tld + "\"");
 
         std::string registered_domain = _domain.substr(
-                faup_get_domain_without_tld_pos(_faup_handler),
-                faup_get_domain_without_tld_size(_faup_handler)
+                faup_get_domain_without_tld_pos(fh),
+                faup_get_domain_without_tld_size(fh)
         );
 
         DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Registered domain found is \"" + registered_domain + "\"");
@@ -151,18 +135,20 @@ bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
 
     } catch (const std::out_of_range& exception) {
         DARWIN_LOG_INFO("ExtractRegisteredDomain:: domain appears to be invalid: \"" + _domain + "\"");
+        faup_terminate(fh);
         return false;
 
     } catch (const std::exception& exception) {
         DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unexpected error with domain \"" + _domain + "\": \"" +
                          exception.what() + "\"");
-
+        faup_terminate(fh);
         return false;
     } catch (...) {
         DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unknown error with domain \"" + _domain + "\"");
+        faup_terminate(fh);
         return false;
     }
-
+    faup_terminate(fh);
     return true;
 }
 
@@ -215,13 +201,20 @@ unsigned int DGATask::Predict() {
 
     std::vector<tensorflow::Tensor> output_tensors;
 
-    tensorflow::Status run_status = _session->Run({{"embedding_1_input", input_tensor}},
-                                                  {"activation_1/Sigmoid"},
-                                                  {},
-                                                  &output_tensors);
-
-    if (!run_status.ok()) {
-        DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+    try
+    {
+        tensorflow::Status run_status = _session->Run({{"embedding_1_input", input_tensor}},
+                                                    {"activation_1/Sigmoid"},
+                                                    {},
+                                                    &output_tensors);
+        if (!run_status.ok()) {
+            DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+            return DARWIN_ERROR_RETURN;
+        }
+    }
+    catch(const std::exception& e)
+    {
+        DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
         return DARWIN_ERROR_RETURN;
     }
 

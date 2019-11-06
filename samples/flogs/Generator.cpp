@@ -13,57 +13,11 @@
 #include "Generator.hpp"
 #include "LogsTask.hpp"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Logs :: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("Logs:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("Logs:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
 
     _redis = configuration.HasMember("redis_socket_path");
     _log = configuration.HasMember("log_file_path");
@@ -120,26 +74,18 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Redis configuration...");
 
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(redis_socket_path);
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    bool ret = redis.SetUnixPath(redis_socket_path);
 
-    /* Ignore signals for broken pipes.
-     * Otherwise, if the Redis UNIX socket does not exist anymore,
-     * this filter will crash */
-    signal(SIGPIPE, SIG_IGN);
-
-    if (!_redis_manager->ConnectToRedis(true)) return false;
-
-    DARWIN_LOG_DEBUG("Logs:: ConfigRedis:: Redis configured");
-
-    return true;
+    return ret;
 }
 
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<LogsTask>(socket, manager, _cache,
+            std::make_shared<LogsTask>(socket, manager, _cache, _cache_mutex,
                                        _log, _redis,
                                        _log_file_path, _log_file,
-                                       _redis_list_name, _redis_manager));
+                                       _redis_list_name));
 }

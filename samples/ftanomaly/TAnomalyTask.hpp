@@ -26,7 +26,7 @@ public:
     explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
+                                       std::mutex& cache_mutex,
                                        std::shared_ptr<AnomalyThreadManager> vat,
                                        std::string redis_list_name);
     ~AnomalyTask() override = default;
@@ -40,10 +40,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Parse a line from the body.
     /// \return true on parsing success, false otherwise
     /// \warning modifies _entry class attribute
@@ -60,6 +56,5 @@ private:
     bool _learning_mode = true;
     std::string _redis_list_name;
     std::string _entry;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;
 };

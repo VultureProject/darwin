@@ -41,8 +41,13 @@ extern "C" {
 #include <sys/stat.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <libgen.h>
+
+#ifdef __gnu_linux__
+#include <assert.h>
+#endif
 
 typedef struct FileStruct_ {
     char *directory;

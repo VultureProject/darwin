@@ -24,8 +24,7 @@ class EndTask: public darwin::Session {
 public:
     explicit EndTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
-                                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::string redis_socket_path);
+                                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
 
     ~EndTask() override = default;
 
@@ -49,7 +48,4 @@ private:
     ///
     /// \return true on success, false otherwise.
     bool REDISAdd(const std::string& evt_id, const std::string& nb_result) noexcept;
-
-private:
-    darwin::toolkit::RedisManager _redis_manager;
 };

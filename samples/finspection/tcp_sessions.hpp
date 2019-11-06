@@ -70,18 +70,18 @@ typedef struct TcpQueue_ {
 } TcpQueue;
 
 enum tcpState {
-    TCP_NONE,
-    TCP_LISTEN,
-    TCP_SYN_SENT,
-    TCP_SYN_RECV,
-    TCP_ESTABLISHED,
-    TCP_FIN_WAIT1,
-    TCP_FIN_WAIT2,
-    TCP_TIME_WAIT,
-    TCP_LAST_ACK,
-    TCP_CLOSE_WAIT,
-    TCP_CLOSING,
-    TCP_CLOSED,
+    TCP_SESS_NONE,
+    TCP_SESS_LISTEN,
+    TCP_SESS_SYN_SENT,
+    TCP_SESS_SYN_RECV,
+    TCP_SESS_ESTABLISHED,
+    TCP_SESS_FIN_WAIT1,
+    TCP_SESS_FIN_WAIT2,
+    TCP_SESS_TIME_WAIT,
+    TCP_SESS_LAST_ACK,
+    TCP_SESS_CLOSE_WAIT,
+    TCP_SESS_CLOSING,
+    TCP_SESS_CLOSED,
 };
 
 typedef struct TcpConnection_ {
