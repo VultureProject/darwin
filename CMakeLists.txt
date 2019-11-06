@@ -555,13 +555,11 @@ if (NOT DEFINED FILTER)
         FILTERS
         HOSTLOOKUP
         SESSION
-        REPUTATION
         DGA
         CONNECTION
         TANOMALY
         ANOMALY
         LOGS
-        END
         CONTENT_INSPECTION
     )
 else (NOT DEFINED FILTER)
