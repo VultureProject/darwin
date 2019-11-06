@@ -107,7 +107,6 @@ bool ContentInspectionTask::ParseBody() {
     _packetList.clear();
 
     try {
-        _packetList = std::vector<Packet *>();
         _logs.clear();
         std::size_t packetMeta = 0, packetMetaEnd;
         std::size_t packetData, packetDataEnd;
