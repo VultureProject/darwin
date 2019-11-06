@@ -262,7 +262,7 @@ namespace darwin {
         packet = (darwin_filter_packet_t *) malloc(packet_size);
 
         if (!packet) {
-            DARWIN_LOG_CRITICAL("Session::SendResToSession: Could not create a Darwin packet");
+            DARWIN_LOG_CRITICAL("Session::SendToClient: Could not create a Darwin packet");
             return false;
         }
 
