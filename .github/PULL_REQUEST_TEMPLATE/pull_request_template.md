@@ -49,4 +49,4 @@ Please include a summary of the change and which issue is fixed. Please also inc
 
 </br>
 
-- [ ] :raising_hand: **I certify on my honor that all the information provided are true, and I've done all I can to deliver a high quality code**
+- [ ] :raising_hand: **I certify on my honor that all the information provided is true, and I've done all I can to deliver a high quality code**
