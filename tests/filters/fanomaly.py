@@ -35,7 +35,7 @@ def test(test_name, data, expected_certitudes, expected_certitudes_size):
     anomaly_filter.configure()
 
     # START FILTER
-    if not anomaly_filter.valgrind_start():
+    if not anomaly_filter.start():
         return False
 
     # SEND TEST
@@ -70,9 +70,7 @@ def test(test_name, data, expected_certitudes, expected_certitudes_size):
     darwin_api.close()
 
     anomaly_filter.clean_files()
-    # ret = anomaly_filter.valgrind_stop() or anomaly_filter.valgrind_stop()
-    # would erase upper ret if this function return True
-    if not anomaly_filter.valgrind_stop():
+    if not anomaly_filter.stop():
         ret = False
 
     return ret
