@@ -34,17 +34,31 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
             return false;
         }
 
-        if (!configuration.HasMember("redis_list_name")){
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: Missing parameter : \"redis_list_name\"");
-            return false;
+        redis_socket_path = configuration["redis_socket_path"].GetString();
+
+        if (configuration.HasMember("redis_list_name")){
+            if (not configuration["redis_list_name"].IsString()) {
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_list_name\" needs to be a string");
+                return false;
+            }
+            _redis_list_name = configuration["redis_list_name"].GetString();
+            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_list_name\" set to " + _redis_list_name);
         }
 
-        if (!configuration["redis_list_name"].IsString()) {
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_list_name\" needs to be a string");
+        if (configuration.HasMember("redis_channel_name")){
+            if (not configuration["redis_channel_name"].IsString()) {
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_channel_name\" needs to be a string");
+                return false;
+            }
+            _redis_channel_name = configuration["redis_channel_name"].GetString();
+            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_channel_name\" set to " + _redis_channel_name);
+        }
+
+        if(_redis_list_name.empty() and _redis_channel_name.empty()) {
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: if \"redis_socket_path\" is provided, you need to provide at least"
+                                    " \"redis_list_name\" or \"redis_channel_name\"");
             return false;
         }
-        redis_socket_path = configuration["redis_socket_path"].GetString();
-        _redis_list_name = configuration["redis_list_name"].GetString();
 
         if(!ConfigRedis(redis_socket_path)){
             DARWIN_LOG_CRITICAL("Logs:: Generator:: Error when configuring REDIS");
@@ -87,5 +101,5 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
             std::make_shared<LogsTask>(socket, manager, _cache, _cache_mutex,
                                        _log, _redis,
                                        _log_file_path, _log_file,
-                                       _redis_list_name));
+                                       _redis_list_name, _redis_channel_name));
 }

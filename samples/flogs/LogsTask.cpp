@@ -25,11 +25,13 @@ LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
                    bool redis,
                    std::string& log_file_path,
                    std::shared_ptr<darwin::toolkit::FileManager>& log_file,
-                   std::string& redis_list_name)
+                   std::string& redis_list_name,
+                   std::string& redis_channel_name)
         : Session{"logs", socket, manager, cache, cache_mutex},
           _log{log}, _redis{redis},
           _log_file_path{log_file_path},
           _redis_list_name{redis_list_name},
+          _redis_channel_name{redis_channel_name},
           _log_file{log_file} {}
 
 long LogsTask::GetFilterCode() noexcept {
@@ -82,10 +84,24 @@ bool LogsTask::WriteLogs() {
 
 bool LogsTask::REDISAddLogs(const std::string& logs) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("LogsTask::REDISAdd:: Add logs in Redis...");
+    DARWIN_LOG_DEBUG("LogsTask::REDISAddLogs:: Add logs in Redis...");
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    return redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) != REDIS_REPLY_ERROR;
+
+    if(not _redis_list_name.empty()) {
+        if(redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) == REDIS_REPLY_ERROR) {
+            DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to add log in Redis !");
+            return false;
+        }
+    }
+
+    if(not _redis_channel_name.empty()) {
+        if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_channel_name, logs}) == REDIS_REPLY_ERROR) {
+            DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to publish log in Redis !");
+            return false;
+        }
+    }
+    return true;
 }
 
 bool LogsTask::ParseBody() {
