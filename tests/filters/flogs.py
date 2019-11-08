@@ -10,7 +10,7 @@ from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 
 
-REDIS_SOCKET = "/tmp/redis.sock"
+REDIS_SOCKET = "/tmp/redis_logs.sock"
 REDIS_LIST_NAME = "logs_darwin"
 REDIS_CHANNEL_NAME = "darwin.test"
 LOG_FILE = "/tmp/logs_test.log"
