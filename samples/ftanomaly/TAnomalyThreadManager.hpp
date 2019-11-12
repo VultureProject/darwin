@@ -19,11 +19,14 @@
 #include "tsl/hopscotch_set.h"
 #include "../../toolkit/ThreadManager.hpp"
 #include "../../toolkit/RedisManager.hpp"
+#include "../../toolkit/FileManager.hpp"
 
 class AnomalyThreadManager: public darwin::toolkit::ThreadManager{
 public:
-    AnomalyThreadManager(std::string redis_list_name,
-                         std::string log_file_path);
+    AnomalyThreadManager(std::string& redis_internal,
+                         std::shared_ptr<darwin::toolkit::FileManager> log_file,
+                         std::string& redis_alerts_channel,
+                         std::string& redis_alerts_list);
     ~AnomalyThreadManager() override = default;
 
 private:
@@ -49,7 +52,11 @@ private:
 
     /// Write the alerts/logs in a log file
     /// \return true on success, false otherwise.
-    bool WriteLogs(arma::uvec index_anomalies, arma::mat alerts);
+    bool WriteLogs(const arma::uvec index_anomalies, const arma::mat alerts);
+
+    /// Write the alerts/logs in Redis
+    /// \return true on success, false otherwise.
+    bool WriteRedis(const arma::uvec index_anomalies, const arma::mat alerts);
 
     /// Used by "PreProcess" to process a log's line
     void PreProcessLine(const std::string& ip, const std::string& protocol, std::string port,
@@ -83,6 +90,10 @@ private:
     // ips linked to pre-processed data :   [  ip1,   ip2   ]
     std::vector<std::string> _ips;
 
-    std::string _log_file_path;
-    const std::string _redis_list_name; // redis' list which contain our data
+    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
+    const std::string _redis_internal; // redis' list which contain our data
+    const std::string _redis_alerts_channel; //the channel on which to publish alerts when detected
+    const std::string _redis_alerts_list; //the list on which to add alerts when detected
+    bool _is_log_redis; //is there a channel and/or list to put alerts to ?
+    bool _is_log_file; //is there a log file to put alerts to ?
 };
