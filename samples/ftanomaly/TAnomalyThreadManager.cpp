@@ -23,21 +23,11 @@ AnomalyThreadManager::AnomalyThreadManager(std::string& redis_internal,
         _redis_internal(redis_internal),
         _redis_alerts_channel(redis_alerts_channel),
         _redis_alerts_list(redis_alerts_list){
-            DARWIN_LOGGER;
-            if(not _redis_alerts_channel.empty()) {
-                DARWIN_LOG_INFO("AnomalyThread:: _redis_alerts_channel not empty");
-            }
-            if(not _redis_alerts_list.empty()) {
-                DARWIN_LOG_INFO("AnomalyThread:: _redis_alerts_list not empty");
-            }
-
             if(not _redis_alerts_list.empty() or not _redis_alerts_channel.empty()) {
-                DARWIN_LOG_INFO("AnomalyThread:: got a redis list/channel, will log to redis");
                 _is_log_redis = true;
             }
 
             if(_log_file != nullptr) {
-                DARWIN_LOG_INFO("AnomalyThread:: got a log file, will log to it");
                 _is_log_file = true;
             }
         }
