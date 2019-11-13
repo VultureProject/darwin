@@ -12,28 +12,25 @@
 #include <string>
 
 #include "../toolkit/rapidjson/document.h"
+#include "../toolkit/FileManager.hpp"
 #include "Session.hpp"
 #include "TAnomalyThreadManager.hpp"
+#include "AGenerator.hpp"
 
-class Generator {
+class Generator: public AGenerator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
-
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) noexcept override final;
 
 private:
-    bool SetUpClassifier(const std::string &configuration_file_path);
-    bool LoadClassifier(const rapidjson::Document &configuration);
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
-    std::string _log_file_path, _redis_socket_path;
-    std::string _redis_list_name = "anomalyFilterData";
+    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
+    std::string _redis_internal = "anomalyFilterData";
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
-    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; // The cache for already processed request
 };

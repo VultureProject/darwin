@@ -23,126 +23,11 @@
 namespace darwin {
     Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
-                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache)
+                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                     std::mutex& cache_mutex)
             : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
-              _filter_socket{socket.get_executor()}, _connected{false}, _cache{cache} {}
-
-    void Session::SendResToSession() noexcept {
-        DARWIN_LOGGER;
-        const std::size_t certitude_size = _certitudes.size();
-
-        /*
-         * Allocate the header +
-         * the size of the certitude -
-         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         */
-        std::size_t packet_size = 0;
-        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
-            packet_size = sizeof(darwin_filter_packet_t) +
-                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
-        }
-
-        DARWIN_LOG_DEBUG("Session::SendResToSession: Computed packet size: " + std::to_string(packet_size));
-
-        darwin_filter_packet_t* packet;
-        packet = (darwin_filter_packet_t *) malloc(packet_size);
-
-        if (!packet) {
-            DARWIN_LOG_CRITICAL("Session::SendResToSession: Could not create a Darwin packet");
-            return;
-        }
-
-        /*
-         * Initialisation of the structure for the padding bytes because of
-         * missing __attribute__((packed)) in the protocol structure.
-         */
-        memset(packet, 0, packet_size);
-
-        for (std::size_t index = 0; index < certitude_size; ++index) {
-            packet->certitude_list[index] = _certitudes[index];
-            DARWIN_LOG_DEBUG("Session:: SendResToSession:: adding certitude " + std::to_string(_certitudes[index]) +
-                " to header");
-        }
-
-        packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _header.response;
-        packet->certitude_size = certitude_size;
-        packet->filter_code = GetFilterCode();
-        packet->body_size = 0;
-        memcpy(packet->evt_id, _header.evt_id, 16);
-
-        DARWIN_LOG_DEBUG("Session:: SendResToSession:: sending answer to client, " +
-            std::to_string(packet->certitude_size) + " certitude(s).");
-
-        Send(packet, nullptr, packet_size);
-
-        free(packet);
-    }
-
-    void Session::SendToDarwin() noexcept {
-        DARWIN_LOGGER;
-
-        if (!_next_filter_path.compare("no")) {
-            DARWIN_LOG_NOTICE("Session:: SendToDarwin: No next filter provided. Ignoring...");
-            return ;
-        }
-
-        std::string data = GetDataToSendToFilter();
-
-        const std::size_t certitude_size = _certitudes.size();
-
-        /*
-         * Allocate the header +
-         * the size of the certitude -
-         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         */
-        std::size_t packet_size = 0;
-        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
-            packet_size = sizeof(darwin_filter_packet_t) +
-                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
-        }
-
-        DARWIN_LOG_DEBUG("Session::SendToDarwin: Computed packet size: " + std::to_string(packet_size));
-
-        darwin_filter_packet_t* packet;
-        packet = (darwin_filter_packet_t *) malloc(packet_size);
-
-        if (!packet) {
-            DARWIN_LOG_CRITICAL("Session:: SendToDarwin: Could not create a Darwin packet");
-            return;
-        }
-
-        /*
-         * Initialisation of the structure for the padding bytes because of
-         * missing __attribute__((packed)) in the protocol structure.
-         */
-        memset(packet, 0, packet_size);
-
-        for (std::size_t index = 0; index < certitude_size; ++index) {
-            packet->certitude_list[index] = _certitudes[index];
-        }
-
-        packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
-        packet->certitude_size = certitude_size;
-        packet->filter_code = GetFilterCode();
-        packet->body_size = data.size();
-        memcpy(packet->evt_id, _header.evt_id, 16);
-
-        if(packet->body_size <= 0) {
-            DARWIN_LOG_DEBUG("Session:: SendToDarwin: no data");
-            SendToFilter(packet, nullptr, packet_size);
-        } else {
-            DARWIN_LOG_DEBUG("Session:: SendToDarwin: Send data : " + data);
-            SendToFilter(packet, data.c_str(), packet_size);
-        }
-
-        free(packet);
-    }
+              _filter_socket{socket.get_executor()}, _connected{false},
+              _cache{cache}, _cache_mutex{cache_mutex} {}
 
     void Session::SetStartingTime() {
         _starting_time = std::chrono::high_resolution_clock::now();
@@ -309,7 +194,22 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Session::ExecuteFilter::");
 
         (*this)();
-        Start();
+        this->SendNext();
+    }
+
+    void Session::SendNext() {
+        switch(_header.response) {
+            case DARWIN_RESPONSE_SEND_BOTH:
+                if(this->SendToFilter()) break;
+            case DARWIN_RESPONSE_SEND_BACK:
+                if(not this->SendToClient()) Start();
+                break;
+            case DARWIN_RESPONSE_SEND_DARWIN:
+                if(not this->SendToFilter()) Start();
+                break;
+            default:
+                Start();
+        }
     }
 
     bool Session::ParseBody() {
@@ -339,64 +239,67 @@ namespace darwin {
         return std::string(buffer.GetString());
     }
 
-    void Session::SendCallback(const boost::system::error_code& e,
-                               std::size_t size __attribute__((unused))) {
+    bool Session::SendToClient() noexcept {
         DARWIN_LOGGER;
+        const std::size_t certitude_size = _certitudes.size();
 
-        if (e) {
-            DARWIN_LOG_ERROR("Session::SendCallback:: " + e.message());
-            _manager.Stop(shared_from_this());
+        /*
+         * Allocate the header +
+         * the size of the certitude -
+         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+         */
+        std::size_t packet_size = 0;
+        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
+            packet_size = sizeof(darwin_filter_packet_t) +
+                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
+        } else {
+            packet_size = sizeof(darwin_filter_packet_t);
         }
-    }
 
-    void Session::Send(darwin_filter_packet_t const* hdr,
-                       void const* data, std::size_t packet_size) {
-        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("Session::SendToClient: Computed packet size: " + std::to_string(packet_size));
 
-        // Here is the synchronous way.
-        // I let it because it may be useful if you want to create
-        // synchronous methods or for debug purposes.
-//        DARWIN_LOG_DEBUG("Session::Send:: Sending header to session...");
-//        try {
-//            boost::asio::write(_socket, boost::asio::buffer(&hdr, sizeof(hdr)));
-//        } catch (boost::system::system_error const& e) {
-//            DARWIN_LOG_ERROR(std::string(
-//                    "Session::Send:: Error sending header to session: ") +
-//                      e.what());
-//            _manager.Stop(shared_from_this());
-//            return;
-//        }
-        DARWIN_LOG_DEBUG("Session::Send:: Async sending header to session...");
+        darwin_filter_packet_t* packet;
+        packet = (darwin_filter_packet_t *) malloc(packet_size);
+
+        if (!packet) {
+            DARWIN_LOG_CRITICAL("Session::SendToClient: Could not create a Darwin packet");
+            return false;
+        }
+
+        /*
+         * Initialisation of the structure for the padding bytes because of
+         * missing __attribute__((packed)) in the protocol structure.
+         */
+        memset(packet, 0, packet_size);
+
+        for (std::size_t index = 0; index < certitude_size; ++index) {
+            packet->certitude_list[index] = _certitudes[index];
+        }
+
+        packet->type = DARWIN_PACKET_FILTER;
+        packet->response = _header.response;
+        packet->certitude_size = certitude_size;
+        packet->filter_code = GetFilterCode();
+        packet->body_size = 0;
+        memcpy(packet->evt_id, _header.evt_id, 16);
 
         boost::asio::async_write(_socket,
-                                 boost::asio::buffer(hdr, packet_size),
-                                 boost::bind(&Session::SendCallback, this,
-                                             boost::asio::placeholders::error,
-                                             boost::asio::placeholders::bytes_transferred));
-        if (data != nullptr && hdr->body_size > 0) {
-//            DARWIN_LOG_DEBUG("Session::Send:: Sending body to session...");
-//            try {
-//                boost::asio::write(_socket,
-//                                   boost::asio::buffer(data, hdr.body_size));
-//            } catch (boost::system::system_error const& e) {
-//                DARWIN_LOG_ERROR(std::string(
-//                        "Session::Send:: Error sending header to session: ") +
-//                          e.what());
-//                _manager.Stop(shared_from_this());
-//                return;
-//            }
-            DARWIN_LOG_DEBUG("Session::Send:: Async sending body to session...");
-            boost::asio::async_write(_socket,
-                                     boost::asio::buffer(data, hdr->body_size),
-                                     boost::bind(&Session::SendCallback, this,
-                                                 boost::asio::placeholders::error,
-                                                 boost::asio::placeholders::bytes_transferred));
-        }
+                                boost::asio::buffer(packet, packet_size),
+                                boost::bind(&Session::SendToClientCallback, this,
+                                            boost::asio::placeholders::error,
+                                            boost::asio::placeholders::bytes_transferred));
+
+        free(packet);
+        return true;
     }
 
-    void Session::SendToFilter(darwin_filter_packet_t const* hdr,
-                               void const* data, std::size_t packet_size) {
+    bool Session::SendToFilter() noexcept {
         DARWIN_LOGGER;
+
+        if (!_next_filter_path.compare("no")) {
+            DARWIN_LOG_NOTICE("Session::SendToFilter:: No next filter provided. Ignoring...");
+            return false;
+        }
 
         if (!_connected) {
             DARWIN_LOG_DEBUG("Session::SendToFilter:: Trying to connect to: " +
@@ -410,54 +313,87 @@ namespace darwin {
                 DARWIN_LOG_ERROR(std::string("Session::SendToFilter:: "
                                              "Unable to connect to next filter: ") +
                                  e.what());
-                return;
+                return false;
             }
         }
 
-        // Here is the synchronous way.
-        // I let it because it may be useful if you want to create
-        // synchronous methods or for debug purposes.
-        DARWIN_LOG_DEBUG("Session::SendToFilter:: Sending header to filter...");
-        try {
-            boost::asio::write(_filter_socket,
-                               boost::asio::buffer(hdr, packet_size));
-        } catch (boost::system::system_error const& e) {
-            DARWIN_LOG_ERROR(std::string(
-                                     "Session::SendToFilter:: Error sending header to filter: ") +
-                                     e.what());
-            _filter_socket.close();
-            _connected = false;
+        std::string data = GetDataToSendToFilter();
+        DARWIN_LOG_DEBUG("Session::SendToFilter:: data to send: " + data);
+        DARWIN_LOG_DEBUG("Session::SendToFilter:: data size: " + std::to_string(data.size()));
+
+        const std::size_t certitude_size = _certitudes.size();
+
+        /*
+         * Allocate the header +
+         * the size of the certitude -
+         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+         */
+        std::size_t packet_size = 0;
+        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
+            packet_size = sizeof(darwin_filter_packet_t) +
+                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
+        } else {
+            packet_size = sizeof(darwin_filter_packet_t);
+        }
+
+        packet_size += data.size();
+
+        DARWIN_LOG_DEBUG("Session::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
+
+        darwin_filter_packet_t* packet;
+        packet = (darwin_filter_packet_t *) malloc(packet_size);
+
+        if (!packet) {
+            DARWIN_LOG_CRITICAL("Session:: SendToFilter:: Could not create a Darwin packet");
+            return false;
+        }
+
+        /*
+         * Initialisation of the structure for the padding bytes because of
+         * missing __attribute__((packed)) in the protocol structure.
+         */
+        memset(packet, 0, packet_size);
+
+        for (std::size_t index = 0; index < certitude_size; ++index) {
+            packet->certitude_list[index] = _certitudes[index];
+        }
+
+        if(data.size() != 0) {
+            // TODO: set a proper pointer in protocol.h for the body
+            // Yes We Hack...
+            memcpy(&packet->certitude_list[certitude_size+1], data.c_str(), data.size());
+        }
+
+        packet->type = DARWIN_PACKET_FILTER;
+        packet->response = _header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
+        packet->certitude_size = certitude_size;
+        packet->filter_code = GetFilterCode();
+        packet->body_size = data.size();
+        memcpy(packet->evt_id, _header.evt_id, 16);
+
+        DARWIN_LOG_DEBUG("Session:: SendToFilter:: Sending header + data");
+        boost::asio::async_write(_filter_socket,
+                            boost::asio::buffer(packet, packet_size),
+                            boost::bind(&Session::SendToFilterCallback, this,
+                                        boost::asio::placeholders::error,
+                                        boost::asio::placeholders::bytes_transferred));
+
+        free(packet);
+        return true;
+    }
+
+    void Session::SendToClientCallback(const boost::system::error_code& e,
+                               std::size_t size __attribute__((unused))) {
+        DARWIN_LOGGER;
+
+        if (e) {
+            DARWIN_LOG_ERROR("Session::SendToClientCallback:: " + e.message());
+            _manager.Stop(shared_from_this());
+            DARWIN_LOG_DEBUG("Session::SendToClientCallback:: Stopped session in manager");
             return;
         }
-//        DARWIN_LOG_DEBUG("Session::SendToFilter:: Async sending header to filter...");
-//        boost::asio::async_write(_filter_socket,
-//                                 boost::asio::buffer(&hdr, sizeof(hdr)),
-//                                 boost::bind(
-//                                         &Session::SendToFilterCallback,
-//                                         this,
-//                                         boost::asio::placeholders::error,
-//                                         boost::asio::placeholders::bytes_transferred));
-        if (data != nullptr && hdr->body_size > 0) {
-            DARWIN_LOG_DEBUG("Session::SendToFilter:: Sending body to filter...");
-            try {
-                boost::asio::write(_filter_socket,
-                                   boost::asio::buffer(data, hdr->body_size));
-            } catch (boost::system::system_error const& e) {
-                DARWIN_LOG_ERROR(std::string(
-                                         "Session::SendToFilter:: Error sending body to filter: ") +
-                                         e.what());
-                _filter_socket.close();
-                _connected = false;
-                return;
-            }
-//            DARWIN_LOG_DEBUG("Session::SendToFilter:: Async sending body to filter...");
-//            boost::asio::async_write(_filter_socket,
-//                                     boost::asio::buffer(data, hdr.body_size),
-//                                     boost::bind(&Session::SendToFilterCallback,
-//                                                 this,
-//                                                 boost::asio::placeholders::error,
-//                                                 boost::asio::placeholders::bytes_transferred));
-        }
+
+        Start();
     }
 
     void Session::SendToFilterCallback(const boost::system::error_code& e,
@@ -469,6 +405,13 @@ namespace darwin {
             _filter_socket.close();
             _connected = false;
         }
+
+        if(_header.response == DARWIN_RESPONSE_SEND_BOTH) {
+            this->SendToClient();
+        }
+        else {
+            Start();
+        }
     }
 
     xxh::hash64_t Session::GenerateHash() {
@@ -479,13 +422,18 @@ namespace darwin {
     void Session::SaveToCache(const xxh::hash64_t &hash, const unsigned int certitude) const {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("SaveToCache:: Saving certitude " + std::to_string(certitude) + " to cache");
+        std::unique_lock<std::mutex> lck{_cache_mutex};
         _cache->insert(hash, certitude);
     }
 
     bool Session::GetCacheResult(const xxh::hash64_t &hash, unsigned int& certitude) {
         DARWIN_LOGGER;
         boost::optional<unsigned int> cached_certitude;
-        cached_certitude = _cache->get(hash);
+
+        {
+            std::unique_lock<std::mutex> lck{_cache_mutex};
+            cached_certitude = _cache->get(hash);
+        }
 
         if (cached_certitude != boost::none) {
             certitude = cached_certitude.get();

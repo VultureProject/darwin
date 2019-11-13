@@ -69,16 +69,17 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         return false;
     }
 
-    _redis_socket_path = configuration["redis_socket_path"].GetString();
+    std::string redis_socket_path = configuration["redis_socket_path"].GetString();
 
-    return true;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    return redis.SetUnixPath(redis_socket_path);
 }
 
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<EndTask>(socket, manager, _cache, _redis_socket_path));
+            std::make_shared<EndTask>(socket, manager, _cache));
 }
 
 Generator::~Generator() = default;

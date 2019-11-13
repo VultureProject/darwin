@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.7.2)
 project(darwin)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(ENV{PKG_CONFIG_PATH}  "/usr/local/lib/pkgconfig/;/usr/local/libdata/pkgconfig/")
 
 find_package(PkgConfig)
@@ -66,6 +66,8 @@ set(
         samples/base/Server.cpp samples/base/Server.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
         samples/base/Session.cpp samples/base/Session.hpp
+        samples/base/AGenerator.cpp samples/base/AGenerator.hpp
+        samples/base/ThreadGroup.cpp samples/base/ThreadGroup.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp
         toolkit/Validators.cpp toolkit/Validators.hpp
@@ -553,13 +555,11 @@ if (NOT DEFINED FILTER)
         FILTERS
         HOSTLOOKUP
         SESSION
-        REPUTATION
         DGA
         CONNECTION
         TANOMALY
         ANOMALY
         LOGS
-        END
         CONTENT_INSPECTION
     )
 else (NOT DEFINED FILTER)

@@ -20,8 +20,9 @@
 HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                               std::mutex& cache_mutex,
                                tsl::hopscotch_map<std::string, int>& db)
-        : Session{"host_lookup", socket, manager, cache}, _database{db} {
+        : Session{"host_lookup", socket, manager, cache, cache_mutex}, _database{db} {
     _is_cache = _cache != nullptr;
 }
 
@@ -78,26 +79,6 @@ void HostLookupTask::operator()() {
 
         DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
-    }
-
-    Workflow();
-}
-
-void HostLookupTask::Workflow() {
-    switch (_header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
     }
 }
 

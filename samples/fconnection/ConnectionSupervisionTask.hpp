@@ -26,7 +26,7 @@ public:
     explicit ConnectionSupervisionTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::shared_ptr<darwin::toolkit::RedisManager> rm,
+                                       std::mutex& cache_mutex,
                                        unsigned int expire);
     ~ConnectionSupervisionTask() override = default;
 
@@ -39,10 +39,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Parse a line in the body.
     bool ParseLine(rapidjson::Value &line) final;
 
@@ -55,5 +51,4 @@ private:
 private:
     unsigned int _redis_expire;
     std::string _connection;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager;
 };

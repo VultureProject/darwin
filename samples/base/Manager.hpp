@@ -8,6 +8,7 @@
 #pragma once
 
 #include <set>
+#include <thread>
 #include "Session.hpp"
 
 namespace darwin {
@@ -38,5 +39,6 @@ namespace darwin {
 
     private:
         std::set<session_ptr_t> _sessions; //!< The managed sessions.
+        std::mutex _mutex;
     };
 }

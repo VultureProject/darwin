@@ -38,9 +38,20 @@ Packet *createPacket() {
 
 void freePacket(Packet *pkt) {
     if(pkt) {
-        if(pkt->ipv4h)      free(pkt->ipv4h);
-        if(pkt->ipv6h)      free(pkt->ipv6h);
-        if(pkt->tcph)       free(pkt->tcph);
+        if(pkt->ipv4h) {
+            if(pkt->ipv4h->dst) free((void *)pkt->ipv4h->dst);
+            if(pkt->ipv4h->src) free((void *)pkt->ipv4h->src);
+            free((void *)pkt->ipv4h);
+        }
+        if(pkt->ipv6h){
+            if(pkt->ipv6h->dst) free((void *)pkt->ipv6h->dst);
+            if(pkt->ipv6h->src) free((void *)pkt->ipv6h->src);
+            free((void *)pkt->ipv6h);
+        }
+        if(pkt->tcph){
+            if(pkt->tcph->flags) free((void *)pkt->tcph->flags);
+            free((void *)pkt->tcph);
+        }
         if(pkt->payload)    free(pkt->payload);
         free(pkt);
     }

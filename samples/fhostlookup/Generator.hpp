@@ -12,29 +12,29 @@
 #include <string>
 
 #include "Session.hpp"
+#include "AGenerator.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "../toolkit/Files.hpp"
 #include "../toolkit/rapidjson/document.h"
 
-class Generator {
+class Generator: public AGenerator {
 public:
     Generator() = default;
     ~Generator() = default;
 
 public:
-    // The config file is the database here
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
-
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) noexcept override final;
+
+protected:
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
 private:
-    bool SetUpClassifier(const std::string &configuration_file_path);
-    bool LoadClassifier(const rapidjson::Document &configuration);
-
-    tsl::hopscotch_map<std::string, int> _database; //The "bad" hostname database
-    // The cache for already processed request
-    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
+    // This implementation is thread safe with multiple reader
+    // with no writer.
+    // This is indicated by the repository doc.
+    // It should mimic thread safety of std::unordered_map<>
+    tsl::hopscotch_map<std::string, int> _database; //!< The "bad" hostname database
 };

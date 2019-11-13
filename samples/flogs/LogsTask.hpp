@@ -28,13 +28,13 @@ public:
     explicit LogsTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager,
                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                      std::mutex& cache_mutex,
                       bool log,
                       bool redis,
                       std::string& log_file_path,
                       std::shared_ptr<darwin::toolkit::FileManager>& log_file,
                       std::string& redis_list_name,
-                      std::shared_ptr<darwin::toolkit::RedisManager>& redis_manager);
-
+                      std::string& redis_channel_name);
     ~LogsTask() override = default;
 
 public:
@@ -46,10 +46,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Parse the body received.
     bool ParseBody() override;
 
@@ -69,6 +65,6 @@ private:
     bool _redis; // If the filter will stock the data in a REDIS
     std::string _log_file_path;
     std::string _redis_list_name;
+    std::string _redis_channel_name;
     std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
 };

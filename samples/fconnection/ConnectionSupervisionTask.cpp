@@ -24,10 +24,10 @@
 ConnectionSupervisionTask::ConnectionSupervisionTask(boost::asio::local::stream_protocol::socket& socket,
                                                      darwin::Manager& manager,
                                                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                                     std::shared_ptr<darwin::toolkit::RedisManager> rm,
+                                                     std::mutex& cache_mutex,
                                                      unsigned int expire)
-        : Session{"connection", socket, manager, cache},
-          _redis_expire{expire}, _redis_manager{std::move(rm)} {}
+        : Session{"connection", socket, manager, cache, cache_mutex},
+          _redis_expire{expire}{}
 
 long ConnectionSupervisionTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_CONNECTION;
@@ -60,33 +60,13 @@ void ConnectionSupervisionTask::operator()() {
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }
-
-    Workflow();
-}
-
-void ConnectionSupervisionTask::Workflow() {
-    switch (_header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
     DARWIN_LOGGER;
 
     if(not line.IsArray()) {
-        DARWIN_LOG_ERROR("DGATask:: ParseBody: The input line is not an array");
+        DARWIN_LOG_ERROR("ConnectionSupervisionTask:: ParseBody: The input line is not an array");
         return false;
     }
 
@@ -125,26 +105,23 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: Looking up '" +  connection  + "' in the Redis");
 
-    redisReply *reply = nullptr;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    long long int result;
 
     std::vector<std::string> arguments{};
     arguments.emplace_back("EXISTS");
     arguments.emplace_back(connection);
 
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong while querying Redis");
-        freeReplyObject(reply);
-        reply = nullptr;
+    if(redis.Query(arguments, result) != REDIS_REPLY_INTEGER) {
+        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Didn't get the expected response from Redis when looking for connection '" + connection + "'.");
         return DARWIN_ERROR_RETURN;
     }
 
     // When doubt, everything is ok
     unsigned int certitude = 0;
 
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Not the expected Redis response "
-                         "when looking up for connection " + connection);
-    } else if (!reply->integer) {
+    if (not result) {
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: No resultfound, setting certitude to 100");
         certitude = 100;
 
         // If connection not found in the Redis, we put it in
@@ -159,19 +136,12 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         }
         arguments.emplace_back("0");
 
-        freeReplyObject(reply);
-        reply = nullptr;
-        if (!_redis_manager->REDISQuery(&reply, arguments)) {
+        if(redis.Query(arguments) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong "
                              "while adding a new connection to Redis");
-            freeReplyObject(reply);
-            reply = nullptr;
             return DARWIN_ERROR_RETURN;
         }
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
 
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: Certitude of a new connection is " +
                      std::to_string(certitude));

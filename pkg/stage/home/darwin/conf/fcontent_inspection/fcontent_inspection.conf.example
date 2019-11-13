@@ -1,0 +1,7 @@
+{
+  "maxConnections": 64000,
+  "yaraRuleFile": "/root/darwin/conf/fcontent_inspection/exampleRule.yar.example",
+  "yaraScanType": "packet",
+  "yaraScanMaxSize": 16384,
+  "maxMemoryUsage": 10
+}
