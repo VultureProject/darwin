@@ -17,6 +17,8 @@
 #include "TAnomalyThreadManager.hpp"
 #include "AGenerator.hpp"
 
+#define REDIS_INTERNAL_LIST "anomalyFilter_internal"
+
 class Generator: public AGenerator {
 public:
     Generator() = default;
@@ -31,6 +33,6 @@ private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
     std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
-    std::string _redis_internal = "anomalyFilterData";
+    std::string _redis_internal = REDIS_INTERNAL_LIST;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager;
 };

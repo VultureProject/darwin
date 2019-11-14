@@ -73,6 +73,19 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
             return false;
         }
 
+        if(not redis_alerts_list.compare(REDIS_INTERNAL_LIST)) {
+            redis_alerts_list.clear();
+            if(not redis_alerts_channel.empty()) {
+                DARWIN_LOG_WARNING("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                                    std::string(REDIS_INTERNAL_LIST) + "' (forbidden name), parameter ignored.");
+            }
+            else {
+                DARWIN_LOG_ERROR("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                                std::string(REDIS_INTERNAL_LIST) + "' (forbidden name). No alternative for Redis, aborting.");
+                return false;
+            }
+        }
+
         DARWIN_LOG_INFO("TAnomaly:: Generator:: Redis configured successfuly");
     }
 
