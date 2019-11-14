@@ -17,11 +17,11 @@ class Anomaly(Filter):
 def run():
     tests = [
         not_enough_data_test,
-        too_short_line_data_test,
-        no_string_line_data_test,
-        no_int_line_data_test,
-        line_not_list_data_test,
-        not_list_data_test,
+        no_data_list_test,
+        line_too_short_test,
+        line_no_string_test,
+        line_no_int_test,
+        line_no_data_list_test,
         one_set_data_test,
         multiple_set_data_test,
     ]
@@ -140,9 +140,9 @@ def multiple_set_data_test():
         ],
         [0,0],2)
 
-def too_short_line_data_test():
+def line_too_short_test():
     return test(
-        "too_short_line_data_test",
+        "line_too_short_test",
         [
             [
                 ["42.42.42.42",1,42,42,42,42],
@@ -159,9 +159,9 @@ def too_short_line_data_test():
         ],
         [101],1)
 
-def no_string_line_data_test():
+def line_no_string_test():
     return test(
-        "no_string_line_data_test",
+        "line_no_string_test",
         [
             [
                 ["42.42.42.42",1,42,42,42,42],
@@ -178,9 +178,9 @@ def no_string_line_data_test():
         ],
         [101],1)
 
-def no_int_line_data_test():
+def line_no_int_test():
     return test(
-        "no_int_line_data_test",
+        "line_no_int_test",
         [
             [
                 ["42.42.42.42",1,42,42,42,42],
@@ -197,9 +197,9 @@ def no_int_line_data_test():
         ],
         [101],1)
 
-def not_list_data_test():
+def no_data_list_test():
     return test(
-        "not_list_data_test",
+        "no_data_list_test",
         [
             ["42.42.42.42",1,42,42,42,42],
             ["42.42.42.42",2,42,42,42,42],
@@ -214,9 +214,9 @@ def not_list_data_test():
         ],
         [101,101,101,101,101,101,101,101,101,101],10)
 
-def line_not_list_data_test():
+def line_no_data_list_test():
     return test(
-        "line_not_list_data_test",
+        "line_no_data_list_test",
         [
             [
                 ["42.42.42.42",1,42,42,42,42],
