@@ -6,6 +6,7 @@
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
 #include "base/Logger.hpp"
+#include "base/Core.hpp"
 #include "Generator.hpp"
 #include "TAnomalyTask.hpp"
 #include "TAnomalyThreadManager.hpp"
@@ -18,6 +19,9 @@
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading configuration...");
+
+    // Generating name for the internaly used redis set
+    _redis_internal = darwin::Core::instance().GetFilterName() + REDIS_INTERNAL_LIST;
 
     std::string redis_alerts_channel; //the channel on which to publish alerts when detected
     std::string redis_alerts_list; //the list on which to add alerts when detected
@@ -71,6 +75,19 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
             DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: if \"redis_socket_path\" is provided, you need to provide at least"
                                     " \"redis_list_name\" or \"redis_channel_name\", they cannot be empty");
             return false;
+        }
+
+        if(not redis_alerts_list.compare(_redis_internal)) {
+            redis_alerts_list.clear();
+            if(not redis_alerts_channel.empty()) {
+                DARWIN_LOG_WARNING("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                                    std::string(_redis_internal) + "' (forbidden name), parameter ignored.");
+            }
+            else {
+                DARWIN_LOG_ERROR("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                                std::string(_redis_internal) + "' (forbidden name). No alternative for Redis, aborting.");
+                return false;
+            }
         }
 
         DARWIN_LOG_INFO("TAnomaly:: Generator:: Redis configured successfuly");
