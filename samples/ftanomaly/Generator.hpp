@@ -17,7 +17,7 @@
 #include "TAnomalyThreadManager.hpp"
 #include "AGenerator.hpp"
 
-#define REDIS_INTERNAL_LIST "anomalyFilter_internal"
+#define REDIS_INTERNAL_LIST "_anomalyFilter_internal"
 
 class Generator: public AGenerator {
 public:
