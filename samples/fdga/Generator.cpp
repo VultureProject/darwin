@@ -16,74 +16,12 @@
 #include "Generator.hpp"
 #include "tensorflow/core/framework/graph.pb.h"
 
-bool Generator::Configure(const std::string &configuration_file_path, const std::size_t cache_size) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configuration_file_path)) return false;
-
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
-
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Initializing faup handler...");
-    faup_options_t *faup_options = faup_options_new();
-
-    if (!faup_options) {
-        DARWIN_LOG_CRITICAL("DGA:: Generator:: Cannot allocate faup options");
-        return false;
-    }
-
-    _faup_handler = faup_init(faup_options);
-
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("DGA:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("DGA:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("DGA:: Generator:: Loading classifier...");
 
     std::string token_map_path;
     std::string model_path;
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("DGA:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
 
     if (!configuration.HasMember("token_map_path")) {
         DARWIN_LOG_CRITICAL("DGA:: Generator:: Missing parameter: \"token_map_path\"");
@@ -123,7 +61,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         _max_tokens = configuration["max_tokens"].GetUint();
     }
 
-    return LoadTokenMap(token_map_path) && LoadModel(model_path);
+    return LoadFaupOptions() && LoadTokenMap(token_map_path) && LoadModel(model_path);
 }
 
 bool Generator::LoadTokenMap(const std::string &token_map_path) {
@@ -144,7 +82,33 @@ bool Generator::LoadTokenMap(const std::string &token_map_path) {
 
     while (!token_map_stream.eof() && std::getline(token_map_stream, current_line)) {
         boost::tokenizer<boost::char_separator<char>> tokens(current_line, separator);
-        _token_map[*tokens.begin()] = (unsigned int)std::stoi(*(++tokens.begin()));
+
+        boost::tokenizer<boost::char_separator<char>>::iterator key(tokens.begin());
+        if (key==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when load token map : Blank line");
+            token_map_stream.close();
+            return false;
+        }
+
+        boost::tokenizer<boost::char_separator<char>>::iterator value(++tokens.begin());
+        if (value==tokens.end()){
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Error when load token map on this line : "
+                                + current_line);
+            token_map_stream.close();
+            return false;
+        }
+
+        _token_map[*key] = (unsigned int)std::stoi(*value);
+
+        try{
+            _token_map[*key] = (unsigned int)std::stoi(*value);
+        }catch(const std::invalid_argument& ia){
+            std::string exc(ia.what());
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Value " + *value + " is invalid : " + exc);
+        }catch(const std::out_of_range& oor){
+            std::string exc(oor.what());
+            DARWIN_LOG_CRITICAL("DGA:: LoadTokenMap:: Value is out of range : " + exc);
+        }
     }
 
     token_map_stream.close();
@@ -176,13 +140,32 @@ bool Generator::LoadModel(const std::string &model_path) {
     return true;
 }
 
+bool Generator::LoadFaupOptions() {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("DGA:: Generator:: Initializing faup options...");
+    _faup_options = faup_options_new();
+
+    if (!_faup_options) {
+        DARWIN_LOG_CRITICAL("DGA:: Generator:: Cannot allocate faup options");
+        return false;
+    }
+    return true;
+}
+
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<DGATask>(socket, manager, _cache, _session, _faup_handler, _token_map, _max_tokens));
+            std::make_shared<DGATask>(socket, manager, _cache, _cache_mutex, _session, _faup_options, _token_map, _max_tokens));
 }
 
 Generator::~Generator() {
-    faup_terminate(_faup_handler);
+    if (_session) {
+        tensorflow::Status s = _session->Close();
+        if (not s.ok()) {
+            DARWIN_LOGGER;
+            DARWIN_LOG_DEBUG("DGA:: Generator:: Unable to close the Tensorflow Session");
+        }
+    }
 }

@@ -25,10 +25,11 @@ const std::vector<std::string> UserAgentTask::USER_AGENT_CLASSES({"Desktop", "To
 UserAgentTask::UserAgentTask(boost::asio::local::stream_protocol::socket& socket,
                              darwin::Manager& manager,
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                             std::mutex& cache_mutex,
                              std::shared_ptr<tensorflow::Session> &session,
                              std::map<std::string, unsigned int> &token_map,
                              const unsigned int max_tokens)
-        : Session{"user_agent", socket, manager, cache}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map} {
+        : Session{"user_agent", socket, manager, cache, cache_mutex}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map} {
     _is_cache = _cache != nullptr;
 }
 
@@ -84,26 +85,7 @@ void UserAgentTask::operator()() {
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
     }
 
-    Workflow();
     _user_agents = std::vector<std::string>();
-}
-
-void UserAgentTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
-    }
 }
 
 UserAgentTask::~UserAgentTask() = default;
@@ -154,15 +136,23 @@ unsigned int UserAgentTask::Predict(const std::string &user_agent) {
 
     std::vector<tensorflow::Tensor> output_tensors;
 
-    tensorflow::Status run_status = _session->Run({{"embedding_4_input", input_tensor}},
-                                                  {"output_node0"},
-                                                  {},
-                                                  &output_tensors);
+    try {
+        tensorflow::Status run_status = _session->Run({{"embedding_4_input", input_tensor}},
+                                                    {"output_node0"},
+                                                    {},
+                                                    &output_tensors);
 
-    if (!run_status.ok()) {
-        DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
-        return 101;
+        if (!run_status.ok()) {
+            DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
+            return DARWIN_ERROR_RETURN;
+        }
     }
+    catch(const std::exception& e)
+    {
+        DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
+        return DARWIN_ERROR_RETURN;
+    }
+
 
     std::map<std::string, float> result;
     index = 0;

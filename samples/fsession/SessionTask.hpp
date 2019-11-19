@@ -17,6 +17,7 @@ extern "C" {
 #include <string>
 #include <thread>
 #include <vector>
+#include <any>
 
 #include "protocol.h"
 #include "Session.hpp"
@@ -34,9 +35,9 @@ extern "C" {
 class SessionTask : public darwin::Session {
 public:
     explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
-                       darwin::Manager& manager,
+                         darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::shared_ptr<darwin::toolkit::RedisManager> redis_manager);
+                         std::mutex& cache_mutex);
     ~SessionTask() override = default;
 
 
@@ -48,16 +49,10 @@ public:
     static constexpr unsigned int TOKEN_SIZE = (2*SHA256_DIGEST_LENGTH);
 
 protected:
-    /// Get the result from the cache
-    virtual xxh::hash64_t GenerateHash() override;
     /// Return filter code
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Read header from the session and
     /// call the method appropriate to the data type received.
     ///
@@ -75,15 +70,11 @@ private:
     /// \return The concatenated string.
     std::string JoinRepoIDs(const std::vector<std::string> &repo_ids);
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse a line of the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
 private:
     // Session_status in Redis
-    std::string _current_token; // The token to check
-    std::vector<std::string> _tokens;
-    std::vector<std::string> _current_repo_ids; // The associated repository IDs to check
-    std::vector<std::vector<std::string>> _repo_ids_list;
-
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
+    std::string _token; // The token to check
+    std::vector<std::string> _repo_ids; // The associated repository IDs to check
 };

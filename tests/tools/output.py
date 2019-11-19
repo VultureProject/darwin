@@ -6,8 +6,10 @@ def print_results(results):
         else:
             print("ERROR | " + i[0])
 
-def print_result(name, result):
+def print_result(name, function):
+    print(name + "... ", end='', flush=True)
+    result = function()
     if result is True:
-        print("OK | " + name)
+        print("\33[32m OK \33[0m")
     else:
-        print("ERROR | " + name)
+        print("\033[91m ERROR \33[0m")

@@ -15,62 +15,11 @@
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
-    DARWIN_LOGGER;
 
-    DARWIN_LOG_DEBUG("HostLookup:: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
-    DARWIN_LOG_DEBUG("HostLookup:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("HostLookup:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("HostLookup:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("HostLookup:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("HostLookup:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("HostLookup:: Generator:: Loading classifier...");
     std::string line, db;
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
 
     if (!configuration.HasMember("database")) {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Missing parameter: \"database\"");
@@ -109,5 +58,5 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<HostLookupTask>(socket, manager, _cache, _database));
+            std::make_shared<HostLookupTask>(socket, manager, _cache, _cache_mutex, _database));
 }

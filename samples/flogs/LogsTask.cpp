@@ -20,17 +20,19 @@
 LogsTask::LogsTask(boost::asio::local::stream_protocol::socket& socket,
                    darwin::Manager& manager,
                    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                   std::mutex& cache_mutex,
                    bool log,
                    bool redis,
-                   std::string log_file_path,
-                   std::ofstream& log_file,
-                   std::string redis_list_name,
-                   std::shared_ptr<darwin::toolkit::RedisManager> redis_manager)
-        : Session{"logs", socket, manager, cache},
+                   std::string& log_file_path,
+                   std::shared_ptr<darwin::toolkit::FileManager>& log_file,
+                   std::string& redis_list_name,
+                   std::string& redis_channel_name)
+        : Session{"logs", socket, manager, cache, cache_mutex},
           _log{log}, _redis{redis},
-          _log_file_path{log_file_path}, _log_file{log_file},
+          _log_file_path{log_file_path},
           _redis_list_name{redis_list_name},
-          _redis_manager{redis_manager}{}
+          _redis_channel_name{redis_channel_name},
+          _log_file{log_file} {}
 
 long LogsTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_LOGS;
@@ -39,99 +41,71 @@ long LogsTask::GetFilterCode() noexcept {
 void LogsTask::operator()() {
     DARWIN_LOGGER;
 
-    if (header.body_size > 0) {
-        DARWIN_LOG_DEBUG("LogsTask:: got log: " + body);
+    if (_header.body_size > 0) {
+        DARWIN_LOG_DEBUG("LogsTask:: got log: " + _raw_body);
 
         if (_log){
             WriteLogs();
         }
         if (_redis){
-            REDISAddLogs(body);
+            if(not REDISAddLogs(_raw_body)) {
+                DARWIN_LOG_WARNING("LogsTask:: Could not add log line to Redis.");
+            }
         }
     } else {
-        DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(header.body_size));
-    }
-
-    Workflow();
-}
-
-void LogsTask::Workflow() {
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-        default:
-            break;
+        DARWIN_LOG_DEBUG("LogsTask:: No log to write, body size: " + std::to_string(_header.body_size));
     }
 }
 
 bool LogsTask::WriteLogs() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("WriteLogsTask::Write:: Starting writing in log file: \""
+    DARWIN_LOG_DEBUG("WriteLogsTask::WriteLogs:: Starting writing in log file: \""
                      + _log_file_path + "\"...");
     unsigned int retry = RETRY;
     bool fail;
 
-    fail = !_log_file.is_open() or _log_file.fail();
+    fail = !(_log_file->Write(_raw_body));
     while(retry and fail){
-        DARWIN_LOG_INFO("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+        DARWIN_LOG_INFO("LogsGenerator::WriteLogs:: Error when writing in log file, "
                         "will retry " + std::to_string(retry) + " times");
-        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
-        fail = !_log_file.is_open() or _log_file.fail();
+        fail = !(_log_file->Write(_raw_body));
         retry--;
     }
 
     if(fail) {
-        DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
+        DARWIN_LOG_ERROR("LogsGenerator::WriteLogs:: Error when writing in log file, "
                          "too many retry, "
-                         "may due to low space disk or wrong permission");
+                         "may due to low space disk or wrong permission, see stderr");
         return false;
     }
-
-    _log_file << body << std::flush;
 
     return true;
 }
 
 bool LogsTask::REDISAddLogs(const std::string& logs) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("LogsTask::REDISAdd:: Add logs in Redis...");
+    DARWIN_LOG_DEBUG("LogsTask::REDISAddLogs:: Add logs in Redis...");
 
-    redisReply *reply = nullptr;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    std::vector<std::string> arguments;
-    arguments.emplace_back("LPUSH");
-    arguments.emplace_back(_redis_list_name);
-    arguments.emplace_back(logs);
-
-    if (!_redis_manager->REDISQuery(&reply, arguments)) {
-        DARWIN_LOG_ERROR("LogsTask::REDISAdd:: Something went wrong while querying Redis, data not added");
-        freeReplyObject(reply);
-        return false;
+    if(not _redis_list_name.empty()) {
+        if(redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) == REDIS_REPLY_ERROR) {
+            DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to add log in Redis !");
+            return false;
+        }
     }
 
-    if (!reply || reply->type != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("LogsTask::REDISAdd:: Not the expected Redis response");
-        freeReplyObject(reply);
-        return false;
+    if(not _redis_channel_name.empty()) {
+        if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_channel_name, logs}) == REDIS_REPLY_ERROR) {
+            DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to publish log in Redis !");
+            return false;
+        }
     }
-
-    freeReplyObject(reply);
-    reply = nullptr;
-
     return true;
 }
 
 bool LogsTask::ParseBody() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("LogsTask:: ParseBody: " + body);
+    DARWIN_LOG_DEBUG("LogsTask:: ParseBody: entry to log = '" + _raw_body + "'");
     return true;
 }

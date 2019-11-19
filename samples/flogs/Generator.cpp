@@ -13,57 +13,11 @@
 #include "Generator.hpp"
 #include "LogsTask.hpp"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Logs :: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("Logs:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("Logs:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Loading classifier...");
 
     std::string redis_socket_path;
-
-    if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("Logs:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
 
     _redis = configuration.HasMember("redis_socket_path");
     _log = configuration.HasMember("log_file_path");
@@ -80,17 +34,31 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
             return false;
         }
 
-        if (!configuration.HasMember("redis_list_name")){
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: Missing parameter : \"redis_list_name\"");
-            return false;
+        redis_socket_path = configuration["redis_socket_path"].GetString();
+
+        if (configuration.HasMember("redis_list_name")){
+            if (not configuration["redis_list_name"].IsString()) {
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_list_name\" needs to be a string");
+                return false;
+            }
+            _redis_list_name = configuration["redis_list_name"].GetString();
+            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_list_name\" set to " + _redis_list_name);
         }
 
-        if (!configuration["redis_list_name"].IsString()) {
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_list_name\" needs to be a string");
+        if (configuration.HasMember("redis_channel_name")){
+            if (not configuration["redis_channel_name"].IsString()) {
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_channel_name\" needs to be a string");
+                return false;
+            }
+            _redis_channel_name = configuration["redis_channel_name"].GetString();
+            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_channel_name\" set to " + _redis_channel_name);
+        }
+
+        if(_redis_list_name.empty() and _redis_channel_name.empty()) {
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: if \"redis_socket_path\" is provided, you need to provide at least"
+                                    " \"redis_list_name\" or \"redis_channel_name\"");
             return false;
         }
-        redis_socket_path = configuration["redis_socket_path"].GetString();
-        _redis_list_name = configuration["redis_list_name"].GetString();
 
         if(!ConfigRedis(redis_socket_path)){
             DARWIN_LOG_CRITICAL("Logs:: Generator:: Error when configuring REDIS");
@@ -106,10 +74,9 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         _log_file_path = configuration["log_file_path"].GetString();
 
         // Open file and check permissions (and create file if not existing)
-        _log_file.open(_log_file_path, std::ios::out | std::ios::app);
-        if(!_log_file.is_open() or _log_file.fail()) {
-            DARWIN_LOG_ERROR("LogsGenerator::LoadClassifier:: Error when opening the log file, "
-                         "maybe too low space disk or wrong permission");
+        _log_file = std::make_shared<darwin::toolkit::FileManager>(_log_file_path, true);
+        if(!_log_file->Open()){
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: Error when opening log file");
             return false;
         }
     }
@@ -121,30 +88,18 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Logs:: Generator:: Redis configuration...");
 
-    _redis_manager = std::make_shared<darwin::toolkit::RedisManager>(redis_socket_path);
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    bool ret = redis.SetUnixPath(redis_socket_path);
 
-    /* Ignore signals for broken pipes.
-     * Otherwise, if the Redis UNIX socket does not exist anymore,
-     * this filter will crash */
-    signal(SIGPIPE, SIG_IGN);
-
-    if (!_redis_manager->ConnectToRedis(true)) return false;
-
-    DARWIN_LOG_DEBUG("Logs:: ConfigRedis:: Redis configured");
-
-    return true;
+    return ret;
 }
 
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<LogsTask>(socket, manager, _cache,
+            std::make_shared<LogsTask>(socket, manager, _cache, _cache_mutex,
                                        _log, _redis,
                                        _log_file_path, _log_file,
-                                       _redis_list_name, _redis_manager));
+                                       _redis_list_name, _redis_channel_name));
 }
-
-Generator::~Generator(){
-    _log_file.close();
-};

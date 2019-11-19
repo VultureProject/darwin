@@ -29,8 +29,9 @@ public:
     explicit DGATask(boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                     std::mutex& cache_mutex,
                      std::shared_ptr<tensorflow::Session> &session,
-                     faup_handler_t *faup_handler,
+                     faup_options_t *faup_options,
                      std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);
     ~DGATask() override;
 
@@ -45,10 +46,6 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Extract the registered domain with the TLD
     ///
     /// \param to_predict Will contain the string extracted.
@@ -60,10 +57,8 @@ private:
     /// \return true on success, false otherwise.
     unsigned int Predict();
 
-    /// Parse the body received.
-    ///
-    /// \return true on success, false otherwise.
-    bool ParseBody() override;
+    /// Parse a line in the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
     /// Tokenize the DGA to be classified.
     ///
@@ -77,7 +72,6 @@ private:
     boost::char_separator<char> _separator {" ());,:-~?!{}/[]"};
     std::shared_ptr<tensorflow::Session> _session = nullptr; // The tensorflow session to use
     std::map<std::string, unsigned int> _token_map; // The token map to help classifying domains
-    std::vector<std::string> _domains; // The domains to check
-    std::string _current_domain; // The current domain being checked
-    faup_handler_t *_faup_handler = nullptr; // used to extract the public suffix
+    faup_options_t *_faup_options = nullptr;
+    std::string _domain; // The current domain to check
 };

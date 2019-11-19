@@ -29,24 +29,14 @@ Generator::Generator() {
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: successfully initialised");
 }
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
+bool Generator::LoadConfig(const rapidjson::Document &config) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Configuring...");
+    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Loading configuration...");
 
-    rapidjson::Document config;
-
-    std::ifstream file(configFile.c_str());
-    std::string content((std::istreambuf_iterator<char>(file)),
-                        (std::istreambuf_iterator<char>()));
-
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: parsing file...");
-    config.Parse(content.c_str());
-    DARWIN_LOG_DEBUG("ContentInspection:: Generator:: file parsed");
-
-    if (!config.IsObject()) {
-        DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: Configuration is not a JSON object");
-        return false;
-    }
+	if(not config.HasMember("yaraRuleFile")) {
+		DARWIN_LOG_CRITICAL("ContentInspection:: Generator:: 'yaraRuleFile' parameter missing");
+		return false;
+	}
 
     char str[2048];
     if(config.HasMember("maxConnections")) {
@@ -74,6 +64,11 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
                 std::snprintf(str, 2048, "yaraRuleFile set to '%s'", config["yaraRuleFile"].GetString());
                 DARWIN_LOG_DEBUG(str);
             }
+			else {
+				DARWIN_LOG_ERROR("ContentInspection:: Generator:: could not open yara rules '" +
+					std::string(_configurations.yaraCnf->ruleFilename) + "'");
+				return false;
+			}
         }
         else {
             DARWIN_LOG_ERROR("ContentInspection:: Generator:: 'yaraRuleFile' parameter must be a string");
@@ -153,11 +148,6 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
         return false;
     }
 
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: Configured");
     return true;
 }
@@ -167,7 +157,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     DARWIN_LOGGER;
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ContentInspectionTask>(socket, manager, _cache, _configurations));
+            std::make_shared<ContentInspectionTask>(socket, manager, _cache, _cache_mutex, _configurations));
 }
 
 Generator::~Generator() {

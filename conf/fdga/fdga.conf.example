@@ -1,0 +1,5 @@
+{
+  "model_path": "/home/darwin/conf/fdga/fdga.pb",
+  "token_map_path": "/home/darwin/conf/fdga/fdga_tokens.csv",
+  "max_tokens": 75
+}

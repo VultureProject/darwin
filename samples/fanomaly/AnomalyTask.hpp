@@ -28,7 +28,8 @@ class AnomalyTask: public darwin::Session {
 public:
     explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                            darwin::Manager& manager,
-                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
+                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                           std::mutex& cache_mutex);
     ~AnomalyTask() override = default;
 
 public:
@@ -40,18 +41,14 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
-    /// Parse the body received.
-    bool ParseBody() override;
-
     /// Generate the logs from the anomalies found
     void GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts);
 
     /// The anomaly detection function
-    bool Detection(arma::mat matrix, const std::vector<std::string> &ips);
+    bool Detection();
+
+    /// Parse a line from the json body.
+    bool ParseLine(rapidjson::Value &cluster);
 
 private:
     // Indices of values in matrix (see variable "_data" below)
@@ -71,7 +68,7 @@ private:
     //                                         10      1       <--- TCP_NB_HOST
     //                                         10      3       <--- TCP_NB_PORT
     //                                          0     15   )  <--- ICMP_NB_HOST
-    std::vector<arma::mat> _matrixies;
+    arma::mat _matrix;
     // ips linked to pre-processed data :   [  ip1,   ip2   ]
-    std::vector<std::vector<std::string>> _ips;
+    std::vector<std::string> _ips;
 };

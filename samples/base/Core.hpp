@@ -8,7 +8,9 @@
 #pragma once
 
 #include <thread>
+#include <atomic>
 #include "Monitor.hpp"
+#include "ThreadGroup.hpp"
 
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
@@ -65,6 +67,11 @@ namespace darwin {
         /// \return true on success, false otherwise.
         static bool GetULArg(unsigned long& res, const char* arg);
 
+        /// Getter for the filter name.
+        ///
+        /// \return A const reference to the string containing the unique name given in the program arguments.
+        const std::string& GetFilterName();
+
     private:
         std::string _name;
         std::string _socketPath;
@@ -76,6 +83,9 @@ namespace darwin {
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
+        std::atomic<FilterStatusEnum> _filter_status;
+        ThreadGroup _threadpool;
+
 
     public:
         // TODO Maybe a getter is a better idea...

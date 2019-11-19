@@ -3,19 +3,24 @@ import os
 
 from tools.filter import Filter
 from tools.output import print_result
+from tools.redis_utils import RedisServer
 from darwin import DarwinApi
 
+DEFAULT_REDIS_SOCKET = "/tmp/redis_connection.sock"
+DEFAULT_INIT_DATA_PATH = "/tmp/init_data_path_connection.txt"
+
 class Connection(Filter):
-    def __init__(self):
+    def __init__(self, redis_server=None):
         super().__init__(filter_name="connection")
-        self.init_data_path = "/tmp/init_data_path.txt".format(self.filter_name)
+        self.init_data_path = DEFAULT_INIT_DATA_PATH
+        self.redis = redis_server if redis_server else RedisServer(unix_socket=DEFAULT_REDIS_SOCKET)
 
     def configure(self):
         content = '{{\n' \
-                  '"redis_socket_path": "/var/sockets/redis/redis.sock",\n' \
+                  '"redis_socket_path": "{redis_socket_path}",\n' \
                   '"init_data_path": "{init_data_path}",\n' \
                   '"redis_expire": 300\n' \
-                  '}}'.format(init_data_path=self.init_data_path)
+                  '}}'.format(init_data_path=self.init_data_path, redis_socket_path=self.redis.unix_socket)
         super(Connection, self).configure(content)
 
     def init_data(self, data):
@@ -40,7 +45,7 @@ def run():
     ]
 
     for i in tests:
-        print_result("connection: " + i.__name__, i())
+        print_result("connection: " + i.__name__, i)
 
 
 """
@@ -56,7 +61,8 @@ def new_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -102,7 +108,7 @@ def new_connection_test():
     return ret
 
 """
-We give a connection that have already 
+We give a connection that have already
 been given in the init data file
 """
 def known_connection_test():
@@ -115,7 +121,8 @@ def known_connection_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,
@@ -173,7 +180,8 @@ def new_connection_to_known_test():
     connection_filter.configure()
 
     # START FILTER
-    connection_filter.valgrind_start()
+    if not connection_filter.valgrind_start():
+        return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=connection_filter.socket,

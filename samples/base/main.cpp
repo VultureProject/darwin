@@ -10,7 +10,7 @@
 #include "Core.hpp"
 #include "Logger.hpp"
 
-void rotateLogsHandler(int signum) {
+void rotateLogsHandler(int signum __attribute__((unused))) {
     darwin::logger::Logger& log = darwin::logger::Logger::instance();
     log.log(darwin::logger::Info, "Rotating logs...");
 

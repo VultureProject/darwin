@@ -24,8 +24,7 @@ class EndTask: public darwin::Session {
 public:
     explicit EndTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
-                                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::string redis_socket_path);
+                                       std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache);
 
     ~EndTask() override = default;
 
@@ -42,14 +41,11 @@ private:
     /// init the following Darwin workflow
     void Workflow();
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse the line received. Useless for this filter.
+    bool ParseLine(rapidjson::Value& line) final {}
 
     /// Add to REDIS the evt id and the certitude list size received by the filter
     ///
     /// \return true on success, false otherwise.
     bool REDISAdd(const std::string& evt_id, const std::string& nb_result) noexcept;
-
-private:
-    darwin::toolkit::RedisManager _redis_manager;
 };

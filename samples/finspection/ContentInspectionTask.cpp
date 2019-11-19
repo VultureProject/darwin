@@ -18,8 +18,9 @@
 ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                               Configurations configurations)
-        : Session{"content_inspection", socket, manager, cache} {
+                               std::mutex& cache_mutex,
+                               Configurations& configurations)
+        : Session{"content_inspection", socket, manager, cache, cache_mutex} {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
 }
@@ -33,10 +34,9 @@ void ContentInspectionTask::operator()() {
     DARWIN_LOG_DEBUG("ContentInspectionTask:: started task");
     bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
-    int tcpStatus;
-
     for(Packet *pkt : _packetList) {
         unsigned int certitude = 0;
+        int tcpStatus = 0;
         SetStartingTime();
 
         pkt->enterTime = std::time(NULL);
@@ -94,64 +94,40 @@ void ContentInspectionTask::operator()() {
         }
 
         _certitudes.push_back(certitude);
-        DARWIN_LOG_DEBUG("ContentInspectionTask:: processed entry in "
+        DARWIN_LOG_INFO("ContentInspectionTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         freePacket(pkt);
     }
 
     DARWIN_LOG_DEBUG("ContentInspectionTask:: task finished");
-    Workflow();
-
-    _packetList = std::vector<Packet *>();
-}
-
-void ContentInspectionTask::Workflow() {
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
-
-    switch (header.response) {
-        case DARWIN_RESPONSE_SEND_BOTH:
-            SendToDarwin();
-            SendResToSession();
-            break;
-        case DARWIN_RESPONSE_SEND_BACK:
-            SendResToSession();
-            if(is_log) SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_DARWIN:
-            SendToDarwin();
-            break;
-        case DARWIN_RESPONSE_SEND_NO:
-            if(is_log) SendToDarwin();
-        default:
-            break;
-    }
 }
 
 bool ContentInspectionTask::ParseBody() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: '" + body + "'");
+    _packetList.clear();
 
     try {
+        _logs.clear();
         std::size_t packetMeta = 0, packetMetaEnd;
         std::size_t packetData, packetDataEnd;
         std::size_t openingBracket;
 
         do {
-            packetMeta = body.find("\"{", packetMeta + 1);
+            packetMeta = _raw_body.find("\"{", packetMeta + 1);
             if(packetMeta == std::string::npos) break;
 
-            packetMetaEnd = body.find("}\",", packetMeta);
+            packetMetaEnd = _raw_body.find("}\",", packetMeta);
             if(packetMetaEnd == std::string::npos) break;
 
-            packetData = body.find("\"{", packetMetaEnd);
+            packetData = _raw_body.find("\"{", packetMetaEnd);
             if(packetData == std::string::npos) break;
 
-            packetDataEnd = body.find("}\"", packetData);
+            packetDataEnd = _raw_body.find("}\"", packetData);
             if(packetDataEnd == std::string::npos) break;
 
             _packetList.push_back(getImpcapData(
-                    body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
-                    body.substr(packetData + 1, packetDataEnd - packetData)
+                    _raw_body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
+                    _raw_body.substr(packetData + 1, packetDataEnd - packetData)
             ));
         } while(true);
 

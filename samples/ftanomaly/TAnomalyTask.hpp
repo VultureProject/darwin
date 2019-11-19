@@ -26,7 +26,7 @@ public:
     explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                                        darwin::Manager& manager,
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                                       std::shared_ptr<darwin::toolkit::RedisManager> redis_manager,
+                                       std::mutex& cache_mutex,
                                        std::shared_ptr<AnomalyThreadManager> vat,
                                        std::string redis_list_name);
     ~AnomalyTask() override = default;
@@ -40,19 +40,21 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
+    /// Parse a line from the body.
+    /// \return true on parsing success, false otherwise
+    /// \warning modifies _entry class attribute
+    bool ParseLine(rapidjson::Value& line) final;
+
     /// Parse the body received.
     bool ParseBody() override;
 
-    /// Parse the data received in the body.
-    bool ParseData(const rapidjson::Value& data);
-
-    /// Add the data parsed to REDIS
+    /// Add the _entry parsed to REDIS
     /// \return true on success, false otherwise.
-    bool REDISAdd(std::vector<std::string> values) noexcept;
+    bool REDISAddEntry() noexcept;
 
 private:
     bool _learning_mode = true;
     std::string _redis_list_name;
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
+    std::string _entry;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;
 };

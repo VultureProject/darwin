@@ -94,7 +94,7 @@ unsigned int PythonExampleTask::WarmWeatherDetector(const int fahrenheit_tempera
         DARWIN_LOG_ERROR("PythonExampleTask:: WarmWeatherDetector:: Something went wrong while calling the Python "
                          "function");
 
-        certitude = 101;
+        certitude = DARWIN_ERROR_RETURN;
     } else {
         kelvin_temp = (int) PyLong_AsLong(py_kelvin_temp);
 

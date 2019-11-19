@@ -18,28 +18,18 @@ extern "C" {
 #include "Session.hpp"
 #include "../../toolkit/RedisManager.hpp"
 #include "../toolkit/rapidjson/document.h"
+#include "AGenerator.hpp"
 
-class Generator {
+class Generator: public AGenerator {
 public:
     Generator() = default;
     ~Generator() = default;
 
 public:
-    // The config file is the Redis UNIX Socket here
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
-
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) noexcept override final;
 
 private:
-    bool SetUpClassifier(const std::string &configuration_file_path);
-    bool LoadClassifier(const rapidjson::Document &configuration);
-    bool ConfigRedis(std::string redis_socket_path);
-
-    std::string _redis_socket_path; // Redis UNIX socket path
-    std::shared_ptr<darwin::toolkit::RedisManager> _redis_manager = nullptr;
-
-    // The cache for already processed request
-    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 };

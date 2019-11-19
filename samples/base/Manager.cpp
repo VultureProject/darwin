@@ -14,19 +14,28 @@ namespace darwin {
         DARWIN_LOGGER;
 
         DARWIN_LOG_DEBUG("Manager::Start:: Starting new session...");
-        _sessions.insert(c);
+        {
+            std::unique_lock<std::mutex> lck(this->_mutex);
+            _sessions.insert(c);
+        }
         c->Start();
     }
 
     void Manager::Stop(darwin::session_ptr_t c) {
-        _sessions.erase(c);
+        {
+            std::unique_lock<std::mutex> lck(this->_mutex);
+            _sessions.erase(c);
+        }
         c->Stop();
     }
 
     void Manager::StopAll() {
-        for (auto& c: _sessions)
-            c->Stop();
-        _sessions.clear();
+        {
+            std::unique_lock<std::mutex> lck(this->_mutex);
+            for (auto& c: _sessions)
+                c->Stop();
+            _sessions.clear();
+        }
     }
 
 }

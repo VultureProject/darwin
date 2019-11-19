@@ -26,6 +26,7 @@ public:
     explicit HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
                             tsl::hopscotch_map<std::string, int>& db);
 
     ~HostLookupTask() override = default;
@@ -41,21 +42,17 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Read a struct in_addr from the session and
     /// lookup in the bad host map to fill _result.
     ///
     /// \return the certitude of host's bad reputation (100: BAD, 0:Good)
-    unsigned int DBLookup(const std::string &host) noexcept;
+    unsigned int DBLookup() noexcept;
 
-    /// Parse the body received.
-    bool ParseBody() override;
+    /// Parse a line from the body.
+    bool ParseLine(rapidjson::Value &line) final;
 
 private:
-    tsl::hopscotch_map<std::string, int> _database ; //The "bad" hostname database
-    std::string _current_host; //The host to lookup
-    std::vector<std::string> _hosts;
+    // This implementation of the hopscotch map allows multiple reader with no writer
+    tsl::hopscotch_map<std::string, int>& _database ; //!< The "bad" hostname database
+    std::string _host;
 };

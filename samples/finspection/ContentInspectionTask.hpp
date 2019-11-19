@@ -38,7 +38,8 @@ public:
     explicit ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                            Configurations configurations);
+				std::mutex& _cache_mutex,
+                            Configurations& configurations);
 
     ~ContentInspectionTask() override = default;
 
@@ -57,6 +58,9 @@ private:
 
     /// Parse the body received.
     bool ParseBody() override;
+
+    // Implemented but not used.
+    bool ParseLine(rapidjson::Value& line) final {}
 
 private:
     Configurations _configurations;

@@ -1,5 +1,6 @@
 import subprocess
 import os
+import os.path
 import logging
 from time import sleep
 from conf import DEFAULT_FILTER_PATH, VALGRIND_MEMCHECK
@@ -26,9 +27,28 @@ class Filter():
                 self.valgrind_stop()
         self.clean_files()
 
+    def check_start(self):
+        if not os.path.exists(self.pid):
+            logging.error("No PID file at start, maybe filter crashed")
+            return False
+        return True
+
+    def check_stop(self):
+        if os.path.exists(self.pid):
+            logging.error("PID file not removed when stopping, maybe filter crashed")
+            return False
+        return True
+
     def start(self):
         self.process = subprocess.Popen(self.cmd)
-        sleep(1)
+        sleep(2)
+        return self.check_start()
+
+    def check_run(self):
+        if self.process and self.process.poll() is None:
+            return True
+
+        return False
 
     def stop(self):
         self.process.terminate()
@@ -39,12 +59,11 @@ class Filter():
             self.process.kill()
             self.process.wait()
             return False
-        return True
+        return self.check_stop()
 
     def valgrind_start(self):
         if VALGRIND_MEMCHECK is False:
-            self.start()
-            return
+            return self.start()
         command = ['valgrind',
                    '--tool=memcheck',
                    '--leak-check=yes',
@@ -54,11 +73,11 @@ class Filter():
 
         self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sleep(3)
+        return self.check_start()
 
     def valgrind_stop(self):
         if VALGRIND_MEMCHECK is False:
-            self.stop()
-            return True
+            return self.stop()
         sleep(3)
         self.process.terminate()
         try:
@@ -76,7 +95,7 @@ class Filter():
             logging.error("Valgrind error: {}".format(err))
             return False
 
-        return True
+        return self.check_stop()
 
     def clean_files(self):
 

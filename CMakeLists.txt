@@ -3,23 +3,20 @@ cmake_minimum_required(VERSION 3.7.2)
 project(darwin)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../../)
 
 if (NOT DEFINED FILTER)
     set(
         FILTERS
-        USER_AGENT
         HOSTLOOKUP
         SESSION
-        REPUTATION
         DGA
         CONNECTION
         TANOMALY
         ANOMALY
         LOGS
-        END
         CONTENT_INSPECTION
     )
 else (NOT DEFINED FILTER)
