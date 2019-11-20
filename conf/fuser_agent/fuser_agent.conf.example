@@ -1,0 +1,5 @@
+{
+  "model_path": "/home/darwin/conf/fuser_agent/fuser_agent.pb",
+  "token_map_path": "/home/darwin/conf/fuser_agent/fuser_agent_tokens.csv",
+  "max_tokens": 50
+}
