@@ -67,6 +67,11 @@ namespace darwin {
         /// \return true on success, false otherwise.
         static bool GetULArg(unsigned long& res, const char* arg);
 
+        /// Getter for the filter name.
+        ///
+        /// \return A const reference to the string containing the unique name given in the program arguments.
+        const std::string& GetFilterName();
+
     private:
         std::string _name;
         std::string _socketPath;

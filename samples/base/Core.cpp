@@ -199,4 +199,8 @@ namespace darwin {
         return true;
     }
 
+    const std::string& Core::GetFilterName() {
+        return this->_name;
+    }
+
 }

@@ -1,0 +1,5 @@
+{
+  "redis_socket_path": "/var/sockets/redis/redis.sock",
+  "init_data_path": "/home/darwin/conf/fconnection/init_data_file.example",
+  "redis_expire": 300
+}
