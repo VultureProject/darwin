@@ -26,7 +26,7 @@ namespace darwin {
         /// Send an alert message to the configured canals.
         ///
         /// \param message The alert message.
-        void Alert(std::string& message);
+        void Alert(const std::string& message);
 
         /// Configures the AlertManager alerting canals.
         ///
@@ -78,7 +78,16 @@ namespace darwin {
                                    const char* const field_name,
                                    std::string& var);
 
+        /// \brief Write the logs in file
+        /// \return True on success, false on error
+        bool WriteLogs(const std::string& logs);
+
+        /// \brief Write the logs in REDIS
+        /// \return True on success, false on error
+        bool REDISAddLogs(const std::string& logs);
+
     private:
+        static constexpr unsigned int RETRY = 1;
         bool _log; // If the filter will stock the data in a log file
         bool _redis; // If the filter will stock the data in a REDIS
         std::string _log_file_path;

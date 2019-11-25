@@ -31,9 +31,9 @@ namespace darwin {
         if (_log)
             logs_status = this->LoadLogsConfig(configuration);
 
-        // This needs some explanation. The goal is to return true if everything is ok, false otherwise.
+        // The goal is to return true if everything is ok, false otherwise.
         //
-        // Let's take the redis part as example, the log part works the same way :
+        // Let's take the redis part as an example, the log part works the same way :
         // It verifies if redis is present, if so returns the redis status, returns true otherwise.
         // If a configuration is not present, then everything went right for it's part.
         return ((_redis && redis_status) || (!_redis && !redis_status)) && ((_log && logs_status) || (!_log && !logs_status));
@@ -60,17 +60,14 @@ namespace darwin {
             return false;
         }
         std::string redis_socket_path = configuration["redis_socket_path"].GetString();
-
         GetStringField(configuration, "redis_list_name", this->_redis_list_name);
         GetStringField(configuration, "redis_channel_name", this->_redis_channel_name);
-
         if(_redis_list_name.empty() and _redis_channel_name.empty()) {
             DARWIN_LOG_WARNING("AlertManager:: if \"redis_socket_path\" is provided, you need to provide at least"
                                     " \"redis_list_name\" or \"redis_channel_name\"."
                                     "Unable to configure redis. Ignoring redis configuration.");
             return false;
         }
-
         if(!ConfigRedis(redis_socket_path)){
             DARWIN_LOG_CRITICAL("AlertManager:: Error when configuring REDIS");
             return false;
@@ -99,8 +96,60 @@ namespace darwin {
 
         darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
         bool ret = redis.SetUnixPath(redis_socket_path);
-
         return ret;
     }
 
+    void AlertManager::Alert(const std::string& str) {
+        if (str.length() <= 0)
+            return;
+        if (_log)
+            this->WriteLogs(str);
+        if (_redis)
+            this->REDISAddLogs(str);
+    }
+
+    bool AlertManager::WriteLogs(const std::string& str) {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("AlertManager::WriteLogs:: Starting writing in log file: \""
+                        + _log_file_path + "\"...");
+        unsigned int retry = RETRY;
+        bool fail;
+
+        fail = !(_log_file->Write(str) + '\n');
+        while(retry and fail){
+            DARWIN_LOG_INFO("AlertManager::WriteLogs:: Error when writing in log file, "
+                            "will retry " + std::to_string(retry) + " times");
+            fail = !(_log_file->Write(str) + '\n');
+            retry--;
+        }
+        if(fail) {
+            DARWIN_LOG_ERROR("AlertManager::WriteLogs:: Error when writing in log file, "
+                            "too many retry, "
+                            "may due to low space disk or wrong permission, see stderr");
+            return false;
+        }
+        return true;
+    }
+
+    bool AlertManager::REDISAddLogs(const std::string& logs) {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("AlertManager::REDISAddLogs:: Add logs in Redis...");
+
+        darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+
+        if(not _redis_list_name.empty()) {
+            if(redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) == REDIS_REPLY_ERROR) {
+                DARWIN_LOG_WARNING("AlertManager::REDISAddLogs:: Failed to add log in Redis !");
+                return false;
+            }
+        }
+
+        if(not _redis_channel_name.empty()) {
+            if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_channel_name, logs}) == REDIS_REPLY_ERROR) {
+                DARWIN_LOG_WARNING("AlertManager::REDISAddLogs:: Failed to publish log in Redis !");
+                return false;
+            }
+        }
+        return true;
+    }
 }
