@@ -15,6 +15,7 @@
 #include "../toolkit/rapidjson/document.h"
 #include "HostLookupTask.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 
 HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
@@ -42,6 +43,7 @@ void HostLookupTask::operator()() {
     auto array = _body.GetArray();
 
     for (auto &line : array) {
+        STAT_INPUT_INC;
         SetStartingTime();
         xxh::hash64_t hash;
         unsigned int certitude;
@@ -51,9 +53,12 @@ void HostLookupTask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if (is_log && (certitude>=_threshold)){
-                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    if(certitude >= _threshold) {
+                        STAT_MATCH_INC;
+                        if(is_log) {
+                            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                        }
                     }
                     _certitudes.push_back(certitude);
                     DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
@@ -63,9 +68,12 @@ void HostLookupTask::operator()() {
             }
 
             certitude = DBLookup();
-            if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+            if(certitude >= _threshold) {
+                STAT_MATCH_INC;
+                if(is_log) {
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                         R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                }
             }
             _certitudes.push_back(certitude);
 
@@ -74,6 +82,7 @@ void HostLookupTask::operator()() {
             }
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
 

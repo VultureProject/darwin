@@ -12,6 +12,7 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "TAnomalyThreadManager.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "Time.hpp"
 #include "protocol.h"
 
@@ -101,6 +102,10 @@ void AnomalyThreadManager::Detection(){
     alerts.shed_cols(index_no_anomalies);
     // add distance to alerts
     alerts.insert_rows(DISTANCE, distances);
+
+    for(unsigned int i = 0; i < index_anomalies.n_rows; i++) {
+        STAT_MATCH_INC;
+    }
 
     if(_is_log_file) {
         WriteLogs(index_anomalies, alerts);

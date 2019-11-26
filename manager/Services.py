@@ -364,6 +364,11 @@ class Services:
                 except KeyError:
                     new[n]['extension'] = '.1'
 
+                try:
+                    new[n]['failCount'] = self._filters[n]['failCount']
+                except KeyError:
+                    new[n]['failCount'] = 0
+
                 new[n]['pid_file'] = '/var/run/darwin/{name}{extension}.pid'.format(
                     name=n, extension=new[n]['extension']
                 )
@@ -429,6 +434,83 @@ class Services:
 
         return errors
 
+<<<<<<< HEAD
+=======
+    def load_conf(self):
+        """
+        Load the configuration.
+        """
+
+        with self._lock:
+            logger.debug("Trying to open config file")
+            try:
+                with open(self._config_file, 'r') as f:
+                    logger.debug("Loading config")
+                    self._filters = json.load(f)
+            except Exception as e:
+                logger.critical("Unable to load initial conf: {0}".format(e))
+                raise e
+
+            logger.info("Configuration loaded")
+
+            for f, c in self._filters.items():
+                if 'next_filter' not in c:
+                    c['next_filter'] = ''
+
+                    logger.debug('No next filter provided')
+
+                try:
+                    c['name'] = f
+                    c['status'] = psutil.STATUS_WAKING
+                    c['failCount'] = 0
+                    c['extension'] = '.1'
+                    c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
+
+                    if not c['next_filter']:
+                        c['next_filter_unix_socket'] = 'no'
+                    else:
+                        c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+                            next_filter=c['next_filter']
+                        )
+
+                    c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
+                    c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
+
+                    c['monitoring'] = '/var/sockets/darwin/{filter}_mon{extension}.sock'.format(
+                        filter=f, extension=c['extension']
+                    )
+
+                    if 'config_file' not in c:
+                        logger.warning('Field "config_file" not found for {filter}: setting default'.format(filter=f))
+                        c['config_file'] = '/home/vlt-sys/darwin/conf/{filter}.conf'.format(filter=f)
+
+                    if 'cache_size' not in c:
+                        c['cache_size'] = 0
+
+                        logger.info('No cache size provided. Setting it to {cache_size}'.format(
+                            cache_size=c['cache_size']
+                        ))
+
+                    if 'output' not in c:
+                        c['output'] = 'NONE'
+                        logger.info('No output type provided. Setting it to {output}'.format(output=c['output']))
+
+                    if 'nb_thread' not in c:
+                        c['nb_thread'] = 5
+
+                        logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
+                            nb_thread=c['nb_thread']
+                        ))
+                except KeyError as e:
+                    logger.critical("Missing parameter: {}".format(e))
+                    raise e
+
+                if 'threshold' not in c:
+                    c['threshold'] = 101
+
+                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
+
+>>>>>>> CORE:: Add stats to filters
     def print_conf(self):
         """
         Pretty Print the configuration.
@@ -471,6 +553,11 @@ class Services:
         with self._lock:
             for n, c in self._filters.items():
                 monitor_data[n] = Services.monitor_one(c['monitoring'])
+                if monitor_data[n]:
+                    monitor_data[n]['failCount'] = c['failCount']
+                else:
+                    monitor_data[n] = {}
+                    monitor_data[n]['status'] = 'error'
         return monitor_data
 
     @staticmethod
@@ -549,6 +636,7 @@ class Services:
 
         except Exception as e:
             logger.warning("HeartBeat failed on {} ({}). Restarting the filter.".format(filter['name'], e))
+            filter['failCount'] += 1
             filter['status'] = psutil.STATUS_DEAD
             self.restart_one(filter, no_lock=True)
 

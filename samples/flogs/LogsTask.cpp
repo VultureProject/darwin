@@ -10,6 +10,7 @@
 #include <thread>
 
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 #include "LogsTask.hpp"
 #include "../../toolkit/xxhash.h"
@@ -43,6 +44,7 @@ void LogsTask::operator()() {
 
     if (_header.body_size > 0) {
         DARWIN_LOG_DEBUG("LogsTask:: got log: " + _raw_body);
+        STAT_INPUT_INC;
 
         if (_log){
             WriteLogs();
