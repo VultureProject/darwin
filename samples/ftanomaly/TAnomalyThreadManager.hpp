@@ -50,13 +50,9 @@ private:
     /// before the algorithm process
     void PreProcess(std::vector<std::string> logs);
 
-    /// Write the alerts/logs in a log file
-    /// \return true on success, false otherwise.
-    bool WriteLogs(const arma::uvec index_anomalies, const arma::mat alerts);
-
     /// Write the alerts/logs in Redis
     /// \return true on success, false otherwise.
-    bool WriteRedis(const arma::uvec index_anomalies, const arma::mat alerts);
+    bool WriteRedis(const std::string& log_line);
 
     /// Used by "PreProcess" to process a log's line
     void PreProcessLine(const std::string& ip, const std::string& protocol, std::string port,

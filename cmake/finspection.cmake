@@ -33,8 +33,7 @@ add_executable(
 
 target_link_libraries(
     ${INSPECTION_NAME}
-    pthread
-    boost_system
+    ${DARWIN_LIBRARIES}
     yara
 )
 

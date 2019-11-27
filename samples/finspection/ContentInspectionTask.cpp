@@ -14,6 +14,7 @@
 #include "Logger.hpp"
 #include "ContentInspectionTask.hpp"
 #include "protocol.h"
+#include "AlertManager.hpp"
 
 ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
@@ -84,11 +85,15 @@ void ContentInspectionTask::operator()() {
                 yaraMeta.Accept(writer);
 
                 certitude = 100;
-                if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                    std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                              R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
                              std::string(buffer.GetString()) +
-                             "}\n";
+                             "}";
+                    DARWIN_RAISE_ALERT(alert_log);
+                    if (is_log) {
+                        _logs += alert_log + "\n";
+                    }
                 }
             }
         }

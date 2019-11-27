@@ -52,11 +52,11 @@ void HostLookupTask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if (certitude >= _threshold and certitude < 101) {
+                    if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
                         DARWIN_RAISE_ALERT(alert_log);
-                        if (is_log){
+                        if (is_log) {
                             _logs += alert_log + "\n";
                         }
                     }
@@ -68,7 +68,7 @@ void HostLookupTask::operator()() {
             }
 
             certitude = DBLookup();
-            if (certitude >= _threshold and certitude < 101) {
+            if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
                 DARWIN_RAISE_ALERT(alert_log);

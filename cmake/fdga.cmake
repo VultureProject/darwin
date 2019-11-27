@@ -20,8 +20,7 @@ add_executable(
 
 target_link_libraries(
     ${DGA_NAME}
-    pthread
-    boost_system
+    ${DARWIN_LIBRARIES}
     libtensorflow_cc.so
     libtensorflow_framework.so
     libexecinfo.so

@@ -10,7 +10,7 @@
 #include <boost/tokenizer.hpp>
 #include <faup/decode.h>
 #include <faup/output.h>
-#include <string.h>
+#include <string>
 #include <thread>
 
 #include "../../toolkit/lru_cache.hpp"
@@ -66,9 +66,12 @@ void DGATask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if (is_log && (certitude>=_threshold)){
-                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                    if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                        if (is_log) {
+                            _logs += alert_log + '\n';
+                        }
                     }
                     _certitudes.push_back(certitude);
                     DARWIN_LOG_DEBUG("DGATask:: processed entry in "
@@ -78,9 +81,12 @@ void DGATask::operator()() {
             }
 
             certitude = Predict();
-            if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+            if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                if (is_log) {
+                    _logs += alert_log + '\n';
+                }
             }
             _certitudes.push_back(certitude);
             if (_is_cache) {
