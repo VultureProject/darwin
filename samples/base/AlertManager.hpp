@@ -10,6 +10,8 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/rapidjson/document.h"
 
+#define DARWIN_RAISE_ALERT(str) darwin::AlertManager::instance().Alert(str)
+
 /// \namespace darwin
 namespace darwin {
 
@@ -40,7 +42,7 @@ namespace darwin {
         AlertManager();
 
         /// \brief This is the destructor of AlertManager object.
-        ~AlertManager();
+        ~AlertManager() = default;
 
         /// \brief Copy operator.
         /// \param other, The AlertManager to copy

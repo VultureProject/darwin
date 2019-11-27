@@ -16,6 +16,7 @@
 #include "HostLookupTask.hpp"
 #include "Logger.hpp"
 #include "protocol.h"
+#include "AlertManager.hpp"
 
 HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
@@ -51,9 +52,13 @@ void HostLookupTask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if (is_log && (certitude>=_threshold)){
-                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                    if (certitude >= _threshold and certitude < 101) {
+                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
+                        DARWIN_RAISE_ALERT(alert_log);
+                        if (is_log){
+                            _logs += alert_log + "\n";
+                        }
                     }
                     _certitudes.push_back(certitude);
                     DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
@@ -63,15 +68,18 @@ void HostLookupTask::operator()() {
             }
 
             certitude = DBLookup();
-            if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                        R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+            if (certitude >= _threshold and certitude < 101) {
+                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
+                DARWIN_RAISE_ALERT(alert_log);
+                if (is_log){
+                    _logs += alert_log + "\n";
+                }
             }
             _certitudes.push_back(certitude);
 
-            if (_is_cache) {
+            if (_is_cache)
                 SaveToCache(hash, certitude);
-            }
         }
         else {
             _certitudes.push_back(DARWIN_ERROR_RETURN);

@@ -11,6 +11,7 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "AGenerator.hpp"
+#include "AlertManager.hpp"
 
 bool AGenerator::Configure(std::string const& configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;
@@ -53,6 +54,13 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
         DARWIN_LOG_CRITICAL("AGenerator:: Configuration is not a JSON object");
         conf_file_stream.close();
         return false;
+    }
+
+    if (not darwin::AlertManager::instance().Configure(configuration)) {
+        DARWIN_LOG_WARNING("AGenerator:: An error occured configuring alerting. "
+                           "Partial or no configuration is applied. "
+                           "Continuing..."
+        );
     }
 
     if (!this->LoadConfig(configuration)) {
