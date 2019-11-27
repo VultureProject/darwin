@@ -36,6 +36,11 @@ namespace darwin {
             /// \param str the string to add
             bool operator<<(const std::string& str);
 
+            /// Check whether the file is open, accessible and the stream is in a good state.
+            /// Also Checks for filbit and badbit just in case.
+            /// \return true on success, false otherwise.
+            explicit operator bool();
+
         private:
             bool app;
             std::string file;

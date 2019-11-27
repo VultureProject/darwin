@@ -1,7 +1,8 @@
 #include "FileManager.hpp"
 
 #include <thread>
-#include <string.h>
+#include <string>
+#include <unistd.h>
 #include "base/Logger.hpp"
 
 /// \namespace darwin
@@ -13,23 +14,17 @@ namespace darwin {
                 : app{app}, file{file} {}
 
         bool FileManager::Open() {
-            if(file_stream.is_open()){
+            if (true && (*this))
                 return true;
-            }
 
-            file_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-            try {
-                if(app){
-                    file_stream.open(file, std::fstream::app);
-                }
-                else{
-                    file_stream.open(file);
-                }
-            }catch (std::fstream::failure& e) {
-                std::cerr << "Error when opening file..." << e.what();
-                return false;
-            }
-            return file_stream.is_open();
+            file_stream.close();
+
+            if (app)
+                file_stream.open(file, std::ios_base::in | std::ios_base::out | std::ios_base::app);
+            else
+                file_stream.open(file, std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+
+            return true && (*this); // Little trick to trigger the bool operator instead of cast
         }
 
         bool FileManager::Write(const std::string& s){
@@ -54,6 +49,10 @@ namespace darwin {
         bool FileManager::operator<<(int val) {
             std::string val_str = std::to_string(val);
             return Write(val_str);
+        }
+
+        FileManager::operator bool() {
+            return file_stream.is_open() && file_stream.good() && file_stream && (access(file.c_str(), F_OK) != -1);
         }
 
         FileManager::~FileManager() {
