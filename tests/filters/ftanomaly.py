@@ -1,7 +1,10 @@
 import os
+import uuid
+import json 
 import redis
 import logging
-from time import sleep
+from time import sleep, time
+
 from tools.redis_utils import RedisServer
 
 from tools.filter import Filter
@@ -9,23 +12,37 @@ from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 
 REDIS_SOCKET = "/tmp/redis_logs.sock"
-REDIS_LIST = "test_ftanomaly"
-LOG_FILE = "/tmp/test_ftanomaly.txt"
+REDIS_ALERT_LIST = "test_ftanomaly"
+REDIS_ALERT_CHANNEL = "test.ftanomaly"
+ALERT_FILE = "/tmp/test_ftanomaly.txt"
 
 class TAnomaly(Filter):
     def __init__(self):
         super().__init__(filter_name="tanomaly")
         self.redis = RedisServer(unix_socket=REDIS_SOCKET)
+        self.test_data = None
+        self.internal_redis = self.filter_name + "_anomalyFilter_internal"
 
     def configure(self):
         content = '{{\n' \
                   '"redis_socket_path": "{redis_socket}",\n' \
                   '"redis_list_name": "{redis_list}",\n' \
+                  '"redis_channel_name": "{redis_channel}",\n' \
                   '"log_file_path": "{log_file}"\n'\
                   '}}'.format(redis_socket=REDIS_SOCKET,
-                              redis_list=REDIS_LIST,
-                              log_file=LOG_FILE)
+                              redis_list=REDIS_ALERT_LIST,
+                              redis_channel=REDIS_ALERT_CHANNEL,
+                              log_file=ALERT_FILE)
         super(TAnomaly, self).configure(content)
+
+    def clean_files(self):
+        super(TAnomaly, self).clean_files()
+
+        try:
+            os.remove(ALERT_FILE)
+        except:
+            pass
+
 
     def send(self, data):
         header = DarwinPacket(
@@ -42,12 +59,12 @@ class TAnomaly(Filter):
         api.socket.sendall(data)
         api.close()
 
-    def get_data_from_redis(self):
+    def get_internal_redis_data(self):
         res = None
 
         try:
             r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
-            res = r.smembers(REDIS_LIST)
+            res = r.smembers(self.internal_redis)
             r.close()
         except Exception as e:
             logging.error("Unable to connect to redis: {}".format(e))
@@ -55,7 +72,39 @@ class TAnomaly(Filter):
 
         return res
 
+    def get_redis_alerts(self):
+        res = None
 
+        try:
+            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+            res = r.lrange(REDIS_ALERT_LIST, 0, -1)
+            r.close()
+        except Exception as e:
+            logging.error("Unable to connect to redis: {}".format(e))
+            return None
+
+        return res
+
+    def get_file_alerts(self):
+        try:
+            f = open(ALERT_FILE, 'r')
+            return f.readlines()
+        except OSError as e:
+            logging.error("No alert file found: {}".format(e))
+            return None
+    
+    def get_test_data(self):
+        if self.test_data is not None:
+            return self.test_data
+        
+        self.test_data = list()
+
+        data_file = open("data/anomalyData.txt", "r")
+        for data in data_file:
+            data = data[0:-1]
+            self.test_data.append(data.split(";"))
+        
+        return self.test_data
 
 
 def run():
@@ -67,6 +116,9 @@ def run():
         invalid_ip_ignored_test,
         invalid_protocol_ignored_test,
         thread_working_test,
+        alert_in_redis_test,
+        alert_published_test,
+        alert_in_file_test,
     ]
 
     for i in tests:
@@ -95,13 +147,13 @@ def redis_test(test_name, data, expected_data):
     darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
                            socket_type="unix", )
 
-    results = darwin_api.bulk_call(
+    darwin_api.bulk_call(
         data,
         filter_code="TANOMALY",
         response_type="back",
     )
 
-    redis_data = tanomaly_filter.get_data_from_redis()
+    redis_data = tanomaly_filter.get_internal_redis_data()
     expected_data = data_to_bytes(expected_data)
 
     if redis_data!=expected_data:
@@ -202,7 +254,6 @@ def invalid_protocol_ignored_test():
         ]
     )
 
-
 def thread_working_test():
 
     ret = True
@@ -219,7 +270,7 @@ def thread_working_test():
     darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
                            socket_type="unix", )
 
-    results = darwin_api.bulk_call(
+    darwin_api.bulk_call(
         [
             ["73.90.76.52","99.184.81.66","1017","17"],
             ["250.230.92.234","54.220.65.198","2922","6"],
@@ -239,11 +290,248 @@ def thread_working_test():
     # We wait for the thread to activate
     sleep(302)
 
-    redis_data = tanomaly_filter.get_data_from_redis()
+    redis_data = tanomaly_filter.get_internal_redis_data()
 
     if redis_data != set() :
         logging.error("thread_working_test : Expected no data in Redis but got {}".format(redis_data))
         ret = False
+
+    # CLEAN
+    darwin_api.close()
+
+    tanomaly_filter.clean_files()
+    # ret = tanomaly_filter.valgrind_stop() or tanomaly_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not tanomaly_filter.valgrind_stop():
+        ret = False
+
+    return ret
+
+def format_alert(alert, test_name):
+        res = json.loads(alert)
+        if "time" in res :
+            del res["time"]
+        else:
+            logging.error("{} : No time in the alert : {}.".format(test_name, res))
+        return res 
+
+def alert_in_redis_test():
+    ret = True
+
+    # CONFIG
+    tanomaly_filter = TAnomaly()
+    tanomaly_filter.configure()
+
+    # START FILTER
+    if not tanomaly_filter.valgrind_start():
+        return False
+
+    # SEND TEST
+    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
+                           socket_type="unix", )
+
+    data = tanomaly_filter.get_test_data()
+    darwin_api.bulk_call(
+        data,
+        filter_code="TANOMALY",
+        response_type="back",
+    )
+
+    # We wait for the thread to activate
+    sleep(302)
+
+    # Too hard to test with "time" field, so it's removed, 
+    # but we check in alert received if this field is present
+    expected_alerts = [
+        {"filter": "tanomaly",
+         "anomaly":
+         {"ip": "213.211.198.58", "udp_nb_host": 0.000000,
+          "udp_nb_port": 0.000000, "tcp_nb_host": 126.000000, "tcp_nb_port": 126.000000,
+          "icmp_nb_host": 0.000000, "distance": 122.697636}},
+        {"filter": "tanomaly",
+         "anomaly":
+         {"ip": "192.168.110.2", "udp_nb_host": 252.000000,
+          "udp_nb_port": 252.000000, "tcp_nb_host": 0.000000,
+          "tcp_nb_port": 0.000000, "icmp_nb_host": 0.000000,
+          "distance": 349.590273}}
+    ]
+
+    redis_alerts = tanomaly_filter.get_redis_alerts()
+
+    redis_alerts = [format_alert(a.decode(), "alerts_in_redis_test")
+                    for a in redis_alerts]
+    
+    if len(redis_alerts)!=len(expected_alerts):
+        ret = False
+        logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+            redis_alerts, expected_alerts))
+
+    for a in redis_alerts:
+        if a not in expected_alerts:
+            ret = False
+            logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+                redis_alerts, expected_alerts))
+
+    # CLEAN
+    darwin_api.close()
+
+    tanomaly_filter.clean_files()
+    # ret = tanomaly_filter.valgrind_stop() or tanomaly_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not tanomaly_filter.valgrind_stop():
+        ret = False
+
+    return ret
+
+
+def alert_published_test():
+    ret = True
+
+    # CONFIG
+    tanomaly_filter = TAnomaly()
+    tanomaly_filter.configure()
+
+    # START FILTER
+    if not tanomaly_filter.valgrind_start():
+        return False
+    # SEND TEST
+
+    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
+                           socket_type="unix", )
+
+    darwin_api.bulk_call(
+        tanomaly_filter.get_test_data(),
+        filter_code="TANOMALY",
+        response_type="back",
+    )
+
+    # Too hard to test with "time" field, so it's removed,
+    # but we check in alert received if this field is present
+    expected_alerts = [
+
+        {"filter": "tanomaly",
+         "anomaly":
+         {"ip": "213.211.198.58", "udp_nb_host": 0.000000,
+          "udp_nb_port": 0.000000, "tcp_nb_host": 126.000000, "tcp_nb_port": 126.000000,
+          "icmp_nb_host": 0.000000, "distance": 122.697636}},
+
+        {"filter": "tanomaly",
+         "anomaly":
+         {"ip": "192.168.110.2", "udp_nb_host": 252.000000,
+          "udp_nb_port": 252.000000, "tcp_nb_host": 0.000000,
+          "tcp_nb_port": 0.000000, "icmp_nb_host": 0.000000,
+          "distance": 349.590273}}
+    ]
+
+    try:
+        r = redis.Redis(
+            unix_socket_path=tanomaly_filter.redis.unix_socket, db=0)
+        pubsub = r.pubsub()
+        pubsub.subscribe([REDIS_ALERT_CHANNEL])
+
+        # We wait for the thread to activate
+        sleep(280)
+
+        alert_received = 0
+        timeout = 30  # in seconds
+        timeout_start = time()
+        # We stop waiting for the data fter 30 seconds
+        while (time() < timeout_start + timeout) or (alert_received < 2):
+            message = pubsub.get_message()
+            if message:
+                if message["type"] == "message":
+                    alert = format_alert(
+                        message["data"].decode(), "alert_published_test")
+                    if alert not in expected_alerts:
+                        ret = False
+                        logging.error(
+                            "alert_published_test: Not the expected alert received in redis. Got {}".format(alert))
+                    alert_received += 1
+            sleep(0.001)
+
+        if alert_received != len(expected_alerts):
+            ret = False
+            logging.error(
+                "alert_published_test: Not the expected alerts number received on the channel")
+
+        r.close()
+    except Exception as e:
+        ret = False
+        logging.error(
+            "alert_published_test: Error when trying to redis subscribe: {}".format(e))
+
+    # CLEAN
+    darwin_api.close()
+
+    tanomaly_filter.clean_files()
+    # ret = tanomaly_filter.valgrind_stop() or tanomaly_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not tanomaly_filter.valgrind_stop():
+        ret = False
+
+    return ret
+
+
+def alert_in_file_test():
+    ret = True
+
+    # CONFIG
+    tanomaly_filter = TAnomaly()
+    tanomaly_filter.configure()
+
+    # START FILTER
+    if not tanomaly_filter.valgrind_start():
+        return False
+
+    # SEND TEST
+    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
+                           socket_type="unix", )
+
+    darwin_api.bulk_call(
+        tanomaly_filter.get_test_data(),
+        filter_code="TANOMALY",
+        response_type="back",
+    )
+
+    # We wait for the thread to activate
+    sleep(302)
+
+    # Too hard to test with "time" field, so it's removed,
+    # but we check in alert received if this field is present
+    expected_alerts = [
+
+        {"filter": "tanomaly",
+         "anomaly":
+         {"ip": "213.211.198.58", "udp_nb_host": 0.000000,
+          "udp_nb_port": 0.000000, "tcp_nb_host": 126.000000, "tcp_nb_port": 126.000000,
+          "icmp_nb_host": 0.000000, "distance": 122.697636}},
+        {"filter": "tanomaly",
+         "anomaly":
+            {"ip": "192.168.110.2", "udp_nb_host": 252.000000,
+             "udp_nb_port": 252.000000, "tcp_nb_host": 0.000000,
+             "tcp_nb_port": 0.000000, "icmp_nb_host": 0.000000,
+             "distance": 349.590273}}
+    ]
+
+    redis_alerts = tanomaly_filter.get_file_alerts()
+
+    redis_alerts = [format_alert(a, "alerts_in_redis_test")
+                    for a in redis_alerts]
+
+    if redis_alerts is None:
+        ret = False
+        logging.error("alert_in_file_test : No alerts writing in alert file")
+
+    if len(redis_alerts)!=len(expected_alerts):
+        ret = False
+        logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+            redis_alerts, expected_alerts))
+
+    for a in redis_alerts:
+        if a not in expected_alerts:
+            ret = False
+            logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+                redis_alerts, expected_alerts))
 
     # CLEAN
     darwin_api.close()
