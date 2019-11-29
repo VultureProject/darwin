@@ -1,14 +1,15 @@
 import logging
 import os
 
+from darwin import DarwinApi
 from tools.filter import Filter
 from tools.output import print_result
-from darwin import DarwinApi
+from tools.logger import CustomAdapter
 
 class Connection(Filter):
-    def __init__(self):
-        super().__init__(filter_name="connection")
-        self.init_data_path = "/tmp/init_data_path.txt".format(self.filter_name)
+    def __init__(self, logger):
+        super().__init__(filter_name="connection", logger=logger)
+        self.init_data_path = "/tmp/init_data_path.txt"
 
     def configure(self):
         content = '{{\n' \
@@ -33,6 +34,9 @@ class Connection(Filter):
 
 
 def run():
+    global logger
+    glogger = logging.getLogger("CONNECTION")
+
     tests = [
         new_connection_test,
         known_connection_test,
@@ -40,17 +44,18 @@ def run():
     ]
 
     for i in tests:
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("connection: " + i.__name__, i)
-
 
 """
 We give a new connection
 """
 def new_connection_test():
+
     ret = True
 
     # CONFIG
-    connection_filter = Connection()
+    connection_filter = Connection(logger)
     connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;43;17"])
     connection_filter.configure()
@@ -78,17 +83,17 @@ def new_connection_test():
 
     if certitudes is None:
         ret = False
-        logging.error("Connection Test : No certitude list found in result")
+        logger.error("No certitude list found in result")
 
 
     if len(certitudes) != 1:
         ret = False
-        logging.error("Connection Test : Unexpected certitude size of {} instead of {}"
+        logger.error("Unexpected certitude size of {} instead of {}"
                       .format(len(certitudes), expected_certitudes_size))
 
     if certitudes != expected_certitudes:
         ret = False
-        logging.error("Connection Test : Unexpected certitude of {} instead of {}"
+        logger.error("Unexpected certitude of {} instead of {}"
                       .format(certitudes, expected_certitudes))
 
     # CLEAN
@@ -110,7 +115,7 @@ def known_connection_test():
     ret = True
 
     # CONFIG
-    connection_filter = Connection()
+    connection_filter = Connection(logger)
     connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;42;6"])
     connection_filter.configure()
@@ -138,17 +143,17 @@ def known_connection_test():
 
     if certitudes is None:
         ret = False
-        logging.error("Connection Test : No certitude list found in result")
+        logger.error("No certitude list found in result")
 
 
     if len(certitudes) != expected_certitudes_size:
         ret = False
-        logging.error("Connection Test : Unexpected certitude size of {} instead of {}"
+        logger.error("Unexpected certitude size of {} instead of {}"
                       .format(len(certitudes), expected_certitudes_size))
 
     if certitudes != expected_certitudes:
         ret = False
-        logging.error("Connection Test : Unexpected certitude of {} instead of {}"
+        logger.error("Unexpected certitude of {} instead of {}"
                       .format(certitudes, expected_certitudes))
 
     # CLEAN
@@ -169,7 +174,7 @@ def new_connection_to_known_test():
     ret = True
 
     # CONFIG
-    connection_filter = Connection()
+    connection_filter = Connection(logger)
     connection_filter.init_data(["42.42.42.1;42.42.42.2;1",
                                        "42.42.42.1;42.42.42.2;42;6"])
     connection_filter.configure()
@@ -205,17 +210,17 @@ def new_connection_to_known_test():
 
     if certitudes is None:
         ret = False
-        logging.error("Connection Test : No certitude list found in result")
+        logger.error("No certitude list found in result")
 
 
     if len(certitudes) != expected_certitudes_size:
         ret = False
-        logging.error("Connection Test : Unexpected certitude size of {} instead of {}"
+        logger.error("Unexpected certitude size of {} instead of {}"
                       .format(len(certitudes), expected_certitudes_size))
 
     if certitudes != expected_certitudes:
         ret = False
-        logging.error("Connection Test : Unexpected certitude of {} instead of {}"
+        logger.error("Unexpected certitude of {} instead of {}"
                       .format(certitudes, expected_certitudes))
 
     # CLEAN

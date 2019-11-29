@@ -1,14 +1,15 @@
-import logging
 import os
+import logging
 
+from darwin import DarwinApi
 from tools.filter import Filter
 from tools.output import print_result
-from darwin import DarwinApi
+from tools.logger import CustomAdapter
 
 class HostLookup(Filter):
-    def __init__(self):
-        super().__init__(filter_name="hostlookup")
-        self.database = "/tmp/database.txt".format(self.filter_name)
+    def __init__(self, logger):
+        super().__init__(filter_name="hostlookup", logger=logger)
+        self.database = "/tmp/database.txt"
 
     def configure(self):
         content = '{{\n' \
@@ -28,9 +29,11 @@ class HostLookup(Filter):
             os.remove(self.init_data_path)
         except:
             pass
-
-
+    
 def run():
+    global logger
+    glogger = logging.getLogger("HOSTLOOKUP")
+
     tests = [
         unique_untrusted_host_test,
         unique_trusted_host_test,
@@ -41,6 +44,7 @@ def run():
     ]
 
     for i in tests:
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("hostlookup: " + i.__name__, i)
 
 
@@ -48,7 +52,7 @@ def test(test_name, init_data, data, expected_certitudes, expected_certitudes_si
     ret = True
 
     # CONFIG
-    hostlookup_filter = HostLookup()
+    hostlookup_filter = HostLookup(logger=logger)
     # All the trusted hosts
     hostlookup_filter.init_data(init_data)
     hostlookup_filter.configure()
@@ -72,17 +76,17 @@ def test(test_name, init_data, data, expected_certitudes, expected_certitudes_si
 
     if certitudes is None:
         ret = False
-        logging.error("Hostlookup Test : {} : No certitude list found in result".format(test_name))
+        logger.error("No certitude list found in result".format(test_name))
 
 
     if len(certitudes) != expected_certitudes_size:
         ret = False
-        logging.error("HostLookup Test : {} : Unexpected certitude size of {} instead of {}"
+        logger.error("Unexpected certitude size of {} instead of {}"
                       .format(test_name, len(certitudes), expected_certitudes_size))
 
     if certitudes != expected_certitudes:
         ret = False
-        logging.error("HostLookup Test : {} : Unexpected certitude of {} instead of {}"
+        logger.error("Unexpected certitude of {} instead of {}"
                       .format(test_name, certitudes, expected_certitudes))
 
     # CLEAN

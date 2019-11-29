@@ -1,6 +1,7 @@
 import logging
 import threading
 from time import sleep
+from tools.logger import CustomAdapter
 from tools.redis_utils import RedisServer
 from tools.output import print_result
 from filters.flogs import Logs
@@ -14,6 +15,9 @@ FLOGS_CONF_TEMPLATE = """{{
 }}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME)
 
 def run():
+    global logger
+    glogger = logging.getLogger("REDIS")
+
     tests = [
         simple_master_server,
         master_slave,
@@ -24,20 +28,21 @@ def run():
     ]
 
     for i in tests:
-         print_result("Redis tests: " + i.__name__, i)
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
+        print_result("Redis tests: " + i.__name__, i)
 
 
 def simple_master_server():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master)
+    filter = Logs(redis_server=master, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
         filter.log(b'The cake is a lie')
     except Exception:
-        logging.error("simple_master_server: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     sleep(1)
@@ -45,7 +50,7 @@ def simple_master_server():
     number = master.get_number_of_connections()
 
     if number != 2:
-        logging.error("simple_master_server: wrong number active connections: expected 2 but got " + str(number))
+        logger.error("wrong number active connections: expected 2 but got " + str(number))
         return False
 
     return True
@@ -55,14 +60,14 @@ def master_slave():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
+    filter = Logs(redis_server=slave, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
     except Exception:
-        logging.error("master_slave: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     sleep(1)
@@ -73,7 +78,7 @@ def master_slave():
     # master : python client, filter connection, slave ping
     # slave : python client, filter connection, master ping
     if numberMaster != 3 and numberSlave != 2:
-        logging.error("master_slave: expected 2 master and 1 slave connections, but got " + str(numberMaster) + " and " + str(numberSlave))
+        logger.error("expected 2 master and 1 slave connections, but got " + str(numberMaster) + " and " + str(numberSlave))
         return False
 
     return True
@@ -82,14 +87,14 @@ def master_slave_master_fail():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
+    filter = Logs(redis_server=slave, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
     except Exception:
-        logging.error("master_slave_master_fail: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     master.stop()
@@ -98,19 +103,19 @@ def master_slave_master_fail():
     try:
         filter.log(b'You re gonna have a bad time.')
     except Exception:
-        logging.error("master_slave_master_fail: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     sleep(1)
 
     if not filter.check_run():
-        logging.error("master_slave_master_fail: filter seems to have crashed when master Redis got offline")
+        logger.error("filter seems to have crashed when master Redis got offline")
         return False
 
     number = slave.get_number_of_connections()
 
     if number != 2:
-        logging.error("master_slave_master_fail: filter is not connected to slave")
+        logger.error("filter is not connected to slave")
         return False
 
     return True
@@ -120,7 +125,7 @@ def master_slave_master_off():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
+    filter = Logs(redis_server=slave, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     master.stop()
 
@@ -129,11 +134,11 @@ def master_slave_master_off():
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
     except Exception:
-        logging.error("master_slave_master_off: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     if not filter.check_run():
-        logging.error("master_slave_master_off: filter seems to have crashed when master Redis got offline")
+        logger.error("filter seems to have crashed when master Redis got offline")
         return False
 
     sleep(1)
@@ -141,7 +146,7 @@ def master_slave_master_off():
     number = slave.get_number_of_connections()
 
     if number != 2:
-        logging.error("master_slave_master_off: filter is not connected to slave")
+        logger.error("filter is not connected to slave")
         return False
 
     return True
@@ -149,14 +154,14 @@ def master_slave_master_off():
 def master_timeout_restart():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master)
+    filter = Logs(redis_server=master, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
     try:
         filter.log(b'The cake is a lie')
     except Exception:
-        logging.error("master_timeout: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     # Wait for Janitor to consider connection has timed out and disconnect
@@ -165,13 +170,13 @@ def master_timeout_restart():
     number = master.get_number_of_connections()
 
     if number != 1:
-        logging.error("master_timeout: wrong number active connections: expected 1 but got " + str(number))
+        logger.error("wrong number active connections: expected 1 but got " + str(number))
         return False
 
     try:
         filter.log(b'The cake is a lie')
     except Exception:
-        logging.error("master_timeout: Could not connect to logs filter")
+        logger.error("Could not connect to logs filter")
         return False
 
     sleep(1)
@@ -179,7 +184,7 @@ def master_timeout_restart():
     number = master.get_number_of_connections()
 
     if number != 2:
-        logging.error("master_timeout: wrong number active connections: expected 2 but got " + str(number))
+        logger.error("wrong number active connections: expected 2 but got " + str(number))
         return False
 
     return True
@@ -187,7 +192,7 @@ def master_timeout_restart():
 def multi_thread_master():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master, nb_threads=5)
+    filter = Logs(redis_server=master, nb_threads=5, logger=logger)
     filter.configure(FLOGS_CONF_TEMPLATE)
     filter.start()
 
@@ -215,6 +220,6 @@ def multi_thread_master():
     number = master.get_number_of_connections()
 
     if number != 6:
-        logging.error("master_timeout: wrong number active connections: expected 6 but got " + str(number))
+        logger.error("master_timeout: wrong number active connections: expected 6 but got " + str(number))
         return False
     return True

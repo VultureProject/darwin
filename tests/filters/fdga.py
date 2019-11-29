@@ -1,17 +1,20 @@
 import logging
 import os
 
+from darwin import DarwinApi
 from tools.filter import Filter
 from tools.output import print_result
-from darwin import DarwinApi
+from tools.logger import CustomAdapter
+
+glogger = logging.getLogger("DGA")
 
 MODEL_PATH = "/tmp/model.pb"
 TOKEN_MAP_PATH = "/tmp/tokens.csv"
 MAX_TOKENS = 150
 
 class DGA(Filter):
-    def __init__(self):
-        super().__init__(filter_name="dga")
+    def __init__(self, logger):
+        super().__init__(filter_name="dga", logger=logger)
         self.token_map_path = TOKEN_MAP_PATH
 
     def configure(self):
@@ -37,19 +40,23 @@ class DGA(Filter):
 
 
 def run():
+    global logger
+    glogger = logging.getLogger("DGA")
+
     tests = [
         good_format_tokens_test,
         bad_format_tokens_test,
     ]
 
     for i in tests:
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("dga: " + i.__name__, i)
 
 def good_format_tokens_test():
     ret = True
 
     # CONFIG
-    dga_filter = DGA()
+    dga_filter = DGA(logger)
     dga_filter.init_tokens(["a,1",
                             "b,2",
                             "c,3",
@@ -71,7 +78,7 @@ def bad_format_tokens_test():
     ret = True
 
     # CONFIG
-    dga_filter = DGA()
+    dga_filter = DGA(logger)
     dga_filter.init_tokens(["a,1",
                             "b2",
                             "c,3",
@@ -83,7 +90,7 @@ def bad_format_tokens_test():
 
     # THE FILTER HAVE TO QUIT GRACEFULLY, SO REMOVE ITS PID
     if os.path.exists(dga_filter.pid):
-        logging.error("DGA test : Filter crash when token map given is not well formatted")
+        logger.error("Filter crash when token map given is not well formatted")
         ret = False
 
     dga_filter.clean_files()

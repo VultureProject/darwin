@@ -4,6 +4,7 @@ from os import kill, remove, access, F_OK
 from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
+from tools.logger import CustomAdapter
 from core.utils import DEFAULT_PATH, FLOGS_CONFIG, RESP_MON_STATUS_RUNNING
 from darwin import DarwinApi
 
@@ -11,6 +12,9 @@ from darwin import DarwinApi
 
 
 def run():
+    global logger
+    glogger = logging.getLogger("BASE")
+
     tests = [
         check_start_stop,
         check_pid_file,
@@ -23,6 +27,7 @@ def run():
     ]
 
     for i in tests:
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("Basic tests: " + i.__name__, i)
 
 
@@ -34,7 +39,7 @@ def check_start_stop():
     try:
         kill(filter.process.pid, 0)
     except OSError as e:
-        logging.error("check_start_stop: Process {} not running: {}".format(filter.process.pid, e))
+        logger.error("Process {} not running: {}".format(filter.process.pid, e))
         return False
 
     if filter.stop() is not True:
@@ -54,19 +59,19 @@ def check_pid_file():
         with open(filter.pid) as f:
             pid = int(f.readline())
     except Exception as e:
-        logging.error("check_pid: Unable to read pid file: {}".format(e))
+        logger.error("Unable to read pid file: {}".format(e))
         return False
 
     try:
         kill(pid, 0)
     except OSError as e:
-        logging.error("check_pid: Process {} not running: {}".format(pid, e))
+        logger.error("Process {} not running: {}".format(pid, e))
         return False
 
     filter.stop()
 
     if access(filter.pid, F_OK):
-        logging.error("check_pid: PID file not deleted")
+        logger.error("PID file not deleted")
         return False
     
     return True
@@ -80,13 +85,13 @@ def check_socket_create_delete():
     filter.valgrind_start()
 
     if not access(filter.socket, F_OK):
-        logging.error("check_socket_create_delete: Socket file not accesible")
+        logger.error("Socket file not accesible")
         return False
 
     filter.stop()
 
     if access(filter.socket, F_OK):
-        logging.error("check_socket_create_delete: Socket file not deleted")
+        logger.error("Socket file not deleted")
         return False
     
     return True
@@ -104,7 +109,7 @@ def check_socket_connection():
         api.call("test\n", filter_code="logs", response_type="back")
         api.close()
     except Exception as e:
-        logging.error("check_socket_connection_back: Error connecting to socket: {}".format(e))
+        logger.error("Error connecting to socket: {}".format(e))
         return False
 
     filter.stop()    
@@ -119,13 +124,13 @@ def check_socket_monitor_create_delete():
     filter.valgrind_start()
 
     if not access(filter.monitor, F_OK):
-        logging.error("check_socket_monitor_create_delete: Socket file not accesible")
+        logger.error("Socket file not accesible")
         return False
 
     filter.stop()
 
     if access(filter.monitor, F_OK):
-        logging.error("check_socket_monitor_create_delete: Socket file not deleted")
+        logger.error("Socket file not deleted")
         return False
     
     return True
@@ -144,10 +149,10 @@ def check_socket_monitor_connection():
             data = s.recv(4096).decode()
             s.close()
         if RESP_MON_STATUS_RUNNING not in data:
-            logging.error("check_socket_monitor_connection: Wrong response; got {}".format(data))
+            logger.error("Wrong response; got {}".format(data))
             return False
     except Exception as e:
-        logging.error("check_socket_monitor_connection: Error connecting to socket: {}".format(e))
+        logger.error("Error connecting to socket: {}".format(e))
         return False
 
     filter.stop()    
@@ -164,7 +169,7 @@ def check_start_wrong_conf():
     if not access(filter.pid, F_OK):
         return True
 
-    logging.error("check_start_wrong_conf: Process running with wrong configuration")
+    logger.error("Process running with wrong configuration")
     return False
 
 
@@ -177,5 +182,5 @@ def check_start_no_conf():
     if not access(filter.pid, F_OK):
         return True
 
-    logging.error("check_start_wrong_conf: Process running with wrong configuration")
+    logger.error("Process running with wrong configuration")
     return False

@@ -4,9 +4,11 @@ import manager_socket.test as manager_socket
 import core.test as core
 import filters.test as filters
 
-
 if __name__ == "__main__":
-    logging.basicConfig(filename="test_error.log", filemode='w', level=logging.ERROR)
+    logging.basicConfig(filename="test_error.log",
+                        filemode='w',
+                        format='[%(levelname)s] %(name)s: %(message)s',
+                        level=logging.ERROR)
 
     core.run()
     filters.run()

@@ -4,6 +4,7 @@ from tools.output import print_result
 
 
 def run():
+
     tests = [
         multiple_filters_running,
 		multiple_filters_running_one_fail,
