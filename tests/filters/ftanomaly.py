@@ -15,6 +15,7 @@ REDIS_SOCKET = "/tmp/redis_logs.sock"
 REDIS_ALERT_LIST = "test_ftanomaly"
 REDIS_ALERT_CHANNEL = "test.ftanomaly"
 ALERT_FILE = "/tmp/test_ftanomaly.txt"
+DATA_TEST = "data/anomalyData.txt"
 
 class TAnomaly(Filter):
     def __init__(self):
@@ -99,7 +100,7 @@ class TAnomaly(Filter):
         
         self.test_data = list()
 
-        data_file = open("data/anomalyData.txt", "r")
+        data_file = open(DATA_TEST, "r")
         for data in data_file:
             data = data[0:-1]
             self.test_data.append(data.split(";"))
@@ -515,7 +516,7 @@ def alert_in_file_test():
 
     redis_alerts = tanomaly_filter.get_file_alerts()
 
-    redis_alerts = [format_alert(a, "alerts_in_redis_test")
+    redis_alerts = [format_alert(a, "alerts_in_file_test")
                     for a in redis_alerts]
 
     if redis_alerts is None:
