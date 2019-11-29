@@ -5,18 +5,23 @@ from darwin import DarwinApi
 from tools.filter import Filter
 from tools.output import print_result
 from tools.logger import CustomAdapter
+from tools.redis_utils import RedisServer
+
+DEFAULT_REDIS_SOCKET = "/tmp/redis_connection.sock"
+DEFAULT_INIT_DATA_PATH = "/tmp/init_data_path_connection.txt"
 
 class Connection(Filter):
-    def __init__(self, logger):
+    def __init__(self, redis_server=None):
         super().__init__(filter_name="connection", logger=logger)
-        self.init_data_path = "/tmp/init_data_path.txt"
+        self.init_data_path = DEFAULT_INIT_DATA_PATH
+        self.redis = redis_server if redis_server else RedisServer(unix_socket=DEFAULT_REDIS_SOCKET)
 
     def configure(self):
         content = '{{\n' \
-                  '"redis_socket_path": "/var/sockets/redis/redis.sock",\n' \
+                  '"redis_socket_path": "{redis_socket_path}",\n' \
                   '"init_data_path": "{init_data_path}",\n' \
                   '"redis_expire": 300\n' \
-                  '}}'.format(init_data_path=self.init_data_path)
+                  '}}'.format(init_data_path=self.init_data_path, redis_socket_path=self.redis.unix_socket)
         super(Connection, self).configure(content)
 
     def init_data(self, data):

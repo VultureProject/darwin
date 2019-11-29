@@ -11,12 +11,17 @@ from tools.logger import CustomAdapter
 from tools.redis_utils import RedisServer
 from darwin import DarwinApi, DarwinPacket
 
-REDIS_SOCKET = "/tmp/redis.sock"
+REDIS_SOCKET = "/tmp/redis_logs.sock"
 REDIS_LIST_NAME = "logs_darwin"
+REDIS_CHANNEL_NAME = "darwin.test"
 LOG_FILE = "/tmp/logs_test.log"
 FLOGS_CONFIG_FILE = '{{"log_file_path": "{0}"}}'.format(LOG_FILE)
 FLOGS_CONFIG_REDIS = '{{"redis_socket_path": "{0}", "redis_list_name": "{1}"}}'.format(REDIS_SOCKET, REDIS_LIST_NAME)
-FLOGS_CONFIG_BOTH = '{{"redis_socket_path": "{1}", "redis_list_name": "{2}", "log_file_path": "{0}"}}'.format(LOG_FILE, REDIS_SOCKET, REDIS_LIST_NAME)
+FLOGS_CONFIG_REDIS_CHANNEL = '{{"redis_socket_path": "{0}", "redis_channel_name": "{1}"}}'.format(REDIS_SOCKET, REDIS_CHANNEL_NAME)
+FLOGS_CONFIG_ALL = """{{"redis_socket_path": "{1}",
+"redis_list_name": "{2}",
+"log_file_path": "{0}",
+"redis_channel_name": "{3}"}}""".format(LOG_FILE, REDIS_SOCKET, REDIS_LIST_NAME, REDIS_CHANNEL_NAME)
 
 
 class Logs(Filter):
@@ -24,6 +29,7 @@ class Logs(Filter):
         super().__init__(filter_name="logs", nb_thread=nb_threads, logger=logger)
         self.log_file = log_file if log_file else LOG_FILE
         self.redis = redis_server if redis_server else RedisServer(unix_socket=REDIS_SOCKET)
+        self.pubsub = None
         try:
             os.remove(self.log_file)
         except:
@@ -82,6 +88,26 @@ class Logs(Filter):
 
         return res
 
+    def redis_subscribe(self, channel):
+        r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+        self.pubsub = r.pubsub(ignore_subscribe_messages=True)
+        self.pubsub.subscribe(channel)
+        sleep(0.1)
+        self.pubsub.get_message()
+
+    def redis_channel_get_message(self):
+        ret = None
+        if self.pubsub is not None:
+            try:
+                ret = self.pubsub.get_message().get('data')
+            except:
+                pass
+        return ret
+
+    def __del__(self):
+        if self.pubsub is not None:
+            self.pubsub.close()
+        super().__del__()
 
 def run():
     global logger
@@ -90,13 +116,16 @@ def run():
     tests = [
         single_log_to_file,
         single_log_to_redis,
-        single_log_to_both,
+        single_log_to_redis_channel,
+        single_log_to_all,
         multiple_log_to_file,
         multiple_log_to_redis,
-        multiple_log_to_both,
+        multiple_log_to_redis_channel,
+        multiple_log_to_all,
         empty_log_to_file,
         empty_log_to_redis,
-        empty_log_to_both
+        empty_log_to_redis_channel,
+        empty_log_to_all
     ]
 
     for i in tests:
@@ -146,13 +175,36 @@ def single_log_to_redis():
 
     return True
 
-
-def single_log_to_both():
-    
+def single_log_to_redis_channel():
     filter = Logs(logger)
-    filter.configure(FLOGS_CONFIG_BOTH)
+    filter.configure(FLOGS_CONFIG_REDIS_CHANNEL)
     if not filter.valgrind_start():
         return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+
+    try:
+        filter.log(b'Surveillance is the business model of the Internet. Bruce Schneier\n')
+        sleep(1)
+    except Exception as e:
+        logger.error("Unable to connect to filter: {}".format(e))
+        return False
+
+    log = filter.redis_channel_get_message()
+    if log != b'Surveillance is the business model of the Internet. Bruce Schneier\n':
+        logger.error("Log line not matching: {}".format(log))
+        return False
+
+    return True
+
+
+def single_log_to_all():
+    filter = Logs(logger)
+    filter.configure(FLOGS_CONFIG_ALL)
+    if not filter.valgrind_start():
+        return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n')
@@ -166,9 +218,14 @@ def single_log_to_both():
         logger.error("Log line not matching: {}".format(logs))
         return False
 
-    log = filter.get_log_from_redis()
-    if log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
-        logger.error("Log line not matching: {}".format(log))
+    redis_log = filter.get_log_from_redis()
+    if redis_log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
+        logger.error("Log line not matching: {}".format(redis_log))
+        return False
+
+    redis_channel_log = filter.redis_channel_get_message()
+    if redis_channel_log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
+        logger.error("Log line not matching: {}".format(redis_channel_log))
         return False
 
     return True
@@ -225,12 +282,46 @@ def multiple_log_to_redis():
 
     return True
 
-
-def multiple_log_to_both():
+def multiple_log_to_redis_channel():
     filter = Logs(logger)
-    filter.configure(FLOGS_CONFIG_BOTH)
+    filter.configure(FLOGS_CONFIG_REDIS_CHANNEL)
     if not filter.valgrind_start():
         return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+
+    try:
+        filter.log(b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n')
+        filter.log(b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n')
+        sleep(1)
+    except Exception as e:
+        logger.error("Unable to connect to filter: {}".format(e))
+        return False
+
+    log = filter.redis_channel_get_message()
+    if log != b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n':
+        logger.error("Log line not matching: {}".format(log))
+        return False
+
+    log = filter.redis_channel_get_message()
+    if log != b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
+        logger.error("Log line not matching: {}".format(log))
+        return False
+
+    log = filter.redis_channel_get_message()
+    if log is not None:
+        logger.error("Log line not matching: waited '' but got '{}'".format(log))
+        return False
+
+    return True
+
+def multiple_log_to_all():
+    filter = Logs(logger)
+    filter.configure(FLOGS_CONFIG_ALL)
+    if not filter.valgrind_start():
+        return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n')
@@ -249,13 +340,21 @@ def multiple_log_to_both():
         return False
 
     log = filter.get_log_from_redis()
+    channel_log = filter.redis_channel_get_message()
     if log != b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n':
         logger.error("Log line not matching: {}".format(log))
         return False
+    if log != channel_log:
+        logger.error("channel log line not matching: {}".format(channel_log))
+        return False
 
     log = filter.get_log_from_redis()
+    channel_log = filter.redis_channel_get_message()
     if log != b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n':
         logger.error("Log line not matching: {}".format(log))
+        return False
+    if log != channel_log:
+        logger.error("channel log line not matching: {}".format(channel_log))
         return False
 
     return True
@@ -304,13 +403,35 @@ def empty_log_to_redis():
 
     return True
 
-
-def empty_log_to_both():
-    
+def empty_log_to_redis_channel():
     filter = Logs(logger)
-    filter.configure(FLOGS_CONFIG_BOTH)
+    filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
         return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+
+    try:
+        filter.log(b'')
+        sleep(1)
+    except Exception as e:
+        logger.error("Unable to connect to filter: {}".format(e))
+        return False
+
+    log = filter.redis_channel_get_message()
+    if log is not None:
+        logger.error("Log line not matching: {}".format(log))
+        return False
+
+    return True
+
+def empty_log_to_all():
+    filter = Logs(logger)
+    filter.configure(FLOGS_CONFIG_ALL)
+    if not filter.valgrind_start():
+        return False
+
+    filter.redis_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'')
@@ -327,6 +448,11 @@ def empty_log_to_both():
     log = filter.get_log_from_redis()
     if log is not None:
         logger.error("Log line not matching: {}".format(log))
+        return False
+
+    channel_log = filter.redis_channel_get_message()
+    if channel_log is not None:
+        logger.error("channel log line not matching: {}".format(channel_log))
         return False
 
     return True

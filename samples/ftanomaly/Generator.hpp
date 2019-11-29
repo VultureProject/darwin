@@ -12,9 +12,12 @@
 #include <string>
 
 #include "../toolkit/rapidjson/document.h"
+#include "../toolkit/FileManager.hpp"
 #include "Session.hpp"
 #include "TAnomalyThreadManager.hpp"
 #include "AGenerator.hpp"
+
+#define REDIS_INTERNAL_LIST "_anomalyFilter_internal"
 
 class Generator: public AGenerator {
 public:
@@ -29,7 +32,7 @@ public:
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
-    std::string _log_file_path;
-    std::string _redis_list_name = "anomalyFilterData";
+    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
+    std::string _redis_internal = REDIS_INTERNAL_LIST;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager;
 };
