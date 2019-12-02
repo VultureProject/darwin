@@ -50,14 +50,15 @@ class Server:
         :param cmd: The instruction sent by the client.
         """
         response = {}
-        if cmd['type'] == 'update_filters':
-            errors = services.update(cmd['filters'])
-            if not errors:
-                response['status'] = 'OK'
-            else:
-                response['status'] = 'KO'
-                response['errors'] = errors
-        elif cmd['type'] == 'monitor':
+        if cmd.get('type', None):
+            if cmd['type'] == 'update_filters':
+                errors = services.update(cmd.get('filters', []))
+                if not errors:
+                    response['status'] = 'OK'
+                else:
+                    response['status'] = 'KO'
+                    response['errors'] = errors
+            elif cmd['type'] == 'monitor':
             response = services.monitor_all()
 
         try:
