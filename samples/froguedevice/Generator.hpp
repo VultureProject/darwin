@@ -23,6 +23,10 @@ private:
     bool LoadPythonCode(const std::string& python_env_path_str, const std::string& module_str,
                         const std::string& function_str, const std::string* custom_python_path_str=nullptr);
 
+    /// Generate a pseudo-random alpha-numeric string of length 32
+    /// \return A randomly generated string
+    static std::string RandomString();
+
 public:
     darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,

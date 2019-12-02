@@ -28,7 +28,10 @@ public:
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                             std::mutex& cache_mutex,
-                            PyObject *py_function);
+                            PyObject *py_function,
+                            std::string input_csv,
+                            std::string output_csv,
+                            std::string output_json);
 
     ~RogueDeviceTask() override = default;
 
@@ -44,12 +47,11 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    bool ParseLine(rapidjson::Value& line) final;
+    bool ParseLine(rapidjson::Value& line, darwin::toolkit::FileManager& file) final;
 
 private:
     PyObject *_py_function = nullptr; // the Python function to call in the module
-    std::string _csv_input_path;
-    std::string _csv_ouput_path;
-    std::string _json_output_path;
-    std::fstream file;
+    std::string _csv_input_path; //!< Python script input
+    std::string _csv_ouput_path; //!< Python Script output
+    std::string _json_output_path; //!< Python Script output
 };

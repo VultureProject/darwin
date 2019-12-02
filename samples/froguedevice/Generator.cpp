@@ -6,6 +6,8 @@
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
 #include <fstream>
+#include <random>
+#include <string>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
@@ -96,9 +98,23 @@ bool Generator::LoadPythonCode(const std::string& python_env_path_str, const std
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
+    std::string input_csv = RandomString() + ".csv";
+    std::string output_csv = RandomString() + ".csv";
+    std::string output_json = RandomString() + ".json";
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<RogueDeviceTask>(socket, manager, _cache, _cache_mutex, _py_function));
+            std::make_shared<RogueDeviceTask>(socket, manager, _cache,
+                                            _cache_mutex, _py_function,
+                                            input_csv, output_csv, output_json));
 }
+
+std::string Generator::RandomString() {
+    std::string str("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::shuffle(str.begin(), str.end(), generator);
+    return str.substr(0, 32);
+}
+
 
 Generator::~Generator() {
     darwin::pythonutils::ExitPythonProgram(&_program_name);

@@ -10,14 +10,20 @@
 
 #include "../toolkit/rapidjson/document.h"
 #include "RogueDeviceTask.hpp"
+#include "FileManager.hpp"
 #include "Logger.hpp"
 
 RogueDeviceTask::RogueDeviceTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
-                               PyObject *py_function)
-        : Session{socket, manager, cache, cache_mutex}, _py_function(py_function) {
+                               PyObject *py_function,
+                               std::string input_csv,
+                               std::string output_csv,
+                               std::string output_json)
+        : Session{socket, manager, cache, cache_mutex}, _py_function(py_function),
+        _csv_input_path{input_csv}, _csv_ouput_path{output_csv},
+        _json_output_path{output_json} {
     _is_cache = _cache != nullptr;
 }
 
@@ -100,8 +106,6 @@ bool RogueDeviceTask::ParseBody() {
         rapidjson::Document document;
         document.Parse(body.c_str());
 
-        
-
         if (!document.IsArray()) {
             DARWIN_LOG_ERROR("RogueDeviceTask:: ParseBody: You must provide a list");
             return false;
@@ -111,6 +115,12 @@ bool RogueDeviceTask::ParseBody() {
 
         if (values.Size() <= 0) {
             DARWIN_LOG_ERROR("RogueDeviceTask:: ParseBody: The list provided is empty");
+            return false;
+        }
+
+        darwin::toolkit::FileManager file(_csv_input_path, false, false);
+        if (not file.Open()) {
+            DARWIN_LOG_CRITICAL("RogueDeviceTask:: Unable to open input csv file.");
             return false;
         }
 
@@ -125,7 +135,8 @@ bool RogueDeviceTask::ParseBody() {
     return true;
 }
 
-bool RogueDeviceTask::ParseLine(rapidjson::Value& line) {
+bool RogueDeviceTask::ParseLine(rapidjson::Value& line,
+                                darwin::toolkit::FileManager& file) {
     // IP, HOSTNAME, OS, PROTO, PORT, SERVICE, PRODUCT, SERVICE_FP, NSE_SCRIPT_ID, NSE_SCRIPT_OUTPUT, NOTES
     //  0     1       2    3      4      5        6          7             8               9           11
     // str   str     str  str    int    str      str        str           str             str          str
@@ -150,14 +161,16 @@ bool RogueDeviceTask::ParseLine(rapidjson::Value& line) {
                 DARWIN_LOG_WARNING("RogueDeviceTask:: ParseLine: Value is not an integer.");
                 return false;
             }
+            ss << items[i].GetInt() << ',';
         } else {
             if (not items[i].IsString()) {
                 DARWIN_LOG_WARNING("RogueDeviceTask:: ParseLine: Value is not an integer.");
                 return false;
             }
+            ss << items[i].GetString() << ',';
         }
-        ss << items[i];
     }
-
+    ss << std::endl;
+    file << ss.str();
     return true;
 }
