@@ -22,6 +22,7 @@
 #include "Logger.hpp"
 #include "protocol.h"
 #include "tensorflow/core/framework/tensor.h"
+#include "AlertManager.hpp"
 
 DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
@@ -69,6 +70,7 @@ void DGATask::operator()() {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                        DARWIN_RAISE_ALERT(alert_log);
                         if (is_log) {
                             _logs += alert_log + '\n';
                         }
@@ -84,6 +86,7 @@ void DGATask::operator()() {
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                DARWIN_RAISE_ALERT(alert_log);
                 if (is_log) {
                     _logs += alert_log + '\n';
                 }
