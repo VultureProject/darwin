@@ -41,4 +41,4 @@ target_link_libraries(
 
 target_include_directories(${TANOMALY_NAME} PUBLIC ${ARMADILLO_INCLUDE_DIRS})
 target_include_directories(${TANOMALY_NAME} PUBLIC ${MLPACK_INCLUDE_DIRS})
-target_include_directories(${TANOMALY_NAME} PUBLIC samples/fanomaly/)
+target_include_directories(${TANOMALY_NAME} PUBLIC samples/ftanomaly/)

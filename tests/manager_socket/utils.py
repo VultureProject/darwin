@@ -16,18 +16,18 @@ def requests(request):
         sock.connect(MANAGEMENT_SOCKET_PATH)
     except socket.error as msg:
         logging.error(msg)
-        return None
+        return ""
     try:
         sock.sendall(bytes(request))
     except Exception as e:
         logging.error("manager_socket.utils.requests: Could not send the request: " + str(e))
-        return None
+        return ""
 
     try:
         response = sock.recv(4096).decode()
     except Exception as e:
         logging.error("manager_socket.utils.requests: Could not get the response: " + str(e))
-        return None
+        return ""
 
     return response
 
@@ -97,10 +97,38 @@ CONF_ONE = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_ONE_V2 = """{{
+    "version": 2,
+    "filters": [
+        {{
+            "name": "logs_1",
+            "exec_path": "{0}darwin_logs",
+            "config_file": "{1}",
+            "output": "NONE",
+            "next_filter": "",
+            "nb_thread": 1,
+            "log_level": "DEBUG",
+            "cache_size": 0
+        }}
+    ],
+    "report_stats": {{
+        "redis": {{
+            "ip": "127.0.0.1",
+            "port": 6379,
+            "unix_path": "/var/sockets/redis/redis.sock"
+        }},
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_THREE = """{{
   "logs_1": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -109,7 +137,7 @@ CONF_THREE = """{{
     }},
     "logs_2": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -118,7 +146,7 @@ CONF_THREE = """{{
     }},
     "logs_3": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -127,10 +155,58 @@ CONF_THREE = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_THREE_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "logs_1",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_2",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_3",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "redis": {{
+            "ip": "127.0.0.1",
+            "port": 6379,
+            "unix_path": "/var/sockets/redis/redis.sock"
+        }},
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_THREE_ONE_WRONG = """{{
   "logs_1": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -139,7 +215,7 @@ CONF_THREE_ONE_WRONG = """{{
     }},
     "logs_2": {{
         "exec_path": "wrong_path",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -148,12 +224,60 @@ CONF_THREE_ONE_WRONG = """{{
     }},
     "logs_3": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
         "log_level": "DEBUG",
         "cache_size": 0
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_THREE_ONE_WRONG_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "logs_1",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_2",
+        "exec_path": "wrong_path",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_3",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "redis": {{
+            "ip": "127.0.0.1",
+            "port": 6379,
+            "unix_path": "/var/sockets/redis/redis.sock"
+        }},
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
