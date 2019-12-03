@@ -20,7 +20,6 @@ from HeartBeat import HeartBeat
 from time import sleep
 import psutil
 from config import load_conf, ConfParseError
-from config import filters as conf_filters
 
 logger = logging.getLogger()
 
@@ -334,13 +333,15 @@ class Services:
         :param names: A list containing the names of the filter to update.
         :return A empty list on success. A list containing error messages on failure.
         """
+        from config import filters as conf_filters
         logger.debug("Update: Trying to open config file")
         try:
             #Reload conf, global variable 'conf_filters' will be updated
             load_conf()
         except ConfParseError:
-            logger.error("Update: wrong configuration format, unable to update")
-            return 1
+            error = "Update: wrong configuration format, unable to update"
+            logger.error(error)
+            return error
 
         logger.info("Update: Configuration loaded")
 
@@ -365,9 +366,9 @@ class Services:
                     new[n]['extension'] = '.1'
 
                 try:
-                    new[n]['failCount'] = self._filters[n]['failCount']
+                    new[n]['failures'] = self._filters[n]['failures']
                 except KeyError:
-                    new[n]['failCount'] = 0
+                    new[n]['failures'] = 0
 
                 new[n]['pid_file'] = '/var/run/darwin/{name}{extension}.pid'.format(
                     name=n, extension=new[n]['extension']
@@ -434,89 +435,33 @@ class Services:
 
         return errors
 
-<<<<<<< HEAD
-=======
-    def load_conf(self):
-        """
-        Load the configuration.
-        """
 
-        with self._lock:
-            logger.debug("Trying to open config file")
-            try:
-                with open(self._config_file, 'r') as f:
-                    logger.debug("Loading config")
-                    self._filters = json.load(f)
-            except Exception as e:
-                logger.critical("Unable to load initial conf: {0}".format(e))
-                raise e
-
-            logger.info("Configuration loaded")
-
-            for f, c in self._filters.items():
-                if 'next_filter' not in c:
-                    c['next_filter'] = ''
-
-                    logger.debug('No next filter provided')
-
-                try:
-                    c['name'] = f
-                    c['status'] = psutil.STATUS_WAKING
-                    c['failCount'] = 0
-                    c['extension'] = '.1'
-                    c['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=f, extension=c['extension'])
-
-                    if not c['next_filter']:
-                        c['next_filter_unix_socket'] = 'no'
-                    else:
-                        c['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
-                            next_filter=c['next_filter']
-                        )
-
-                    c['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=f, extension=c['extension'])
-                    c['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=f)
-
-                    c['monitoring'] = '/var/sockets/darwin/{filter}_mon{extension}.sock'.format(
-                        filter=f, extension=c['extension']
-                    )
-
-                    if 'config_file' not in c:
-                        logger.warning('Field "config_file" not found for {filter}: setting default'.format(filter=f))
-                        c['config_file'] = '/home/vlt-sys/darwin/conf/{filter}.conf'.format(filter=f)
-
-                    if 'cache_size' not in c:
-                        c['cache_size'] = 0
-
-                        logger.info('No cache size provided. Setting it to {cache_size}'.format(
-                            cache_size=c['cache_size']
-                        ))
-
-                    if 'output' not in c:
-                        c['output'] = 'NONE'
-                        logger.info('No output type provided. Setting it to {output}'.format(output=c['output']))
-
-                    if 'nb_thread' not in c:
-                        c['nb_thread'] = 5
-
-                        logger.info('No number of threads provided. Setting it to {nb_thread}'.format(
-                            nb_thread=c['nb_thread']
-                        ))
-                except KeyError as e:
-                    logger.critical("Missing parameter: {}".format(e))
-                    raise e
-
-                if 'threshold' not in c:
-                    c['threshold'] = 101
-
-                    logger.info('No threshold provided. Setting it to the filter\'s default threshold')
-
->>>>>>> CORE:: Add stats to filters
     def print_conf(self):
         """
         Pretty Print the configuration.
         Mostly used for debug purpose.
         """
         pprint(self._filters)
+
+    @staticmethod
+    def get_proc_info(filter, proc_stats=[]):
+        ret = {}
+        from config import stats_reporting
+        if not proc_stats:
+            logger.debug("get_proc_info(): no special stats, taking ones in configuration")
+            proc_stats = stats_reporting.get('proc_stats', ['memory_percent', 'cpu_percent'])
+
+        for proc in psutil.process_iter(attrs=["cmdline", "name"]):
+            if filter['name'] in proc.info["cmdline"] and "darwin_" in proc.info["name"]:
+                logger.debug("get_proc_info(): found processus {}, getting stats {}".format(filter['name'], proc_stats))
+                try:
+                    ret.update(proc.as_dict(proc_stats))
+                except Exception as e:
+                    logger.error("get_proc_info(): could not get proc info -> {}".format(e))
+                    pass
+
+        return ret
+
 
     @staticmethod
     def monitor_one(file):
@@ -528,10 +473,10 @@ class Services:
         """
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            logger.debug("connecting to monitoring socket...")
+            logger.debug("Connecting to monitoring socket...")
             sock.connect(file)
         except Exception as e:
-            logger.error("Error, cannot connect to monitoring socket {} : {}".format(file, e))
+            logger.warning("Cannot connect to monitoring socket {} : {}".format(file, e))
             return
 
         try:
@@ -539,11 +484,11 @@ class Services:
             data = JsonSocket(sock).recv()
             logger.debug("received data: '{}'".format(data))
         except Exception as e:
-            logger.error("Error, filter monitoring data not received: {}".format(e))
+            logger.error("Filter monitoring data not received: {}".format(e))
             return
         return data
 
-    def monitor_all(self):
+    def monitor_all(self, proc_stats=[]):
         """
         Get monitoring data from all the filters.
 
@@ -554,7 +499,8 @@ class Services:
             for n, c in self._filters.items():
                 monitor_data[n] = Services.monitor_one(c['monitoring'])
                 if monitor_data[n]:
-                    monitor_data[n]['failCount'] = c['failCount']
+                    monitor_data[n]['failures'] = c['failures']
+                    monitor_data[n]['proc_stats'] = Services.get_proc_info(c, proc_stats)
                 else:
                     monitor_data[n] = {}
                     monitor_data[n]['status'] = 'error'
@@ -636,7 +582,7 @@ class Services:
 
         except Exception as e:
             logger.warning("HeartBeat failed on {} ({}). Restarting the filter.".format(filter['name'], e))
-            filter['failCount'] += 1
+            filter['failures'] += 1
             filter['status'] = psutil.STATUS_DEAD
             self.restart_one(filter, no_lock=True)
 
