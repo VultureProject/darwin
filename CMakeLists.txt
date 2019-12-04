@@ -142,3 +142,7 @@ endif()
 if(CONTENT_INSPECTION IN_LIST FILTERS)
 include(finspection)
 endif()
+
+if(TEST IN_LIST FILTERS)
+include(ftest)
+endif()
