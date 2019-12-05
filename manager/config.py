@@ -119,7 +119,8 @@ conf_v2_schema = {
                         "permissions": {
                             "type": "number",
                             "minimum": 1,
-                            "maximum": 777
+                            "maximum": 777,
+                            "default": 640
                         }
                     },
                     "required": ["filepath"],

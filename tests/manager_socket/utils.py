@@ -112,11 +112,6 @@ CONF_ONE_V2 = """{{
         }}
     ],
     "report_stats": {{
-        "redis": {{
-            "ip": "127.0.0.1",
-            "port": 6379,
-            "unix_path": "/var/sockets/redis/redis.sock"
-        }},
         "file": {{
             "filepath": "/tmp/darwin-stats",
             "permissions": 640
@@ -190,11 +185,6 @@ CONF_THREE_V2 = """{{
     }}
     ],
     "report_stats": {{
-        "redis": {{
-            "ip": "127.0.0.1",
-            "port": 6379,
-            "unix_path": "/var/sockets/redis/redis.sock"
-        }},
         "file": {{
             "filepath": "/tmp/darwin-stats",
             "permissions": 640
@@ -268,11 +258,6 @@ CONF_THREE_ONE_WRONG_V2 = """{{
     }}
     ],
     "report_stats": {{
-        "redis": {{
-            "ip": "127.0.0.1",
-            "port": 6379,
-            "unix_path": "/var/sockets/redis/redis.sock"
-        }},
         "file": {{
             "filepath": "/tmp/darwin-stats",
             "permissions": 640
@@ -292,6 +277,7 @@ CONF_FLOGS_WRONG_CONF = """{
 # Requests
 
 REQ_MONITOR      = b'{"type": "monitor"}'
+REQ_MONITOR_CUSTOM_STATS = b'{"type": "monitor", "proc_stats": ["name", "pid", "memory_percent"]}'
 REQ_UPDATE_EMPTY = b'{"type": "update_filters", "filters": []}'
 REQ_UPDATE_ONE   = b'{"type": "update_filters", "filters": ["logs_1"]}'
 REQ_UPDATE_TWO   = b'{"type": "update_filters", "filters": ["logs_2", "logs_3"]}'
@@ -302,9 +288,9 @@ REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata
 
 RESP_EMPTY     = '{}'
 
-RESP_LOGS_1 = '"logs_1": {"status": "running"}'
-RESP_LOGS_2 = '"logs_2": {"status": "running"}'
-RESP_LOGS_3 = '"logs_3": {"status": "running"}'
+RESP_LOGS_1 = '"logs_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
+RESP_LOGS_2 = '"logs_2": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
+RESP_LOGS_3 = '"logs_3": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
 RESP_STATUS_OK = '"status": "OK"'
 RESP_STATUS_KO = '"status": "KO"'
 RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
