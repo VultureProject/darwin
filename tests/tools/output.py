@@ -11,4 +11,4 @@ def print_result(name, function):
     if result is True:
         print(name + ": " + "\33[32m OK \33[0m", flush=True)
     else:
-        print(name + " :" + "\033[91m ERROR \33[0m", flush=True)
+        print(name + ": " + "\033[91m ERROR \33[0m", flush=True)
