@@ -15,7 +15,7 @@ REDIS_SOCKET = "/tmp/redis_logs.sock"
 REDIS_ALERT_LIST = "test_ftanomaly"
 REDIS_ALERT_CHANNEL = "test.ftanomaly"
 ALERT_FILE = "/tmp/test_ftanomaly.txt"
-DATA_TEST = "data/anomalyData.txt"
+DATA_TEST = "filters/data/anomalyData.txt"
 
 class TAnomaly(Filter):
     def __init__(self):
