@@ -29,6 +29,7 @@ class Logs(Filter):
         super().__init__(filter_name="logs", nb_thread=nb_threads, logger=logger)
         self.log_file = log_file if log_file else LOG_FILE
         self.redis = redis_server if redis_server else RedisServer(unix_socket=REDIS_SOCKET)
+        self.redis.start()
         self.pubsub = None
         try:
             os.remove(self.log_file)
@@ -79,7 +80,7 @@ class Logs(Filter):
         res = None
 
         try:
-            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+            r = self.redis.connect()
             res = r.rpop(REDIS_LIST_NAME)
             r.close()
         except Exception as e:
@@ -89,7 +90,7 @@ class Logs(Filter):
         return res
 
     def redis_subscribe(self, channel):
-        r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+        r = self.redis.connect()
         self.pubsub = r.pubsub(ignore_subscribe_messages=True)
         self.pubsub.subscribe(channel)
         sleep(0.1)
@@ -107,6 +108,7 @@ class Logs(Filter):
     def __del__(self):
         if self.pubsub is not None:
             self.pubsub.close()
+        self.redis.stop()
         super().__del__()
 
 def run():
