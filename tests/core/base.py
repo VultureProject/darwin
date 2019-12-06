@@ -32,7 +32,7 @@ def run():
 
 
 def check_start_stop():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
 
     filter.configure(FLOGS_CONFIG)
     filter.valgrind_start()
@@ -49,7 +49,7 @@ def check_start_stop():
 
 
 def check_pid_file():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
@@ -78,7 +78,7 @@ def check_pid_file():
 
 
 def check_socket_create_delete():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
@@ -98,7 +98,7 @@ def check_socket_create_delete():
 
 
 def check_socket_connection():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
@@ -117,7 +117,7 @@ def check_socket_connection():
 
 
 def check_socket_monitor_create_delete():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
@@ -137,7 +137,7 @@ def check_socket_monitor_create_delete():
 
 
 def check_socket_monitor_connection():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
     pid = -1
 
     filter.configure(FLOGS_CONFIG)
@@ -160,7 +160,7 @@ def check_socket_monitor_connection():
 
 
 def check_start_wrong_conf():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
 
     filter.configure("")
     filter.valgrind_start()
@@ -174,7 +174,7 @@ def check_start_wrong_conf():
 
 
 def check_start_no_conf():
-    filter = Filter(filter_name="logs")
+    filter = Filter(filter_name="logs", logger=logger)
 
     filter.valgrind_start()
     sleep(2)
