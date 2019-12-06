@@ -176,7 +176,7 @@ class Server:
                 if not self._continue:
                     logger.debug("Reporter: stopping")
                     break
-                stats = str(services.monitor_all())
+                stats = services.monitor_all()
                 logger.debug("reporting stats: {}".format(stats))
 
                 if self._stats_redis:

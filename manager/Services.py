@@ -504,7 +504,7 @@ class Services:
                 else:
                     monitor_data[n] = {}
                     monitor_data[n]['status'] = 'error'
-        return monitor_data
+        return json.dumps(monitor_data)
 
     @staticmethod
     def _wait_process_ready(content):
