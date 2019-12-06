@@ -76,18 +76,18 @@ def test(test_name, init_data, data, expected_certitudes, expected_certitudes_si
 
     if certitudes is None:
         ret = False
-        logger.error("No certitude list found in result".format(test_name))
+        logger.error("No certitude list found in result")
 
 
     if len(certitudes) != expected_certitudes_size:
         ret = False
         logger.error("Unexpected certitude size of {} instead of {}"
-                      .format(test_name, len(certitudes), expected_certitudes_size))
+                      .format(len(certitudes), expected_certitudes_size))
 
     if certitudes != expected_certitudes:
         ret = False
         logger.error("Unexpected certitude of {} instead of {}"
-                      .format(test_name, certitudes, expected_certitudes))
+                      .format(certitudes, expected_certitudes))
 
     # CLEAN
     darwin_api.close()
