@@ -37,7 +37,7 @@ DEFAULT_REDIS_SOCKET = "/tmp/darwin_test_redis.sock"
 DEFAULT_REDIS_CHANNEL = "darwin.tests"
 DEFAULT_REDIS_LIST = "darwin_tests"
 DEFAULT_STATS_FILE = "/tmp/darwin_stats_test.log"
-STAT_LOG_MATCH = "{'logs_1': {'status': 'running', 'connections': 0, 'received': 0, 'entryErrors': 0, 'matches': 0, 'failures': 0, 'proc_stats': {'"
+STAT_LOG_MATCH = '{"logs_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {"'
 
 
 def run():
@@ -64,6 +64,7 @@ def proc_stats_default():
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
+        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
@@ -75,7 +76,7 @@ def proc_stats_default():
             logging.error("proc_stats_default(): {}".format(e))
 
     except Exception as e:
-        logging.error("proc_stats_default(): {}".format(e))
+        logging.error("proc_stats_default(): error loading json -> {}".format(e))
 
     darwin_stop(process)
     darwin_remove_configuration()
@@ -93,6 +94,7 @@ def proc_stats_other_defaults():
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
+        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
@@ -122,6 +124,7 @@ def proc_stats_custom():
 
     try:
         resp = json.loads(requests(REQ_MONITOR_CUSTOM_STATS))
+        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
