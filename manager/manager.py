@@ -1,19 +1,4 @@
 #!/usr/local/bin/python3
-"""This file is part of Vulture 3.
-
-Vulture 3 is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Vulture 3 is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Vulture 3.  If not, see http://www.gnu.org/licenses/.
-"""
 __author__ = "Hugo SOSZYNSKI"
 __credits__ = []
 __license__ = "GPLv3"
@@ -34,10 +19,12 @@ from logging import FileHandler
 from Administration import Server
 from threading import Thread
 from time import sleep
+from config import load_conf, ConfParseError
+from config import filters as conf_filters
 
 # Argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('config_file', type=str, help='The config file to use')
+parser.add_argument('config_file', type=str, help='The configuration file to use')
 parser.add_argument('-l', '--log-level',
                     help='Set log level to DEBUG, INFO, WARNING (default), ERROR or CRITICAL',
                     choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
@@ -101,8 +88,13 @@ if __name__ == '__main__':
 
     server = Server()
     logger.info("Configuring...")
-    services = Services(args.config_file)
+    try:
+        load_conf(args.config_file)
+    except ConfParseError as e:
+        logger.critical(e)
+        exit(1)
 
+    services = Services(conf_filters)
     try:
         logger.info("Starting services...")
         services.start_all()
