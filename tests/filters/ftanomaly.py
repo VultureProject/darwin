@@ -9,18 +9,20 @@ from tools.redis_utils import RedisServer
 
 from tools.filter import Filter
 from tools.output import print_result
+from tools.logger import CustomAdapter
 from darwin import DarwinApi, DarwinPacket
 
-REDIS_SOCKET = "/tmp/redis_logs.sock"
+REDIS_SOCKET = "/tmp/redis_tanomaly.sock"
 REDIS_ALERT_LIST = "test_ftanomaly"
 REDIS_ALERT_CHANNEL = "test.ftanomaly"
 ALERT_FILE = "/tmp/test_ftanomaly.txt"
-DATA_TEST = "data/anomalyData.txt"
+DATA_TEST = "filters/data/anomalyData.txt"
 
 class TAnomaly(Filter):
-    def __init__(self):
-        super().__init__(filter_name="tanomaly")
-        self.redis = RedisServer(unix_socket=REDIS_SOCKET)
+    def __init__(self, logger):
+        super().__init__(filter_name="tanomaly", logger=logger)
+        self.redis = RedisServer(unix_socket=REDIS_SOCKET, port=6380, logger=logger)
+        self.redis.start()
         self.test_data = None
         self.internal_redis = self.filter_name + "_anomalyFilter_internal"
 
@@ -64,11 +66,11 @@ class TAnomaly(Filter):
         res = None
 
         try:
-            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+            r = self.redis.connect()
             res = r.smembers(self.internal_redis)
             r.close()
         except Exception as e:
-            logging.error("Unable to connect to redis: {}".format(e))
+            logger.error("Unable to connect to redis: {}".format(e))
             return None
 
         return res
@@ -77,11 +79,11 @@ class TAnomaly(Filter):
         res = None
 
         try:
-            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
+            r = self.redis.connect()
             res = r.lrange(REDIS_ALERT_LIST, 0, -1)
             r.close()
         except Exception as e:
-            logging.error("Unable to connect to redis: {}".format(e))
+            logger.error("Unable to connect to redis: {}".format(e))
             return None
 
         return res
@@ -91,7 +93,7 @@ class TAnomaly(Filter):
             f = open(ALERT_FILE, 'r')
             return f.readlines()
         except OSError as e:
-            logging.error("No alert file found: {}".format(e))
+            logger.error("No alert file found: {}".format(e))
             return None
     
     def get_test_data(self):
@@ -107,8 +109,14 @@ class TAnomaly(Filter):
         
         return self.test_data
 
+    def __del__(self):
+        self.redis.stop()
+        super().__del__()
 
 def run():
+    global logger
+    glogger = logging.getLogger("TANOMALY")
+
     tests = [
         well_formatted_data_test,
         data_too_short_ignored_test,
@@ -123,6 +131,7 @@ def run():
     ]
 
     for i in tests:
+        logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("tanomaly: " + i.__name__, i)
 
 def redis_test(test_name, data, expected_data):
@@ -137,7 +146,7 @@ def redis_test(test_name, data, expected_data):
     ret = True
 
     # CONFIG
-    tanomaly_filter = TAnomaly()
+    tanomaly_filter = TAnomaly(logger)
     tanomaly_filter.configure()
 
     # START FILTER
@@ -158,7 +167,7 @@ def redis_test(test_name, data, expected_data):
     expected_data = data_to_bytes(expected_data)
 
     if redis_data!=expected_data:
-        logging.error("{}: Expected this data : {} but got {} in redis".format(test_name, expected_data, redis_data))
+        logger.error("Expected this data : {} but got {} in redis".format(expected_data, redis_data))
         ret = False
 
     # CLEAN
@@ -260,7 +269,7 @@ def thread_working_test():
     ret = True
 
     # CONFIG
-    tanomaly_filter = TAnomaly()
+    tanomaly_filter = TAnomaly(logger)
     tanomaly_filter.configure()
 
     # START FILTER
@@ -289,12 +298,13 @@ def thread_working_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    #sleep(302)
+    sleep(52)
 
     redis_data = tanomaly_filter.get_internal_redis_data()
 
     if redis_data != set() :
-        logging.error("thread_working_test : Expected no data in Redis but got {}".format(redis_data))
+        logger.error("Expected no data in Redis but got {}".format(redis_data))
         ret = False
 
     # CLEAN
@@ -313,14 +323,14 @@ def format_alert(alert, test_name):
         if "time" in res :
             del res["time"]
         else:
-            logging.error("{} : No time in the alert : {}.".format(test_name, res))
+            logger.error("No time in the alert : {}.".format(res))
         return res 
 
 def alert_in_redis_test():
     ret = True
 
     # CONFIG
-    tanomaly_filter = TAnomaly()
+    tanomaly_filter = TAnomaly(logger)
     tanomaly_filter.configure()
 
     # START FILTER
@@ -339,7 +349,8 @@ def alert_in_redis_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    #sleep(302)
+    sleep(52)
 
     # Too hard to test with "time" field, so it's removed, 
     # but we check in alert received if this field is present
@@ -364,13 +375,13 @@ def alert_in_redis_test():
     
     if len(redis_alerts)!=len(expected_alerts):
         ret = False
-        logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+        logger.error("Not the expected data in Redis. Got : {}, expected : {}".format(
             redis_alerts, expected_alerts))
 
     for a in redis_alerts:
         if a not in expected_alerts:
             ret = False
-            logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+            logger.error("Not the expected data in Redis. Got : {}, expected : {}".format(
                 redis_alerts, expected_alerts))
 
     # CLEAN
@@ -389,7 +400,7 @@ def alert_published_test():
     ret = True
 
     # CONFIG
-    tanomaly_filter = TAnomaly()
+    tanomaly_filter = TAnomaly(logger)
     tanomaly_filter.configure()
 
     # START FILTER
@@ -431,13 +442,15 @@ def alert_published_test():
         pubsub.subscribe([REDIS_ALERT_CHANNEL])
 
         # We wait for the thread to activate
-        sleep(280)
+        #sleep(280)
+        sleep(52)
 
         alert_received = 0
-        timeout = 30  # in seconds
+        #timeout = 30  # in seconds
+        timeout = 5  # in seconds
         timeout_start = time()
         # We stop waiting for the data fter 30 seconds
-        while (time() < timeout_start + timeout) or (alert_received < 2):
+        while (time() < timeout_start + timeout) and (alert_received < 2):
             message = pubsub.get_message()
             if message:
                 if message["type"] == "message":
@@ -445,21 +458,21 @@ def alert_published_test():
                         message["data"].decode(), "alert_published_test")
                     if alert not in expected_alerts:
                         ret = False
-                        logging.error(
-                            "alert_published_test: Not the expected alert received in redis. Got {}".format(alert))
+                        logger.error(
+                            "Not the expected alert received in redis. Got {}".format(alert))
                     alert_received += 1
             sleep(0.001)
 
         if alert_received != len(expected_alerts):
             ret = False
-            logging.error(
-                "alert_published_test: Not the expected alerts number received on the channel")
+            logger.error(
+                "Not the expected alerts number received on the channel")
 
         r.close()
     except Exception as e:
         ret = False
-        logging.error(
-            "alert_published_test: Error when trying to redis subscribe: {}".format(e))
+        logger.error(
+            "Error when trying to redis subscribe: {}".format(e))
 
     # CLEAN
     darwin_api.close()
@@ -477,7 +490,7 @@ def alert_in_file_test():
     ret = True
 
     # CONFIG
-    tanomaly_filter = TAnomaly()
+    tanomaly_filter = TAnomaly(logger)
     tanomaly_filter.configure()
 
     # START FILTER
@@ -495,7 +508,8 @@ def alert_in_file_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    #sleep(302)
+    sleep(52)
 
     # Too hard to test with "time" field, so it's removed,
     # but we check in alert received if this field is present
@@ -521,17 +535,17 @@ def alert_in_file_test():
 
     if redis_alerts is None:
         ret = False
-        logging.error("alert_in_file_test : No alerts writing in alert file")
+        logger.error("No alerts writing in alert file")
 
     if len(redis_alerts)!=len(expected_alerts):
         ret = False
-        logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+        logger.error("Not the expected data in Redis. Got : {}, expected : {}".format(
             redis_alerts, expected_alerts))
 
     for a in redis_alerts:
         if a not in expected_alerts:
             ret = False
-            logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+            logger.error("Not the expected data in Redis. Got : {}, expected : {}".format(
                 redis_alerts, expected_alerts))
 
     # CLEAN
