@@ -5,7 +5,8 @@ import redis
 from time import sleep
 
 class RedisServer():
-    def __init__(self, address=None, unix_socket=None, port=7890, master=None):
+    def __init__(self, address=None, unix_socket=None, port=7890, master=None, logger=None):
+        self.logger = logger if logger else logging
         self.address = address
         self.unix_socket = unix_socket
         self.port = port
@@ -48,7 +49,7 @@ class RedisServer():
         try:
             self.process.wait(3)
         except subprocess.TimeoutExpired:
-            logging.error("Unable to stop Redis server correctly. Killing it.")
+            self.logger.error("Unable to stop Redis server correctly. Killing it.")
             self.process.kill().wait()
             return False
         return True
