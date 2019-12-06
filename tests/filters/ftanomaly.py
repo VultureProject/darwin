@@ -298,8 +298,7 @@ def thread_working_test():
     )
 
     # We wait for the thread to activate
-    #sleep(302)
-    sleep(52)
+    sleep(302)
 
     redis_data = tanomaly_filter.get_internal_redis_data()
 
@@ -349,8 +348,7 @@ def alert_in_redis_test():
     )
 
     # We wait for the thread to activate
-    #sleep(302)
-    sleep(52)
+    sleep(302)
 
     # Too hard to test with "time" field, so it's removed, 
     # but we check in alert received if this field is present
@@ -442,8 +440,7 @@ def alert_published_test():
         pubsub.subscribe([REDIS_ALERT_CHANNEL])
 
         # We wait for the thread to activate
-        #sleep(280)
-        sleep(52)
+        sleep(280)
 
         alert_received = 0
         #timeout = 30  # in seconds
@@ -508,8 +505,7 @@ def alert_in_file_test():
     )
 
     # We wait for the thread to activate
-    #sleep(302)
-    sleep(52)
+    sleep(302)
 
     # Too hard to test with "time" field, so it's removed,
     # but we check in alert received if this field is present
