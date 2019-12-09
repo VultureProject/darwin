@@ -1,6 +1,6 @@
 import logging
 from time import sleep
-from manager_socket.utils import requests, check_filter_files, PATH_CONF_FLOGS, CONF_EMPTY, CONF_ONE, CONF_ONE_V2, CONF_THREE, CONF_THREE_V2, CONF_FLOGS, CONF_FLOGS_WRONG_CONF , REQ_MONITOR, REQ_UPDATE_EMPTY, REQ_UPDATE_ONE, REQ_UPDATE_TWO, REQ_UPDATE_THREE, REQ_UPDATE_NON_EXISTING, RESP_EMPTY, RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3, RESP_STATUS_OK, RESP_STATUS_KO, RESP_ERROR_FILTER_NOT_EXISTING
+from manager_socket.utils import requests, check_filter_files, PATH_CONF_FLOGS, CONF_EMPTY, CONF_ONE, CONF_ONE_V2, CONF_THREE, CONF_THREE_V2, CONF_FLOGS, CONF_FLOGS_WRONG_CONF, REQ_MONITOR, REQ_UPDATE_EMPTY, REQ_UPDATE_ONE, REQ_UPDATE_TWO, REQ_UPDATE_THREE, REQ_UPDATE_NON_EXISTING, REQ_UPDATE_NO_FILTER, RESP_EMPTY, RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3, RESP_STATUS_OK, RESP_STATUS_KO, RESP_ERROR_FILTER_NOT_EXISTING
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
 from tools.output import print_result
 
@@ -37,7 +37,8 @@ def run():
         many_update_all_wrong_conf,
         many_update_all_wrong_conf_conf_v2,
         non_existing_filter,
-        non_existing_filter_conf_v2
+        non_existing_filter_conf_v2,
+        update_no_filter,
     ]
 
     for i in tests:
@@ -1016,6 +1017,36 @@ def non_existing_filter_conf_v2():
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_LOGS_1, RESP_LOGS_2, RESP_LOGS_3]):
         logging.error("non_existing_filter: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    return ret
+
+
+def update_no_filter():
+
+    ret = True
+
+    darwin_configure(CONF_ONE)
+    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if RESP_LOGS_1 not in resp:
+        logging.error("update_no_filter: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(1) # Need this because of the starting delay
+    resp = requests(REQ_UPDATE_NO_FILTER)
+    if RESP_STATUS_OK not in resp:
+        logging.error("update_no_filter: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if RESP_LOGS_1 not in resp:
+        logging.error("update_no_filter: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)

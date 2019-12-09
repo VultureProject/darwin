@@ -278,11 +278,13 @@ CONF_FLOGS_WRONG_CONF = """{
 
 REQ_MONITOR      = b'{"type": "monitor"}'
 REQ_MONITOR_CUSTOM_STATS = b'{"type": "monitor", "proc_stats": ["name", "pid", "memory_percent"]}'
+REQ_MONITOR_ERROR = b'{"type": "monitor", "proc_stats": ["foo", "bar"]}'
 REQ_UPDATE_EMPTY = b'{"type": "update_filters", "filters": []}'
 REQ_UPDATE_ONE   = b'{"type": "update_filters", "filters": ["logs_1"]}'
 REQ_UPDATE_TWO   = b'{"type": "update_filters", "filters": ["logs_2", "logs_3"]}'
 REQ_UPDATE_THREE = b'{"type": "update_filters", "filters": ["logs_1", "logs_2", "logs_3"]}'
 REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata"]}'
+REQ_UPDATE_NO_FILTER = b'{"type": "update_filters"}'
 
 # Responses
 

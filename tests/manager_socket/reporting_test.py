@@ -7,7 +7,7 @@ from tools.redis_utils import RedisServer
 import os
 import stat
 
-from manager_socket.utils import requests, PATH_CONF_FLOGS, CONF_ONE, CONF_FLOGS, REQ_MONITOR, REQ_MONITOR_CUSTOM_STATS
+from manager_socket.utils import requests, PATH_CONF_FLOGS, CONF_ONE, CONF_FLOGS, REQ_MONITOR, REQ_MONITOR_CUSTOM_STATS, REQ_MONITOR_ERROR
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
 from tools.output import print_result
 
@@ -45,6 +45,7 @@ def run():
         proc_stats_default,
         proc_stats_other_defaults,
         proc_stats_custom,
+        proc_stats_wrong,
         redis_reports,
         file_reports,
         file_and_redis_simple_report,
@@ -137,6 +138,35 @@ def proc_stats_custom():
 
     except Exception as e:
         logging.error("proc_stats_custom(): {}".format(e))
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    return ret
+
+def proc_stats_wrong():
+
+    ret = False
+
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS, conf_redis="", conf_file="", proc_stats=""))
+    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    process = darwin_start()
+
+    try:
+        resp = json.loads(requests(REQ_MONITOR_ERROR))
+        resp = json.loads(resp)
+
+        try:
+            result = resp['logs_1']['proc_stats']
+            if len(result) == 0:
+                ret = True
+            else:
+                logging.error("proc_stats_wrong(): not expected result -> {} (supposed to have empty dict {{}})".format(result))
+        except KeyError as e:
+            logging.error("proc_stats_wrong(): {}".format(e))
+
+    except Exception as e:
+        logging.error("proc_stats_wrong(): {}".format(e))
 
     darwin_stop(process)
     darwin_remove_configuration()
