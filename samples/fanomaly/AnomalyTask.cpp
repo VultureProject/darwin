@@ -13,6 +13,7 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "AnomalyTask.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
@@ -32,10 +33,12 @@ void AnomalyTask::operator()() {
 
     for (auto &value : array)
     {
+        STAT_INPUT_INC;
         if(ParseLine(value)) {
             Detection();
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }
@@ -89,6 +92,7 @@ bool AnomalyTask::Detection(){
     // add distance to alerts
     alerts.insert_rows(DISTANCE, distances);
 
+    STAT_MATCH_INC;
     _certitudes.push_back(100);
 
     if(GetOutputType() == darwin::config::output_type::LOG){

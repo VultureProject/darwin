@@ -12,6 +12,7 @@
 #include <config.hpp>
 
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
@@ -42,14 +43,17 @@ void ConnectionSupervisionTask::operator()() {
     auto array = _body.GetArray();
 
     for (auto &line : array) {
+        STAT_INPUT_INC;
         SetStartingTime();
 
         if(ParseLine(line)) {
             certitude = REDISLookup(_connection);
-
-            if(is_log && certitude>=_threshold){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+            if(certitude >= _threshold) {
+                STAT_MATCH_INC;
+                if(is_log) {
+                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
                         R"(", "connection": ")" + _connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                }
             }
 
             _certitudes.push_back(certitude);
@@ -57,6 +61,7 @@ void ConnectionSupervisionTask::operator()() {
                             + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }

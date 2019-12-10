@@ -67,6 +67,7 @@ set(
         samples/protocol.h
         samples/base/main.cpp
         samples/config.hpp samples/config.cpp
+        samples/base/Stats.cpp samples/base/Stats.hpp
         samples/base/Core.cpp samples/base/Core.hpp
         samples/base/Logger.cpp samples/base/Logger.hpp
         samples/base/Monitor.cpp samples/base/Monitor.hpp
