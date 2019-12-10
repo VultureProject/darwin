@@ -46,21 +46,37 @@ conf_v1_schema = {
                 "exec_path": {"type": "string"},
                 "config_file": {"type": "string"},
                 "nb_thread": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100,
-                    "default": 5
-                    },
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 5
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^[1]?[0-9]{0,2}$"
+                        }
+                    ]
+                },
                 "log_level": {
                     "type": "string",
                     "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DEVELOPER"],
                     "default": "WARNING"
                     },
                 "cache_size": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "default": 0
-                    },
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        }
+                    ]
+                },
                 "output": {
                     "type": "string",
                     "enum": ["NONE", "RAW", "LOG", "PARSED"],
