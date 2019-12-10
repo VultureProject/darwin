@@ -20,6 +20,7 @@
 #include "../toolkit/rapidjson/document.h"
 #include "DGATask.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 #include "tensorflow/core/framework/tensor.h"
 #include "AlertManager.hpp"
@@ -53,6 +54,7 @@ void DGATask::operator()() {
     rapidjson::GenericArray<false, rapidjson::Value> array = _body.GetArray();
 
     for (rapidjson::Value &value : array) {
+        STAT_INPUT_INC;
         SetStartingTime();
         // We have a generic hash function, which takes no arguments as these can be of very different types depending
         // on the nature of the filter
@@ -68,6 +70,7 @@ void DGATask::operator()() {
 
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                        STAT_MATCH_INC;
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
                         DARWIN_RAISE_ALERT(alert_log);
@@ -84,6 +87,7 @@ void DGATask::operator()() {
 
             certitude = Predict();
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                STAT_MATCH_INC;
                 std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
                 DARWIN_RAISE_ALERT(alert_log);
@@ -99,6 +103,7 @@ void DGATask::operator()() {
                             + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
 

@@ -14,6 +14,7 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "TAnomalyTask.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
@@ -45,11 +46,13 @@ void AnomalyTask::operator()() {
     DARWIN_LOG_DEBUG("AnomalyTask:: got " + std::to_string(array.Size()) + " lines to treat");
 
     for (auto& line : array) {
+        STAT_INPUT_INC;
         if(ParseLine(line)) {
             REDISAddEntry();
             _certitudes.push_back(0);
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }

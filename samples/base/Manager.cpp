@@ -6,6 +6,7 @@
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "Manager.hpp"
 
 namespace darwin {
@@ -18,6 +19,7 @@ namespace darwin {
             std::unique_lock<std::mutex> lck(this->_mutex);
             _sessions.insert(c);
         }
+        STAT_CLIENT_INC;
         c->Start();
     }
 
@@ -26,6 +28,7 @@ namespace darwin {
             std::unique_lock<std::mutex> lck(this->_mutex);
             _sessions.erase(c);
         }
+        STAT_CLIENT_DEC;
         c->Stop();
     }
 

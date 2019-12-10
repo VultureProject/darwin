@@ -12,6 +12,7 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "TAnomalyThreadManager.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "Time.hpp"
 #include "protocol.h"
 #include "AlertManager.hpp"
@@ -104,6 +105,7 @@ void AnomalyThreadManager::Detection(){
     alerts.insert_rows(DISTANCE, distances);
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
+        STAT_MATCH_INC;
         std::string log_line(R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "filter": "tanomaly", )"
                 + R"("anomaly": {)"
                 + R"("ip": ")" + _ips[index_anomalies(i)] + "\","

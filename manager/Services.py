@@ -20,7 +20,6 @@ from HeartBeat import HeartBeat
 from time import sleep
 import psutil
 from config import load_conf, ConfParseError
-from config import filters as conf_filters
 
 logger = logging.getLogger()
 
@@ -334,13 +333,15 @@ class Services:
         :param names: A list containing the names of the filter to update.
         :return A empty list on success. A list containing error messages on failure.
         """
+        from config import filters as conf_filters
         logger.debug("Update: Trying to open config file")
         try:
             #Reload conf, global variable 'conf_filters' will be updated
             load_conf()
         except ConfParseError:
-            logger.error("Update: wrong configuration format, unable to update")
-            return 1
+            error = "Update: wrong configuration format, unable to update"
+            logger.error(error)
+            return error
 
         logger.info("Update: Configuration loaded")
 
@@ -363,6 +364,11 @@ class Services:
                     new[n]['extension'] = '.1' if self._filters[n]['extension'] == '.2' else '.2'
                 except KeyError:
                     new[n]['extension'] = '.1'
+
+                try:
+                    new[n]['failures'] = self._filters[n]['failures']
+                except KeyError:
+                    new[n]['failures'] = 0
 
                 new[n]['pid_file'] = '/var/run/darwin/{name}{extension}.pid'.format(
                     name=n, extension=new[n]['extension']
@@ -429,12 +435,33 @@ class Services:
 
         return errors
 
+
     def print_conf(self):
         """
         Pretty Print the configuration.
         Mostly used for debug purpose.
         """
         pprint(self._filters)
+
+    @staticmethod
+    def get_proc_info(filter, proc_stats=[]):
+        ret = {}
+        from config import stats_reporting
+        if not proc_stats:
+            logger.debug("get_proc_info(): no special stats, taking ones in configuration")
+            proc_stats = stats_reporting.get('proc_stats', ['memory_percent', 'cpu_percent'])
+
+        for proc in psutil.process_iter(attrs=["cmdline", "name"]):
+            if filter['name'] in proc.info["cmdline"] and "darwin_" in proc.info["name"]:
+                logger.debug("get_proc_info(): found processus {}, getting stats {}".format(filter['name'], proc_stats))
+                try:
+                    ret.update(proc.as_dict(proc_stats))
+                except Exception as e:
+                    logger.error("get_proc_info(): could not get proc info -> {}".format(e))
+                    pass
+
+        return ret
+
 
     @staticmethod
     def monitor_one(file):
@@ -446,10 +473,10 @@ class Services:
         """
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            logger.debug("connecting to monitoring socket...")
+            logger.debug("Connecting to monitoring socket...")
             sock.connect(file)
         except Exception as e:
-            logger.error("Error, cannot connect to monitoring socket {} : {}".format(file, e))
+            logger.warning("Cannot connect to monitoring socket {} : {}".format(file, e))
             return
 
         try:
@@ -457,11 +484,11 @@ class Services:
             data = JsonSocket(sock).recv()
             logger.debug("received data: '{}'".format(data))
         except Exception as e:
-            logger.error("Error, filter monitoring data not received: {}".format(e))
+            logger.error("Filter monitoring data not received: {}".format(e))
             return
         return data
 
-    def monitor_all(self):
+    def monitor_all(self, proc_stats=[]):
         """
         Get monitoring data from all the filters.
 
@@ -471,7 +498,13 @@ class Services:
         with self._lock:
             for n, c in self._filters.items():
                 monitor_data[n] = Services.monitor_one(c['monitoring'])
-        return monitor_data
+                if monitor_data[n]:
+                    monitor_data[n]['failures'] = c['failures']
+                    monitor_data[n]['proc_stats'] = Services.get_proc_info(c, proc_stats)
+                else:
+                    monitor_data[n] = {}
+                    monitor_data[n]['status'] = 'error'
+        return json.dumps(monitor_data)
 
     @staticmethod
     def _wait_process_ready(content):
@@ -549,6 +582,7 @@ class Services:
 
         except Exception as e:
             logger.warning("HeartBeat failed on {} ({}). Restarting the filter.".format(filter['name'], e))
+            filter['failures'] += 1
             filter['status'] = psutil.STATUS_DEAD
             self.restart_one(filter, no_lock=True)
 
