@@ -115,9 +115,6 @@ void AnomalyThreadManager::Detection(){
                 + R"("distance": )" + std::to_string(alerts(DISTANCE, i))
                 + "}}");
         DARWIN_RAISE_ALERT(log_line);
-        if(_is_log_file) {
-            _log_file->Write(log_line + '\n');
-        }
         if(_is_log_redis) {
             WriteRedis(log_line + '\n');
         }

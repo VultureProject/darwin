@@ -3,13 +3,14 @@ import uuid
 import json
 import redis
 import logging
+import functools
 from time import sleep, time
 
 from tools.redis_utils import RedisServer
 
 from tools.filter import Filter
 from tools.output import print_result
-from darwin import DarwinApi, DarwinPacket
+from darwin import DarwinApi
 
 REDIS_SOCKET = "/tmp/redis_alert.sock"
 REDIS_ALERT_LIST = "test_alert"
@@ -153,13 +154,13 @@ class TestFilter(Filter):
 # wfile & wsocket & wlist & wchannel
 def run():
     tests = [
-        {"test_name": "no_config_file", "conf": None, "log": "this is log 1", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "config_file_empty", "conf": "", "log": "this is log 2", "expected_file": False, "expected_list": False, "expected_channel": False},
+        # {"test_name": "no_config_file", "conf": None, "log": "this is log 1", "expected_file": False, "expected_list": False, "expected_channel": False},
+        # {"test_name": "config_file_empty", "conf": "", "log": "this is log 2", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "config_file_empty_json", "conf": {}, "log": "this is log 3", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file", "conf": {"log_file_path": ALERT_FILE}, "log": "this is log 4", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "socket", "conf": {"redis_socket_path": REDIS_SOCKET}, "log": "this is log 5", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "list", "conf": {"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 6", "expected_file": False, "expected_list": True, "expected_channel": False},
-        {"test_name": "channel", "conf": {"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 7", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "list", "conf": {"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 6", "expected_file": False, "expected_list": False, "expected_channel": False},
+        {"test_name": "channel", "conf": {"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 7", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "empty_file", "conf": {"log_file_path": EMPTY_ALERT_FILE}, "log": "this is log 8", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "empty_socket", "conf": {"redis_socket_path": EMPTY_REDIS_SOCKET}, "log": "this is log 9", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "empty_list", "conf": {"alert_redis_list_name": EMPTY_REDIS_ALERT_LIST}, "log": "this is log 10", "expected_file": False, "expected_list": False, "expected_channel": False},
@@ -168,11 +169,11 @@ def run():
         {"test_name": "wrong_socket", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET}, "log": "this is log 13", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_list", "conf": {"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 14", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_channel", "conf": {"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 15", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "list__channel", "conf": {"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 16", "expected_file": False, "expected_list": True, "expected_channel": True},
+        {"test_name": "list__channel", "conf": {"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 16", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__socket", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": REDIS_SOCKET}, "log": "this is log 17", "expected_file": True, "expected_list": False, "expected_channel": False},
-        {"test_name": "file__list", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 18", "expected_file": True, "expected_list": True, "expected_channel": False},
-        {"test_name": "file__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 19", "expected_file": True, "expected_list": False, "expected_channel": True},
-        {"test_name": "file__list__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 20", "expected_file": True, "expected_list": True, "expected_channel": True},
+        {"test_name": "file__list", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 18", "expected_file": True, "expected_list": False, "expected_channel": False},
+        {"test_name": "file__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 19", "expected_file": True, "expected_list": False, "expected_channel": False},
+        {"test_name": "file__list__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 20", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "socket__list", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 21", "expected_file": False, "expected_list": True, "expected_channel": False},
         {"test_name": "socket__channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 22", "expected_file": False, "expected_list": False, "expected_channel": True},
         {"test_name": "socket__list__channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 23", "expected_file": False, "expected_list": True, "expected_channel": True},
@@ -182,58 +183,58 @@ def run():
         {"test_name": "wrong_file__socket", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET}, "log": "this is log 27", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_socket", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET}, "log": "this is log 28", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_socket", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET}, "log": "this is log 29", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__list", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 30", "expected_file": False, "expected_list": True, "expected_channel": False},
+        {"test_name": "wrong_file__list", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 30", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_list", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 31", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_list", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 32", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 33", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_file__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 33", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 34", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 35", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 36", "expected_file": False, "expected_list": True, "expected_channel": True},
-        {"test_name": "file__wrong_list__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 37", "expected_file": True, "expected_list": False, "expected_channel": True},
-        {"test_name": "file__list__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 38", "expected_file": True, "expected_list": True, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 39", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_file__list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 36", "expected_file": False, "expected_list": False, "expected_channel": False},
+        {"test_name": "file__wrong_list__channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 37", "expected_file": True, "expected_list": False, "expected_channel": False},
+        {"test_name": "file__list__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 38", "expected_file": True, "expected_list": False, "expected_channel": False},
+        {"test_name": "wrong_file__wrong_list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 39", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_list__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 40", "expected_file": True, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 41", "expected_file": False, "expected_list": True, "expected_channel": False},
+        {"test_name": "wrong_file__list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 41", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 42", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_socket__list", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 43", "expected_file": False, "expected_list": True, "expected_channel": False},
+        {"test_name": "wrong_socket__list", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 43", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "socket__wrong_list", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 44", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_socket__wrong_list", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 45", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_socket__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 46", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_socket__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 46", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "socket__wrong_channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 47", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_socket__wrong_channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 48", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_socket__list__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 49", "expected_file": False, "expected_list": True, "expected_channel": True},
+        {"test_name": "wrong_socket__list__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 49", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "socket__wrong_list__channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 50", "expected_file": False, "expected_list": False, "expected_channel": True},
         {"test_name": "socket__list__wrong_channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 51", "expected_file": False, "expected_list": True, "expected_channel": False},
-        {"test_name": "wrong_socket__wrong_list__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 52", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_socket__wrong_list__channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 52", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "socket__wrong_list__wrong_channel", "conf": {"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 53", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_socket__list__wrong_channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 54", "expected_file": False, "expected_list": True, "expected_channel": False},
+        {"test_name": "wrong_socket__list__wrong_channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 54", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_socket__wrong_list__wrong_channel", "conf": {"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 55", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__list", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 56", "expected_file": False, "expected_list": True, "expected_channel": False},
-        {"test_name": "file__wrong_socket__list", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 57", "expected_file": True, "expected_list": True, "expected_channel": False},
+        {"test_name": "file__wrong_socket__list", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 57", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "file__socket__wrong_list", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 58", "expected_file": True, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_socket__list", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 59", "expected_file": False, "expected_list": True, "expected_channel": False},
+        {"test_name": "wrong_file__wrong_socket__list", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST}, "log": "this is log 59", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_socket__wrong_list", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 60", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__wrong_list", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 61", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_socket__wrong_list", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST}, "log": "this is log 62", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 63", "expected_file": False, "expected_list": False, "expected_channel": True},
-        {"test_name": "file__wrong_socket__channel", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 64", "expected_file": True, "expected_list": False, "expected_channel": True},
+        {"test_name": "file__wrong_socket__channel", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 64", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "file__socket__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 65", "expected_file": True, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_socket__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 66", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_file__wrong_socket__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 66", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file__wrong_socket__wrong_channel", "conf": {"log_file_path": ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 67", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 68", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__wrong_socket__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 69", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 70", "expected_file": False, "expected_list": True, "expected_channel": True},
-        {"test_name": "wrong_file__wrong_socket__list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 71", "expected_file": False, "expected_list": True, "expected_channel": True},
+        {"test_name": "wrong_file__wrong_socket__list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 71", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__wrong_list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 72", "expected_file": False, "expected_list": False, "expected_channel": True},
         {"test_name": "wrong_file__socket__list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 73", "expected_file": False, "expected_list": True, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_socket__wrong_list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 74", "expected_file": False, "expected_list": False, "expected_channel": True},
+        {"test_name": "wrong_file__wrong_socket__wrong_list__channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": REDIS_ALERT_CHANNEL}, "log": "this is log 74", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "wrong_file__socket__wrong_list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 75", "expected_file": False, "expected_list": False, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_socket__list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 76", "expected_file": False, "expected_list": True, "expected_channel": False},
-        {"test_name": "wrong_file__wrong_socket__wrong_list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 77", "expected_file": False, "expected_list": False, "expected_channel": False},
+        {"test_name": "wrong_file__wrong_socket__list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 76", "expected_file": False, "expected_list": False, "expected_channel": False},
+        {"test_name": "wrong_file__wrong_socket__wrong_list__wrong_channel", "conf": {"log_file_path": WRONG_ALERT_FILE,"redis_socket_path": WRONG_REDIS_SOCKET,"alert_redis_list_name": WRONG_REDIS_ALERT_LIST,"alert_redis_channel_name": WRONG_REDIS_ALERT_CHANNEL}, "log": "this is log 77", "expected_file": False, "expected_list": False, "expected_channel": False}
     ]
 
     for i in tests:
-        print_result("AlerManager: " + i["test_name"], **i)
+        print_result("AlerManager: " + i["test_name"], functools.partial(test, **i))
 
 
 def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=True, expected_channel=True) -> bool:
@@ -243,9 +244,9 @@ def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=
             return True
         elif not file_content and expected:
             if file_content is None:
-                logging.error("Was expecting alert in log file, file is empty")
-            else:
                 logging.error("Was expecting alert in log file, file doesn't exist")
+            else:
+                logging.error("Was expecting alert in log file, file is empty")
             return False
         elif file_content and not expected:
             logging.error("Expected log file to be empty or non extisting but got content")
@@ -268,18 +269,19 @@ def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=
             logging.error("Was not expecting alerts in the Redis list but got some")
             return False
         elif alerts and expected:
+            alerts = [i.decode() for i in alerts]
             if log in alerts:
                 return True
-            logging.error("The given lert could not be found in the Redist alert list")
+            logging.error("The given alert could not be found in the Redist alert list")
             return False
 
 
     def check_channel_output(pubsub, log, expected=True) -> bool:
-        message = pubsub.get_message(1)
+        message = pubsub.get_message()
         if message and expected:
             if message["type"] == "message":
                 alert = message["data"].decode()
-                if alert != log or alert != log.encode():
+                if alert != log:
                     logging.error("Not the expected alert received in redis. Got {}".format(alert))
                     return False
                 return True
@@ -297,24 +299,31 @@ def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=
 
     filter = TestFilter()
     if conf is not None:
-        filter.configure(str(conf))
+        filter.configure(json.dumps(conf))
+
+    filter.valgrind_start()
 
     try:
         r = redis.Redis(unix_socket_path=filter.redis.unix_socket, db=0)
         pubsub = r.pubsub()
         pubsub.subscribe([REDIS_ALERT_CHANNEL])
+        sleep(0.1)
+        pubsub.get_message()
 
         filter.send(log)
-        sleep(0.1)
+        sleep(0.5)
 
-        if not check_file_output(log, expected=expected_file):
+        if not check_file_output(filter, log, expected=expected_file):
             logging.error(test_name + ": File output check failed")
             return False
-        if not check_list_output(log, expected=expected_list):
+        if not check_list_output(filter, log, expected=expected_list):
             logging.error(test_name + ": Redis list output check failed")
             return False
-        if not check_channel_output(pubsub, log, expected=expected_list):
+        if not check_channel_output(pubsub, log, expected=expected_channel):
             logging.error(test_name + ": Redis channel output check failed")
+            return False
+
+        if filter.valgrind_stop is False:
             return False
 
         return True

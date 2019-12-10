@@ -31,7 +31,7 @@ bool AGenerator::Configure(std::string const& configFile, const std::size_t cach
 bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AGenerator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("AGenerator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("AGenerator:: Parsing configuration from '" + configuration_file_path + "'...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);

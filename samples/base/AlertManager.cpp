@@ -26,7 +26,7 @@ namespace darwin {
 
         if (!_redis and !_log){
             DARWIN_LOG_WARNING("AlertManager:: Need at least one of these parameters to raise alerts: "
-                                "\"redis_socket_path\" or \"log_file_path\"");
+                                "'redis_socket_path' or 'log_file_path'");
             return false;
         }
 
@@ -64,7 +64,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (!configuration["redis_socket_path"].IsString() || configuration["redis_socket_path"].GetStringLength() <= 0) {
-            DARWIN_LOG_WARNING("AlertManager:: \"redis_socket_path\" needs to be a non-empty string. Ignoring REDIS configuration...");
+            DARWIN_LOG_WARNING("AlertManager:: 'redis_socket_path' needs to be a non-empty string. Ignoring REDIS configuration...");
             _redis = false; // Error configuring redis, disabling...
             return false;
         }
@@ -72,8 +72,8 @@ namespace darwin {
         GetStringField(configuration, "alert_redis_list_name", this->_redis_list_name);
         GetStringField(configuration, "alert_redis_channel_name", this->_redis_channel_name);
         if(_redis_list_name.empty() and _redis_channel_name.empty()) {
-            DARWIN_LOG_WARNING("AlertManager:: if \"redis_socket_path\" is provided, you need to provide at least"
-                                    " \"alert_redis_list_name\" or \"alert_redis_channel_name\"."
+            DARWIN_LOG_WARNING("AlertManager:: if 'redis_socket_path' is provided, you need to provide at least"
+                                    " 'alert_redis_list_name' or 'alert_redis_channel_name'."
                                     "Unable to configure REDIS. Ignoring REDIS configuration...");
             _redis = false; // Error configuring redis, disabling...
             return false;
@@ -94,10 +94,10 @@ namespace darwin {
         if (configuration.HasMember(field_name)){
             if (configuration[field_name].IsString() && configuration[field_name].GetStringLength() > 0) {
                 var = configuration[field_name].GetString();
-                DARWIN_LOG_INFO(std::string("AlertManager:: \"") + field_name + "\" set to " + var);
+                DARWIN_LOG_INFO(std::string("AlertManager:: '") + field_name + "' set to " + var);
                 return true;
             } else {
-                DARWIN_LOG_WARNING(std::string("AlertManager:: \"") + field_name + "\" needs to be a non-empty string."
+                DARWIN_LOG_WARNING(std::string("AlertManager:: '") + field_name + "' needs to be a non-empty string."
                                     "Ignoring this field...");
             }
         }
@@ -124,8 +124,8 @@ namespace darwin {
 
     bool AlertManager::WriteLogs(const std::string& str) {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("AlertManager::WriteLogs:: Starting writing in log file: \""
-                        + _log_file_path + "\"...");
+        DARWIN_LOG_DEBUG("AlertManager::WriteLogs:: Starting to write in log file: '"
+                        + _log_file_path + "'...");
         unsigned int retry = RETRY;
         bool fail;
 

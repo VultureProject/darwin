@@ -540,13 +540,13 @@ def alert_in_file_test(legacy=False):
 
     if len(redis_alerts)!=len(expected_alerts):
         ret = False
-        logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+        logging.error("alerts_in_file_test : Not the expected data in file. Got : {}, expected : {}".format(
             redis_alerts, expected_alerts))
 
     for a in redis_alerts:
         if a not in expected_alerts:
             ret = False
-            logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
+            logging.error("alerts_in_file_test : Not the expected data in file. Got : {}, expected : {}".format(
                 redis_alerts, expected_alerts))
 
     # CLEAN

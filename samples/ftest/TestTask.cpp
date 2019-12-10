@@ -43,17 +43,14 @@ void TestTask::operator()() {
     for (auto &line : array) {
         SetStartingTime();
         xxh::hash64_t hash;
-        unsigned int certitude;
 
         if(ParseLine(line)) {
             DARWIN_RAISE_ALERT(_line);
+            _certitudes.push_back(0);
         }
         else {
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
-
-        DARWIN_LOG_DEBUG("TestTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
     }
 }
 
