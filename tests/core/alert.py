@@ -69,94 +69,6 @@ class TestFilter(Filter):
             return None
 
 
-# Exhaustive Test List
-#
-# no file
-# empty file
-# empty config json
-#
-# file
-# socket
-# list
-# channel
-#
-# wfile
-# wsocket
-# wlist
-# wchannel
-#
-# list & channel
-# file & socket
-# file & list
-# file & channel
-# file & list & channel
-# socket & list
-# socket & channel
-# socket & list & channel
-# file & socket & list
-# file & socket & channel
-# file & socket & list & channel
-#
-# wfile & socket
-# file & wsocket
-# wfile & wsocket
-#
-# wfile & list
-# file & wlist
-# wfile & wlist
-#
-# wfile & channel
-# file & wchannel
-# wfile & wchannel
-#
-# wfile & list & channel
-# file & wlist & channel
-# file & list & wchannel
-# wfile & wlist & channel
-# file & wlist & wchannel
-# wfile & list & wchannel
-# wfile & wlist & wchannel
-#
-# wsocket & list
-# socket & wlist
-# wsocket & wlist
-#
-# wsocket & channel
-# socket & wchannel
-# wsocket & wchannel
-#
-# wsocket & list & channel
-# socket & wlist & channel
-# socket & list & wchannel
-# wsocket & wlist & channel
-# socket & wlist & wchannel
-# wsocket & list & wchannel
-# wsocket & wlist & wchannel
-#
-# wfile & socket & list
-# file & wsocket & list
-# file & socket & wlist
-# wfile & wsocket & list
-# file & wsocket & wlist
-# wfile & socket & wlist
-# wfile & wsocket & wlist
-#
-# wfile & socket & channel
-# file & wsocket & channel
-# file & socket & wchannel
-# wfile & wsocket & channel
-# file & wsocket & wchannel
-# wfile & socket & wchannel
-# wfile & wsocket & wchannel
-#
-# wfile & socket & list & channel
-# wfile & wsocket & list & channel
-# wfile & socket & wlist & channel
-# wfile & socket & list & wchannel
-# wfile & wsocket & wlist & channel
-# wfile & socket & wlist & wchannel
-# wfile & wsocket & list & wchannel
-# wfile & wsocket & wlist & wchannel
 def run():
     tests = [
         {"test_name": "config_file_empty_json", "conf": {}, "log": "this is log 3", "expected_file": False, "expected_list": False, "expected_channel": False},
@@ -258,7 +170,7 @@ def check_file_output(filter: TestFilter, log: str, expected=True) -> bool:
             logging.error("Was expecting alert in log file, file is empty")
         return False
     elif file_content and not expected:
-        logging.error("Expected log file to be empty or non existing but got content")
+        logging.error("Expected log file to be empty or non existing but got {}".parse(file_content))
         return False
     elif file_content and expected:
         if log + '\n' in file_content:

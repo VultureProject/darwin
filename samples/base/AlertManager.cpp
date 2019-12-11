@@ -62,13 +62,14 @@ namespace darwin {
 
     bool AlertManager::LoadRedisConfig(const rapidjson::Document& configuration) {
         DARWIN_LOGGER;
+        std::string redis_socket_path;
 
-        if (!configuration["redis_socket_path"].IsString() || configuration["redis_socket_path"].GetStringLength() <= 0) {
+        GetStringField(configuration, "redis_socket_path", redis_socket_path);
+        if (redis_socket_path.empty()) {
             DARWIN_LOG_WARNING("AlertManager:: 'redis_socket_path' needs to be a non-empty string. Ignoring REDIS configuration...");
             _redis = false; // Error configuring redis, disabling...
             return false;
         }
-        std::string redis_socket_path = configuration["redis_socket_path"].GetString();
         GetStringField(configuration, "alert_redis_list_name", this->_redis_list_name);
         GetStringField(configuration, "alert_redis_channel_name", this->_redis_channel_name);
         if(_redis_list_name.empty() and _redis_channel_name.empty()) {
@@ -131,6 +132,7 @@ namespace darwin {
 
         fail = !(_log_file->Write(str + '\n'));
         while(retry and fail){
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             DARWIN_LOG_INFO("AlertManager::WriteLogs:: Error when writing in log file, "
                             "will retry " + std::to_string(retry) + " times");
             fail = !(_log_file->Write(str + '\n'));
