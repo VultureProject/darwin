@@ -139,7 +139,7 @@ namespace darwin {
         if(fail) {
             DARWIN_LOG_ERROR("AlertManager::WriteLogs:: Error when writing in log file, "
                             "too many retry, "
-                            "may due to low space disk or wrong permission, see stderr");
+                            "may be due to low space disk or wrong permission, see stderr");
             return false;
         }
         return true;
