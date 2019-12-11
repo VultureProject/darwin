@@ -10,7 +10,7 @@
 #include <boost/tokenizer.hpp>
 #include <faup/decode.h>
 #include <faup/output.h>
-#include <string.h>
+#include <string>
 #include <thread>
 
 #include "../../toolkit/lru_cache.hpp"
@@ -23,6 +23,7 @@
 #include "Stats.hpp"
 #include "protocol.h"
 #include "tensorflow/core/framework/tensor.h"
+#include "AlertManager.hpp"
 
 DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
@@ -68,11 +69,13 @@ void DGATask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if(certitude >= _threshold) {
+                    if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
-                        if(is_log) {
-                            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                        DARWIN_RAISE_ALERT(alert_log);
+                        if (is_log) {
+                            _logs += alert_log + '\n';
                         }
                     }
                     _certitudes.push_back(certitude);
@@ -83,11 +86,13 @@ void DGATask::operator()() {
             }
 
             certitude = Predict();
-            if(certitude >= _threshold) {
+            if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
-                if(is_log) {
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                        R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                DARWIN_RAISE_ALERT(alert_log);
+                if (is_log) {
+                    _logs += alert_log + '\n';
                 }
             }
             _certitudes.push_back(certitude);

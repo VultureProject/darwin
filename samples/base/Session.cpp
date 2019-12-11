@@ -126,7 +126,7 @@ namespace darwin {
         }
 
         if (boost::asio::error::eof == e) {
-            DARWIN_LOG_INFO("Session::ReadHeaderCallback:: " + e.message());
+            DARWIN_LOG_DEBUG("Session::ReadHeaderCallback:: " + e.message());
         } else {
             DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
         }

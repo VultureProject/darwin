@@ -15,6 +15,7 @@
 #include "Logger.hpp"
 #include "Stats.hpp"
 #include "protocol.h"
+#include "AlertManager.hpp"
 
 AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
@@ -104,18 +105,21 @@ bool AnomalyTask::Detection(){
 void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts){
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
-        _logs += R"({"evt_id": ")" + Evt_idToString();
-        _logs += R"(", "time": ")" + darwin::time_utils::GetTime();
-        _logs += R"(", "filter": ")" + GetFilterName();
-        _logs += R"(", "anomaly": {)";
-        _logs += R"("ip": ")" + ips[index_anomalies(i)] + "\",";
-        _logs += R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ",";
-        _logs += R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ",";
-        _logs += R"("tcp_nb_host": )" + std::to_string(alerts(TCP_NB_HOST, i)) + ",";
-        _logs += R"("tcp_nb_port": )" + std::to_string(alerts(TCP_NB_PORT, i)) + ",";
-        _logs += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
-        _logs += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
-        _logs += "}}\n";
+        std::string alert_log;
+        alert_log = R"({"evt_id": ")" + Evt_idToString();
+        alert_log += R"(", "time": ")" + darwin::time_utils::GetTime();
+        alert_log += R"(", "filter": ")" + GetFilterName();
+        alert_log += R"(", "anomaly": {)";
+        alert_log += R"("ip": ")" + ips[index_anomalies(i)] + "\",";
+        alert_log += R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ",";
+        alert_log += R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ",";
+        alert_log += R"("tcp_nb_host": )" + std::to_string(alerts(TCP_NB_HOST, i)) + ",";
+        alert_log += R"("tcp_nb_port": )" + std::to_string(alerts(TCP_NB_PORT, i)) + ",";
+        alert_log += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
+        alert_log += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
+        alert_log += "}}";
+        DARWIN_RAISE_ALERT(alert_log);
+        _logs += alert_log + '\n';
     }
 };
 

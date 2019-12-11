@@ -14,6 +14,7 @@
 #include "Logger.hpp"
 #include "Stats.hpp"
 #include "protocol.h"
+#include "AlertManager.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
 #include "../../toolkit/lru_cache.hpp"
@@ -48,11 +49,14 @@ void ConnectionSupervisionTask::operator()() {
 
         if(ParseLine(line)) {
             certitude = REDISLookup(_connection);
-            if(certitude >= _threshold) {
+
+            if(certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
-                if(is_log) {
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
-                        R"(", "connection": ")" + _connection + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
+                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                        R"(", "connection": ")" + _connection + R"(", "certitude": )" + std::to_string(certitude) + "}";
+                DARWIN_RAISE_ALERT(alert_log);
+                if (is_log) {
+                    _logs += alert_log + "\n";
                 }
             }
 

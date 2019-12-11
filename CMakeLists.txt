@@ -38,6 +38,12 @@ endif (NOT DEFINED FILTER)
 # CORE DEPENDENCIES #
 #####################
 
+set(
+    ENV{PKG_CONFIG_PATH}
+    "/usr/local/lib/pkgconfig/;/usr/local/libdata/pkgconfig/"
+)
+find_package(PkgConfig)
+
 find_package(Threads)
 find_package(Boost)
 
@@ -45,6 +51,18 @@ link_directories(
     /usr/local/lib
 )
 
+pkg_check_modules(HIREDIS REQUIRED hiredis)
+link_directories(${HIREDIS_LIBRARY_DIRS})
+find_library(HIREDIS_LIBRARY hiredis PATHS ${HIREDIS_LIBRARY_DIRS})
+
+include_directories(${HIREDIS_INCLUDE_DIRS})
+
+set(
+    DARWIN_LIBRARIES
+    pthread
+    boost_system
+    hiredis
+)
 
 ###################
 #  CORE INCLUDES  #
@@ -73,6 +91,7 @@ set(
         samples/base/Monitor.cpp samples/base/Monitor.hpp
         samples/base/AGenerator.cpp samples/base/AGenerator.hpp
         samples/base/ThreadGroup.cpp samples/base/ThreadGroup.hpp
+        samples/base/AlertManager.cpp samples/base/AlertManager.hpp
 
         samples/base/Server.cpp samples/base/Server.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
@@ -82,6 +101,8 @@ set(
         toolkit/Validators.cpp toolkit/Validators.hpp
         toolkit/Time.cpp toolkit/Time.hpp
         toolkit/Files.cpp toolkit/Files.hpp
+        toolkit/RedisManager.cpp toolkit/RedisManager.hpp
+        toolkit/FileManager.cpp toolkit/FileManager.hpp
 )
 
 
@@ -121,4 +142,8 @@ endif()
 
 if(CONTENT_INSPECTION IN_LIST FILTERS)
 include(finspection)
+endif()
+
+if("TEST" IN_LIST FILTERS)
+include(ftest)
 endif()

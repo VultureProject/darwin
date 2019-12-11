@@ -4,16 +4,6 @@ set(TANOMALY_NAME darwin_tanomaly)
 # FILTER DEPENDENCIES #
 #######################
 
-set(
-    ENV{PKG_CONFIG_PATH}
-    "/usr/local/lib/pkgconfig/;/usr/local/libdata/pkgconfig/"
-)
-find_package(PkgConfig)
-
-pkg_check_modules(HIREDIS REQUIRED hiredis)
-link_directories(${HIREDIS_LIBRARY_DIRS})
-find_library(HIREDIS_LIBRARY hiredis PATHS ${HIREDIS_LIBRARY_DIRS})
-
 find_library(ARMADILLO_LIBRARY armadillo PATHS ${ARMADILLO_LIBRARY_DIRS})
 
 find_library(MLPACK_LIBRARY mlpack PATHS ${MLPACK_LIBRARY_DIRS})
@@ -37,23 +27,18 @@ add_executable(
     samples/ftanomaly/TAnomalyTask.cpp samples/ftanomaly/TAnomalyTask.hpp
     samples/ftanomaly/TAnomalyThreadManager.cpp samples/ftanomaly/TAnomalyThreadManager.hpp
     samples/ftanomaly/Generator.cpp samples/ftanomaly/Generator.hpp
-    toolkit/RedisManager.cpp toolkit/RedisManager.hpp
-    toolkit/FileManager.cpp toolkit/FileManager.hpp
     toolkit/ThreadManager.cpp toolkit/ThreadManager.hpp
 )
 
 target_link_libraries(
     ${TANOMALY_NAME}
-    pthread
-    boost_system
-    hiredis
+    ${DARWIN_LIBRARIES}
     lapack
     blas
     ${ARMADILLO_LIBRARY}
     ${MLPACK_LIBRARY}
 )
 
-target_include_directories(${TANOMALY_NAME} PUBLIC ${HIREDIS_INCLUDE_DIRS})
 target_include_directories(${TANOMALY_NAME} PUBLIC ${ARMADILLO_INCLUDE_DIRS})
 target_include_directories(${TANOMALY_NAME} PUBLIC ${MLPACK_INCLUDE_DIRS})
 target_include_directories(${TANOMALY_NAME} PUBLIC samples/ftanomaly/)
