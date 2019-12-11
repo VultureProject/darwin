@@ -124,6 +124,7 @@ void AnomalyThreadManager::Detection(){
     _matrix.reset();
 }
 
+//TODO Legacy function, bound to disapear
 bool AnomalyThreadManager::WriteRedis(const std::string& log_line){
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Starting writing alerts in Redis...");
