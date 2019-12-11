@@ -58,7 +58,7 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
 
     if (not darwin::AlertManager::instance().Configure(configuration)) {
         DARWIN_LOG_WARNING("AGenerator:: An error occured configuring alerting. "
-                           "Partial or no configuration is applied. "
+                           "Partial or no configuration was applied. "
                            "Continuing..."
         );
     }
