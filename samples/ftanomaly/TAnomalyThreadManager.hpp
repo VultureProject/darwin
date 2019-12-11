@@ -52,6 +52,7 @@ private:
 
     /// Write the alerts/logs in Redis
     /// \return true on success, false otherwise.
+    //TODO legacy function bound to disappear
     bool WriteRedis(const std::string& log_line);
 
     /// Used by "PreProcess" to process a log's line
