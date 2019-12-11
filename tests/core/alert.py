@@ -258,7 +258,7 @@ def check_file_output(filter: TestFilter, log: str, expected=True) -> bool:
             logging.error("Was expecting alert in log file, file is empty")
         return False
     elif file_content and not expected:
-        logging.error("Expected log file to be empty or non extisting but got content")
+        logging.error("Expected log file to be empty or non existing but got content")
         return False
     elif file_content and expected:
         if log + '\n' in file_content:
