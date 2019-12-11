@@ -65,7 +65,7 @@ bool TestTask::ParseLine(rapidjson::Value& line) {
     auto values = line.GetArray();
 
     if (values.Size() != 1) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: You must provide only the host in the list");
+        DARWIN_LOG_ERROR("TestTask:: ParseBody: You must provide only one value in the list");
         return false;
     }
 
