@@ -70,7 +70,7 @@ bool TestTask::ParseLine(rapidjson::Value& line) {
     }
 
     if (not values[0].IsString()) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: The host sent must be a string");
+        DARWIN_LOG_ERROR("TestTask:: ParseBody: The value sent must be a string");
         return false;
     }
 
