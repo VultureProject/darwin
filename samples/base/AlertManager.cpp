@@ -39,7 +39,7 @@ namespace darwin {
         //
         // Let's take the redis part as an example, the log part works the same way :
         // It verifies if redis is present, if so returns the redis status, returns true otherwise.
-        // If a configuration is not present, then everything went right for it's part.
+        // If a configuration is not present, then everything went right for its part.
         return ((_redis && redis_status) || (!_redis && !redis_status)) && ((_log && logs_status) || (!_log && !logs_status));
     }
 
