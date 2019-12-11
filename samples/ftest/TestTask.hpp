@@ -1,7 +1,7 @@
 /// \file     TestTask.hpp
 /// \authors  Hugo Soszynski
 /// \version  1.0
-/// \date     03/12/2013
+/// \date     11/12/2019
 /// \license  GPLv3
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
