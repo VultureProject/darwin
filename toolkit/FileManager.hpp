@@ -22,7 +22,7 @@ namespace darwin {
             ~FileManager();
 
             /// Open the file
-            /// \param froce_reopen If true, close the file and reopen it no matter what
+            /// \param force_reopen If true, close the file and reopen it no matter what
             /// \return true if successful, else false
             bool Open(bool force_reopen=false);
 
