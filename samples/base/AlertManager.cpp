@@ -166,4 +166,8 @@ namespace darwin {
         }
         return true;
     }
+
+    void AlertManager::Rotate() {
+        this->_log_file->Open(true);
+    }
 }

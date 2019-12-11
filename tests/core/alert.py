@@ -5,6 +5,7 @@ import redis
 import logging
 import functools
 from time import sleep, time
+from signal import SIGHUP
 
 from tools.redis_utils import RedisServer
 
@@ -34,6 +35,10 @@ class TestFilter(Filter):
         super().clean_files()
         try:
             os.remove(ALERT_FILE)
+        except:
+            pass
+        try:
+            os.remove(ALERT_FILE + '.1')
         except:
             pass
 
@@ -154,8 +159,6 @@ class TestFilter(Filter):
 # wfile & wsocket & wlist & wchannel
 def run():
     tests = [
-        # {"test_name": "no_config_file", "conf": None, "log": "this is log 1", "expected_file": False, "expected_list": False, "expected_channel": False},
-        # {"test_name": "config_file_empty", "conf": "", "log": "this is log 2", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "config_file_empty_json", "conf": {}, "log": "this is log 3", "expected_file": False, "expected_list": False, "expected_channel": False},
         {"test_name": "file", "conf": {"log_file_path": ALERT_FILE}, "log": "this is log 4", "expected_file": True, "expected_list": False, "expected_channel": False},
         {"test_name": "socket", "conf": {"redis_socket_path": REDIS_SOCKET}, "log": "this is log 5", "expected_file": False, "expected_list": False, "expected_channel": False},
@@ -234,69 +237,76 @@ def run():
     ]
 
     for i in tests:
-        print_result("AlerManager: " + i["test_name"], functools.partial(test, **i))
+        print_result("AlertManager: " + i["test_name"], functools.partial(test, **i))
+
+    tests = [
+        check_log_rotate,
+    ]
+
+    for i in tests:
+        print_result("AlertManager: " + i.__name__, i)
+
+
+def check_file_output(filter: TestFilter, log: str, expected=True) -> bool:
+    file_content = filter.get_file_alerts()
+    if not file_content and not expected:
+        return True
+    elif not file_content and expected:
+        if file_content is None:
+            logging.error("Was expecting alert in log file, file doesn't exist")
+        else:
+            logging.error("Was expecting alert in log file, file is empty")
+        return False
+    elif file_content and not expected:
+        logging.error("Expected log file to be empty or non extisting but got content")
+        return False
+    elif file_content and expected:
+        if log + '\n' in file_content:
+            return True
+        logging.error("Log not in log file")
+        return False
+
+
+def check_list_output(filter: TestFilter, log: str, expected=True) -> bool:
+    alerts = filter.get_redis_alerts()
+    if not alerts and not expected:
+        return True
+    elif not alerts and expected:
+        logging.error("Was expecting alerts in the Redis list but got none")
+        return False
+    elif alerts and not expected:
+        logging.error("Was not expecting alerts in the Redis list but got some")
+        return False
+    elif alerts and expected:
+        alerts = [i.decode() for i in alerts]
+        if log in alerts:
+            return True
+        logging.error("The given alert could not be found in the Redist alert list")
+        return False
+
+
+def check_channel_output(pubsub, log, expected=True) -> bool:
+    message = pubsub.get_message()
+    if message and expected:
+        if message["type"] == "message":
+            alert = message["data"].decode()
+            if alert != log:
+                logging.error("Not the expected alert received in redis. Got {}".format(alert))
+                return False
+            return True
+        logging.error("Redis message received from channel has the wrong type")
+        return False
+    elif message and not expected:
+        logging.error("Was expecting no message on Redis channel but got one")
+        return False
+    elif not message and expected:
+        logging.error("Was expecting message on Redis channel but got none")
+        return False
+    elif not message and not expected:
+        return True
 
 
 def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=True, expected_channel=True) -> bool:
-    def check_file_output(filter: TestFilter, log: str, expected=True) -> bool:
-        file_content = filter.get_file_alerts()
-        if not file_content and not expected:
-            return True
-        elif not file_content and expected:
-            if file_content is None:
-                logging.error("Was expecting alert in log file, file doesn't exist")
-            else:
-                logging.error("Was expecting alert in log file, file is empty")
-            return False
-        elif file_content and not expected:
-            logging.error("Expected log file to be empty or non extisting but got content")
-            return False
-        elif file_content and expected:
-            if log + '\n' in file_content:
-                return True
-            logging.error("Log not in log file")
-            return False
-
-
-    def check_list_output(filter: TestFilter, log: str, expected=True) -> bool:
-        alerts = filter.get_redis_alerts()
-        if not alerts and not expected:
-            return True
-        elif not alerts and expected:
-            logging.error("Was expecting alerts in the Redis list but got none")
-            return False
-        elif alerts and not expected:
-            logging.error("Was not expecting alerts in the Redis list but got some")
-            return False
-        elif alerts and expected:
-            alerts = [i.decode() for i in alerts]
-            if log in alerts:
-                return True
-            logging.error("The given alert could not be found in the Redist alert list")
-            return False
-
-
-    def check_channel_output(pubsub, log, expected=True) -> bool:
-        message = pubsub.get_message()
-        if message and expected:
-            if message["type"] == "message":
-                alert = message["data"].decode()
-                if alert != log:
-                    logging.error("Not the expected alert received in redis. Got {}".format(alert))
-                    return False
-                return True
-            logging.error("Redis message received from channel has the wrong type")
-            return False
-        elif message and not expected:
-            logging.error("Was expecting no message on Redis channel but got one")
-            return False
-        elif not message and expected:
-            logging.error("Was expecting message on Redis channel but got none")
-            return False
-        elif not message and not expected:
-            return True
-
-
     filter = TestFilter()
     if conf is not None:
         filter.configure(json.dumps(conf))
@@ -332,3 +342,41 @@ def test(test_name: str, conf: str, log: str, expected_file=True, expected_list=
         logging.error("Got an unexpected error: " + str(e))
         return False
 
+
+def check_log_rotate():
+    conf = {"log_file_path": ALERT_FILE}
+
+    filter = TestFilter()
+    filter.configure(json.dumps(conf))
+    filter.valgrind_start()
+
+    try:
+        log = "The errors which arise from the absence of facts are far more numerous and more durable than those which result from unsound reasoning respecting true data. Charles Babbage"
+        filter.send(log)
+        sleep(0.5)
+
+        if not check_file_output(filter, log, expected=True):
+            logging.error('check_log_rotate' + ": File output check failed")
+            return False
+
+        # Log Rotate
+        os.rename(ALERT_FILE, ALERT_FILE + '.1')
+        filter.process.send_signal(SIGHUP)
+
+        log = "C is quirky, flawed, and an enormous success. Dennis Ritchie"
+        filter.send(log)
+        sleep(0.5)
+
+        if not check_file_output(filter, log, expected=True):
+            logging.error('check_log_rotate' + ": File output check failed")
+            return False
+
+
+        if filter.valgrind_stop is False:
+            return False
+
+        return True
+
+    except Exception as e:
+        logging.error("Got an unexpected error: " + str(e))
+        return False

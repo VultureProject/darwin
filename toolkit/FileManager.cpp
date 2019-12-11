@@ -13,10 +13,11 @@ namespace darwin {
         FileManager::FileManager(const std::string& file, bool app)
                 : app{app}, file{file} {}
 
-        bool FileManager::Open() {
-            if (true && (*this))
+        bool FileManager::Open(bool force_reopen) {
+            if (not force_reopen && (*this))
                 return true;
 
+            std::lock_guard<std::mutex> lock(file_mutex);
             file_stream.close();
 
             if (app)

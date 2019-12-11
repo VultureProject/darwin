@@ -36,6 +36,9 @@ namespace darwin {
         /// \return True on success, false if no alerting canal was configured.
         bool Configure(const rapidjson::Document &configuration);
 
+        /// Close and reopen the alert file to handle log rotate
+        void Rotate();
+
     private:
         /// \brief This is the constructor of AlertManager object.
         /// This constructor is private because only getAlertManager method can call it.
