@@ -1,1 +1,6 @@
-{}
+{
+    "log_file_path": "/var/log/darwin/alerts.log",
+    "redis_socket_path": "/var/sockets/redis/redis.sock",
+    "alert_redis_list_name": "darwin_alerts",
+    "alert_redis_channel_name": "darwin.alerts"
+}

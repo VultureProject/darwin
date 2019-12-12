@@ -26,9 +26,8 @@ class RedisServer():
             if self.address:
                 f.write("bind " + self.address + "\r\n")
                 f.write("port " + str(self.port) + "\r\n")
-            elif self.unix_socket:
+            if self.unix_socket:
                 f.write("unixsocket " + self.unix_socket + "\r\n")
-                f.write("port 0\r\n")
 
             if self.master:
                 if self.master.address:

@@ -1,6 +1,6 @@
 import os
 import uuid
-import json 
+import json
 import redis
 import logging
 from time import sleep, time
@@ -13,6 +13,7 @@ from tools.logger import CustomAdapter
 from darwin import DarwinApi, DarwinPacket
 
 REDIS_SOCKET = "/tmp/redis_tanomaly.sock"
+REDIS_SOCKET = "/tmp/redis_anomaly.sock"
 REDIS_ALERT_LIST = "test_ftanomaly"
 REDIS_ALERT_CHANNEL = "test.ftanomaly"
 ALERT_FILE = "/tmp/test_ftanomaly.txt"
@@ -20,26 +21,37 @@ DATA_TEST = "filters/data/anomalyData.txt"
 
 class TAnomaly(Filter):
     def __init__(self, logger):
-        super().__init__(filter_name="tanomaly", logger=logger)
+        super().__init__(filter_name="tanomaly", cache_size=1, logger=logger)
         self.redis = RedisServer(unix_socket=REDIS_SOCKET, port=6380, logger=logger)
         self.redis.start()
         self.test_data = None
         self.internal_redis = self.filter_name + "_anomalyFilter_internal"
 
-    def configure(self):
-        content = '{{\n' \
-                  '"redis_socket_path": "{redis_socket}",\n' \
-                  '"redis_list_name": "{redis_list}",\n' \
-                  '"redis_channel_name": "{redis_channel}",\n' \
-                  '"log_file_path": "{log_file}"\n'\
-                  '}}'.format(redis_socket=REDIS_SOCKET,
-                              redis_list=REDIS_ALERT_LIST,
-                              redis_channel=REDIS_ALERT_CHANNEL,
-                              log_file=ALERT_FILE)
-        super(TAnomaly, self).configure(content)
+    def configure(self, legacy=False):
+        if legacy:
+            content = '{{\n' \
+                    '"redis_socket_path": "{redis_socket}",\n' \
+                    '"redis_list_name": "{redis_list}",\n' \
+                    '"redis_channel_name": "{redis_channel}",\n' \
+                    '"log_file_path": "{log_file}"\n'\
+                    '}}'.format(redis_socket=REDIS_SOCKET,
+                                redis_list=REDIS_ALERT_LIST,
+                                redis_channel=REDIS_ALERT_CHANNEL,
+                                log_file=ALERT_FILE)
+        else:
+            content = '{{\n' \
+                    '"redis_socket_path": "{redis_socket}",\n' \
+                    '"alert_redis_list_name": "{redis_list}",\n' \
+                    '"alert_redis_channel_name": "{redis_channel}",\n' \
+                    '"log_file_path": "{log_file}"\n'\
+                    '}}'.format(redis_socket=REDIS_SOCKET,
+                                redis_list=REDIS_ALERT_LIST,
+                                redis_channel=REDIS_ALERT_CHANNEL,
+                                log_file=ALERT_FILE)
+        super().configure(content)
 
     def clean_files(self):
-        super(TAnomaly, self).clean_files()
+        super().clean_files()
 
         try:
             os.remove(ALERT_FILE)
@@ -95,18 +107,18 @@ class TAnomaly(Filter):
         except OSError as e:
             logger.error("No alert file found: {}".format(e))
             return None
-    
+
     def get_test_data(self):
         if self.test_data is not None:
             return self.test_data
-        
+
         self.test_data = list()
 
         data_file = open(DATA_TEST, "r")
         for data in data_file:
             data = data[0:-1]
             self.test_data.append(data.split(";"))
-        
+
         return self.test_data
 
     def __del__(self):
@@ -128,11 +140,15 @@ def run():
         alert_in_redis_test,
         alert_published_test,
         alert_in_file_test,
+        alert_in_redis_test_legacy,
+        alert_published_test_legacy,
+        alert_in_file_test_legacy,
     ]
 
     for i in tests:
         logger = CustomAdapter(glogger, {'test_name': i.__name__})
         print_result("tanomaly: " + i.__name__, i)
+
 
 def redis_test(test_name, data, expected_data):
 
@@ -325,12 +341,12 @@ def format_alert(alert, test_name):
             logger.error("No time in the alert : {}.".format(res))
         return res 
 
-def alert_in_redis_test():
+def alert_in_redis_test(legacy=False):
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly(logger)
-    tanomaly_filter.configure()
+    tanomaly_filter.configure(legacy)
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -350,7 +366,7 @@ def alert_in_redis_test():
     # We wait for the thread to activate
     sleep(302)
 
-    # Too hard to test with "time" field, so it's removed, 
+    # Too hard to test with "time" field, so it's removed,
     # but we check in alert received if this field is present
     expected_alerts = [
         {"filter": "tanomaly",
@@ -370,7 +386,7 @@ def alert_in_redis_test():
 
     redis_alerts = [format_alert(a.decode(), "alerts_in_redis_test")
                     for a in redis_alerts]
-    
+
     if len(redis_alerts)!=len(expected_alerts):
         ret = False
         logger.error("Not the expected data in Redis. Got : {}, expected : {}".format(
@@ -394,12 +410,12 @@ def alert_in_redis_test():
     return ret
 
 
-def alert_published_test():
+def alert_published_test(legacy=False):
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly(logger)
-    tanomaly_filter.configure()
+    tanomaly_filter.configure(legacy)
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -483,12 +499,12 @@ def alert_published_test():
     return ret
 
 
-def alert_in_file_test():
+def alert_in_file_test(legacy=False):
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly(logger)
-    tanomaly_filter.configure()
+    tanomaly_filter.configure(legacy)
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -554,3 +570,17 @@ def alert_in_file_test():
         ret = False
 
     return ret
+
+# Legacy tests uses legacy configuration format
+def alert_in_redis_test_legacy():
+    return alert_in_redis_test(legacy=True)
+
+
+# Legacy tests uses legacy configuration format
+def alert_published_test_legacy():
+    return alert_published_test(legacy=True)
+
+
+# Legacy tests uses legacy configuration format
+def alert_in_file_test_legacy():
+    return  alert_in_file_test(legacy=True)

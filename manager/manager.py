@@ -17,10 +17,11 @@ from lockfile import FileLock
 from Services import Services
 from logging import FileHandler
 from Administration import Server
-from threading import Thread
+from threading import Thread, Condition
 from time import sleep
 from config import load_conf, ConfParseError
 from config import filters as conf_filters
+from config import stats_reporting as conf_stats_report
 
 # Argparse
 parser = argparse.ArgumentParser()
@@ -103,17 +104,30 @@ if __name__ == '__main__':
         services.stop_all()
         exit(1)
 
-    t = Thread(target=server.constant_heartbeat, args=(services,))
+    stopCond = Condition()
+    reporterThread = Thread(target=server.report_stats, args=(services, conf_stats_report, stopCond))
+    logger.info("launching Reporter thread...")
+    reporterThread.start()
+
+    heartbeatThread = Thread(target=server.constant_heartbeat, args=(services, stopCond))
     logger.info("launching HeartBeat thread...")
-    t.start()
+    heartbeatThread.start()
+
     logger.info("Running server...")
     server.run(services)
 
+    # Received Stop signal
     logger.info("Stopping services...")
-    logger.debug("Joining...")
-    t.join(1)
-    if t.is_alive():
-        logger.error("HeartBeat thread not responding... Ignoring & stopping filters")
+    with stopCond:
+        logger.debug("notifying threads to stop...")
+        stopCond.notifyAll()
+    logger.debug("Joining Heartbeat")
+    heartbeatThread.join(1)
+    try:
+        logger.debug("Joining Reporter")
+        reporterThread.join(1)
+    except RuntimeError:
+        logger.debug("Reporter not started, ignoring")
     logger.debug("Stop all")
     services.stop_all()
     logger.debug("Clean all")

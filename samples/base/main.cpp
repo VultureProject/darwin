@@ -9,12 +9,14 @@
 #include <cstdlib>
 #include "Core.hpp"
 #include "Logger.hpp"
+#include "AlertManager.hpp"
 
 void rotateLogsHandler(int signum __attribute__((unused))) {
     darwin::logger::Logger& log = darwin::logger::Logger::instance();
     log.log(darwin::logger::Info, "Rotating logs...");
-
     log.RotateLogs();
+
+    darwin::AlertManager::instance().Rotate();
 }
 
 int main(int ac, char**av) {
