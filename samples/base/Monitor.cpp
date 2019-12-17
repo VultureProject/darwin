@@ -7,17 +7,17 @@
 
 #include <sstream>
 #include "Monitor.hpp"
+#include "Stats.hpp"
 #include "Logger.hpp"
 
 namespace darwin {
-    Monitor::Monitor(std::string const& unix_socket_path, std::atomic<FilterStatusEnum>& status)
+    Monitor::Monitor(std::string const& unix_socket_path)
             : _socket_path{unix_socket_path}, _io_context{1},
               _signals{_io_context},
               _acceptor{_io_context,
                         boost::asio::local::stream_protocol::endpoint(
                                 _socket_path)},
-              _connection{_io_context},
-              _filter_status{status} {
+              _connection{_io_context} {
         // Setting the stopping signals for the service
         _signals.add(SIGINT);
         _signals.add(SIGTERM);
@@ -92,12 +92,21 @@ namespace darwin {
 
     void Monitor::SendMonitoringData() {
         std::string message("{\"status\": ");
-        switch(_filter_status) {
-            case FilterStatusEnum::starting : message.append("\"starting\"");   break;
-            case FilterStatusEnum::configuring : message.append("\"configuring\"");    break;
-            case FilterStatusEnum::running : message.append("\"running\""); break;
+        switch(darwin::stats::filter_status) {
+            case darwin::stats::FilterStatusEnum::starting : message.append("\"starting\"");   break;
+            case darwin::stats::FilterStatusEnum::configuring : message.append("\"configuring\"");    break;
+            case darwin::stats::FilterStatusEnum::running : message.append("\"running\""); break;
+            case darwin::stats::FilterStatusEnum::stopping : message.append("\"stopping\""); break;
             default: message.append("\"unknown\"");
         }
+        message.append(", \"connections\":");
+        message.append(std::to_string(STAT_CLIENTS_NUM));
+        message.append(", \"received\":");
+        message.append(std::to_string(STAT_INPUTS));
+        message.append(", \"entryErrors\":");
+        message.append(std::to_string(STAT_PARSE_ERRORS));
+        message.append(", \"matches\":");
+        message.append(std::to_string(STAT_MATCHES));
         message.append("}");
 
         boost::asio::async_write(_connection, boost::asio::buffer(message),

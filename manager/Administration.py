@@ -1,18 +1,3 @@
-"""This file is part of Vulture 3.
-
-Vulture 3 is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Vulture 3 is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Vulture 3.  If not, see http://www.gnu.org/licenses/.
-"""
 __author__ = "Hugo SOSZYNSKI"
 __credits__ = []
 __license__ = "GPLv3"
@@ -23,8 +8,8 @@ __doc__ = 'The unix socket administration server class'
 
 import socket
 import logging
-from os import unlink
-
+import redis
+import os
 from JsonSocket import JsonSocket
 from time import sleep
 
@@ -53,10 +38,9 @@ class Server:
         Close the socket.
         """
         self._socket.close()
-        unlink('/var/sockets/darwin/darwin.sock')
+        os.unlink('/var/sockets/darwin/darwin.sock')
 
-    @staticmethod
-    def process(services, cli, cmd):
+    def process(self, services, cli, cmd):
         """
         Process the incoming instruction.
 
@@ -65,18 +49,21 @@ class Server:
         :param cmd: The instruction sent by the client.
         """
         response = {}
-        if cmd['type'] == 'update_filters':
-            errors = services.update(cmd['filters'])
-            if not errors:
-                response['status'] = 'OK'
-            else:
-                response['status'] = 'KO'
-                response['errors'] = errors
-        elif cmd['type'] == 'monitor':
-            response = services.monitor_all()
+        if cmd.get('type', None):
+            if cmd['type'] == 'update_filters':
+                errors = services.update(cmd.get('filters', []))
+                errors += self.update_stats_conf()
+                if not errors:
+                    response['status'] = 'OK'
+                else:
+                    response['status'] = 'KO'
+                    response['errors'] = errors
+            elif cmd['type'] == 'monitor':
+                response = services.monitor_all(proc_stats=cmd.get('proc_stats', []))
 
         try:
             cli.send(response)
+            del cli
         except Exception as e:
             logger.error("Error sending admin a response: {0}".format(e))
 
@@ -111,11 +98,105 @@ class Server:
         """
         self._continue = False
 
-    def constant_heartbeat(self, services):
+    def constant_heartbeat(self, services, cv):
         """
         Run constant heartbeat in a thread.
         """
 
-        while self._continue:
-            sleep(1)
-            services.hb_all()
+        with cv:
+            while self._continue:
+                cv.wait(1)
+                if not self._continue:
+                    logger.debug("HeartBeat: stopping")
+                    break
+                services.hb_all()
+
+    def try_connect_redis(self, redis_conf):
+        error = ""
+        if redis_conf.get('ip', None):
+            self._stats_redis = redis.Redis(host=redis_conf.get('ip'), port=redis_conf.get('port', 6379), health_check_interval=10)
+        elif redis_conf.get('unix_path', None):
+            self._stats_redis = redis.Redis(unix_socket_path=redis_conf.get('unix_path'), health_check_interval=10)
+        else:
+            self._stats_redis = None
+
+        if self._stats_redis:
+            try:
+                self._stats_redis.ping()
+            except redis.exceptions.ConnectionError as e:
+                error = "Could not connect to Redis server: {}".format(e)
+                logger.error(error)
+                self._stats_redis = None
+
+        return error
+
+    def try_open_file(self, file_conf):
+        error = ""
+        filepath = file_conf.get('filepath', None)
+        permissions = str(file_conf.get('permissions', 640))
+        if filepath:
+            try:
+                with open(os.open(filepath, os.O_WRONLY | os.O_APPEND | os .O_CREAT, int(permissions, 8)), 'a'):
+                    self._stats_filepath = filepath
+                    self._stats_file_permissions = permissions
+            except Exception as e:
+                error = "Could not open file: {}".format(e)
+                logger.error(error)
+
+        return error
+
+    def update_stats_conf(self):
+        self._stats_redis = None
+        self._stats_filepath = None
+        errors = []
+        redis_conf = self._stats.get('redis', None)
+        file_conf = self._stats.get('file', None)
+        if redis_conf:
+            error = self.try_connect_redis(redis_conf)
+            if error:
+                errors.append({"configuration": "report_stats", "error": error})
+        if file_conf:
+            error = self.try_open_file(file_conf)
+            if error:
+                errors.append({"configuration": "report_stats", "error": error})
+
+        return errors
+
+    def report_stats(self, services, reports_conf, cv):
+        """
+        Run stats reporting at regular intervals
+        """
+
+        self._stats = reports_conf
+        self.update_stats_conf()
+
+        with cv:
+            while self._continue:
+                cv.wait(self._stats.get('interval', 10))
+                if not self._continue:
+                    logger.debug("Reporter: stopping")
+                    break
+                stats = services.monitor_all()
+                logger.debug("reporting stats: {}".format(stats))
+
+                if self._stats_redis:
+                    try:
+                        redis_pub = self._stats['redis'].get('channel', None)
+                        redis_list = self._stats['redis'].get('list', None)
+                        if redis_pub:
+                            logger.debug("Reporting stats on Redis channel {}".format(redis_pub))
+                            self._stats_redis.publish(redis_pub, stats)
+                        if redis_list:
+                            logger.debug("Reporting stats on Redis list {}".format(redis_list))
+                            self._stats_redis.rpush(redis_list, stats)
+                    except redis.exceptions.ConnectionError as e:
+                        logger.error("Could not report stats to Redis: {}".format(e))
+
+                if self._stats_filepath:
+                    try:
+                        logger.debug("Reporting stats to file {}".format(self._stats_filepath))
+                        os.umask(0)
+                        with open(os.open(self._stats_filepath, os.O_WRONLY | os.O_APPEND | os.O_CREAT, int(self._stats_file_permissions, 8)), 'a') as file:
+                            file.write(stats+'\n')
+                    except Exception as e:
+                        logger.error("Could not write stats to file: {}".format(e))

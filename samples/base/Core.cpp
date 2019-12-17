@@ -14,24 +14,26 @@
 #include "Logger.hpp"
 #include "Server.hpp"
 #include "Core.hpp"
+#include "Stats.hpp"
 
 namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
               _pidPath{}, _nbThread{0},
-              _filter_status{FilterStatusEnum::starting},
               _threadpool{}, daemon{true} {}
 
     int Core::run() {
         DARWIN_LOGGER;
         int ret{0};
 
+        SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::starting);
+
         try {
-            Monitor monitor{_monSocketPath, _filter_status};
+            Monitor monitor{_monSocketPath};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
 
-            _filter_status.store(FilterStatusEnum::configuring);
+            SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
             Generator gen{};
             if (!gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
@@ -43,7 +45,7 @@ namespace darwin {
 
             try {
                 Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
-                _filter_status.store(FilterStatusEnum::running);
+                SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
                 DARWIN_LOG_DEBUG("Core::run:: Creating threads...");
                 // Starting from 1 because the current process will run

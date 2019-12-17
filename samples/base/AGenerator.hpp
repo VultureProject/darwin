@@ -51,7 +51,7 @@ public:
     Configure(std::string const& configFile,
               const std::size_t cache_size) final;
 
-protected:
+private:
     /// Open and read the configuration file.
     /// Try to load the json format of the configuration.
     ///

@@ -83,7 +83,6 @@ namespace darwin {
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
-        std::atomic<FilterStatusEnum> _filter_status;
         ThreadGroup _threadpool;
 
 

@@ -10,7 +10,7 @@
 #include <boost/tokenizer.hpp>
 #include <faup/decode.h>
 #include <faup/output.h>
-#include <string.h>
+#include <string>
 #include <thread>
 
 #include "../../toolkit/lru_cache.hpp"
@@ -20,8 +20,10 @@
 #include "../toolkit/rapidjson/document.h"
 #include "DGATask.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "protocol.h"
 #include "tensorflow/core/framework/tensor.h"
+#include "AlertManager.hpp"
 
 DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
@@ -52,6 +54,7 @@ void DGATask::operator()() {
     rapidjson::GenericArray<false, rapidjson::Value> array = _body.GetArray();
 
     for (rapidjson::Value &value : array) {
+        STAT_INPUT_INC;
         SetStartingTime();
         // We have a generic hash function, which takes no arguments as these can be of very different types depending
         // on the nature of the filter
@@ -66,9 +69,14 @@ void DGATask::operator()() {
                 hash = GenerateHash();
 
                 if (GetCacheResult(hash, certitude)) {
-                    if (is_log && (certitude>=_threshold)){
-                        _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+                    if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                        STAT_MATCH_INC;
+                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                        DARWIN_RAISE_ALERT(alert_log);
+                        if (is_log) {
+                            _logs += alert_log + '\n';
+                        }
                     }
                     _certitudes.push_back(certitude);
                     DARWIN_LOG_DEBUG("DGATask:: processed entry in "
@@ -78,9 +86,14 @@ void DGATask::operator()() {
             }
 
             certitude = Predict();
-            if (is_log && (certitude>=_threshold)){
-                _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}\n";
+            if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
+                STAT_MATCH_INC;
+                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
+                DARWIN_RAISE_ALERT(alert_log);
+                if (is_log) {
+                    _logs += alert_log + '\n';
+                }
             }
             _certitudes.push_back(certitude);
             if (_is_cache) {
@@ -90,6 +103,7 @@ void DGATask::operator()() {
                             + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
 

@@ -14,8 +14,6 @@
 /// \namespace darwin
 namespace darwin {
 
-    enum class FilterStatusEnum {starting, configuring, running};
-
     /// This class is made to handle one connection at the time.
     /// Each connection will receive monitoring data.
     ///
@@ -26,7 +24,7 @@ namespace darwin {
         /// Constructor.
         ///
         /// \param unix_socket_path The path to the unix socket to connect to the management API.
-        explicit Monitor(std::string const& unix_socket_path, std::atomic<FilterStatusEnum>& status);
+        explicit Monitor(std::string const& unix_socket_path);
         ~Monitor() = default;
 
     public:
@@ -67,6 +65,5 @@ namespace darwin {
         boost::asio::signal_set _signals; //!< Set of the stopping signals.
         boost::asio::local::stream_protocol::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::local::stream_protocol::socket _connection; //!< Socket of the current connection.
-        std::atomic<FilterStatusEnum>& _filter_status; //!< Current status of the filter.
     };
 }
