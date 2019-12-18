@@ -65,7 +65,6 @@ def proc_stats_default():
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
-        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
@@ -95,7 +94,6 @@ def proc_stats_other_defaults():
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
-        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
@@ -125,7 +123,6 @@ def proc_stats_custom():
 
     try:
         resp = json.loads(requests(REQ_MONITOR_CUSTOM_STATS))
-        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']
@@ -154,7 +151,6 @@ def proc_stats_wrong():
 
     try:
         resp = json.loads(requests(REQ_MONITOR_ERROR))
-        resp = json.loads(resp)
 
         try:
             result = resp['logs_1']['proc_stats']

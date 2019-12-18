@@ -12,6 +12,7 @@ import redis
 import os
 from JsonSocket import JsonSocket
 from time import sleep
+import json
 
 
 logger = logging.getLogger()
@@ -176,7 +177,7 @@ class Server:
                 if not self._continue:
                     logger.debug("Reporter: stopping")
                     break
-                stats = services.monitor_all()
+                stats = json.dumps(services.monitor_all())
                 logger.debug("reporting stats: {}".format(stats))
 
                 if self._stats_redis:
@@ -185,10 +186,10 @@ class Server:
                         redis_list = self._stats['redis'].get('list', None)
                         if redis_pub:
                             logger.debug("Reporting stats on Redis channel {}".format(redis_pub))
-                            self._stats_redis.publish(redis_pub, stats)
+                            self._stats_redis.publish(redis_pub, stats.encode("ascii"))
                         if redis_list:
                             logger.debug("Reporting stats on Redis list {}".format(redis_list))
-                            self._stats_redis.rpush(redis_list, stats)
+                            self._stats_redis.rpush(redis_list, stats.encode("ascii"))
                     except redis.exceptions.ConnectionError as e:
                         logger.error("Could not report stats to Redis: {}".format(e))
 
