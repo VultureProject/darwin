@@ -11,6 +11,7 @@
 #include <boost/asio.hpp>
 #include "Server.hpp"
 #include "Logger.hpp"
+#include "Stats.hpp"
 
 namespace darwin {
 
@@ -78,6 +79,7 @@ namespace darwin {
         // call will exit.
         DARWIN_LOGGER;
 
+        SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::stopping);
         DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
         _acceptor.close();
         _io_context.stop();

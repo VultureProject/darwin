@@ -21,6 +21,7 @@ extern "C" {
 #include "../../toolkit/xxhash.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "Logger.hpp"
+#include "Stats.hpp"
 #include "SessionTask.hpp"
 #include "protocol.h"
 
@@ -43,17 +44,21 @@ void SessionTask::operator()() {
     auto array = _body.GetArray();
 
     for (auto &line : array) {
+        STAT_INPUT_INC;
         if(ParseLine(line)) {
             SetStartingTime();
             unsigned int certitude;
 
             certitude = ReadFromSession(_token, _repo_ids);
+            if(certitude)
+                STAT_MATCH_INC;
             _certitudes.push_back(certitude);
 
             DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
                             + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
         else {
+            STAT_PARSE_ERROR_INC;
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }

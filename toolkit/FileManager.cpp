@@ -1,7 +1,8 @@
 #include "FileManager.hpp"
 
 #include <thread>
-#include <string.h>
+#include <string>
+#include <unistd.h>
 #include "base/Logger.hpp"
 
 /// \namespace darwin
@@ -9,32 +10,26 @@ namespace darwin {
     /// \namespace toolkit
     namespace toolkit{
 
-        FileManager::FileManager(std::string& file, bool app, bool reopen_on_failure)
+        FileManager::FileManager(const std::string& file, bool app, bool reopen_on_failure)
                 : app{app}, file{file}, reopen_on_failure{reopen_on_failure} {}
 
-        bool FileManager::Open() {
-            if(file_stream.is_open()){
+        bool FileManager::Open(bool force_reopen) {
+            if (not force_reopen && (*this))
                 return true;
-            }
 
-            file_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-            try {
-                if(app){
-                    file_stream.open(file, std::fstream::app);
-                }
-                else{
-                    file_stream.open(file);
-                }
-            } catch (std::fstream::failure& e) {
-                std::cerr << "Error when opening file..." << e.what();
-                return false;
-            }
-            return file_stream.is_open();
+            std::lock_guard<std::mutex> lock(file_mutex);
+            file_stream.close();
+
+            if (app)
+                file_stream.open(file, std::ios_base::in | std::ios_base::out | std::ios_base::app);
+            else
+                file_stream.open(file, std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+
+            return true && (*this); // Little trick to trigger the bool operator instead of cast
         }
 
-        bool FileManager::Write(std::string& s){
-            if(not this->IsOpen()){
-                if (not this->reopen_on_failure or this->Open())
+        bool FileManager::Write(const std::string& s){
+            if(!Open()){
                 return false;
             }
             try {
@@ -47,7 +42,7 @@ namespace darwin {
             return true;
         }
 
-        bool FileManager::operator<<(std::string& str) {
+        bool FileManager::operator<<(const std::string& str) {
             return Write(str);
         }
 
@@ -62,6 +57,10 @@ namespace darwin {
 
         void FileManager::SetReOpenOnFailure(bool reopen) {
             reopen_on_failure = reopen;
+        }
+
+        FileManager::operator bool() {
+            return file_stream.is_open() && file_stream.good() && file_stream && (access(file.c_str(), F_OK) != -1);
         }
 
         FileManager::~FileManager() {

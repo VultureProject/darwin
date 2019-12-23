@@ -28,8 +28,7 @@ add_executable(
 
 target_link_libraries(
     ${ANOMALY_NAME}
-    pthread
-    boost_system
+    ${DARWIN_LIBRARIES}
     lapack
     blas
     ${ARMADILLO_LIBRARY}

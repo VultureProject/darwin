@@ -16,18 +16,18 @@ def requests(request):
         sock.connect(MANAGEMENT_SOCKET_PATH)
     except socket.error as msg:
         logging.error(msg)
-        return None
+        return ""
     try:
         sock.sendall(bytes(request))
     except Exception as e:
         logging.error("manager_socket.utils.requests: Could not send the request: " + str(e))
-        return None
+        return ""
 
     try:
         response = sock.recv(4096).decode()
     except Exception as e:
         logging.error("manager_socket.utils.requests: Could not get the response: " + str(e))
-        return None
+        return ""
 
     return response
 
@@ -97,10 +97,33 @@ CONF_ONE = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_ONE_V2 = """{{
+    "version": 2,
+    "filters": [
+        {{
+            "name": "logs_1",
+            "exec_path": "{0}darwin_logs",
+            "config_file": "{1}",
+            "output": "NONE",
+            "next_filter": "",
+            "nb_thread": 1,
+            "log_level": "DEBUG",
+            "cache_size": 0
+        }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_THREE = """{{
   "logs_1": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -109,7 +132,7 @@ CONF_THREE = """{{
     }},
     "logs_2": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -118,7 +141,7 @@ CONF_THREE = """{{
     }},
     "logs_3": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -127,10 +150,53 @@ CONF_THREE = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_THREE_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "logs_1",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_2",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_3",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
 CONF_THREE_ONE_WRONG = """{{
   "logs_1": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -139,7 +205,7 @@ CONF_THREE_ONE_WRONG = """{{
     }},
     "logs_2": {{
         "exec_path": "wrong_path",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
@@ -148,12 +214,55 @@ CONF_THREE_ONE_WRONG = """{{
     }},
     "logs_3": {{
         "exec_path": "{0}darwin_logs",
-        "config_file":"{1}",
+        "config_file": "{1}",
         "output": "NONE",
         "next_filter": "",
         "nb_thread": 1,
         "log_level": "DEBUG",
         "cache_size": 0
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
+CONF_THREE_ONE_WRONG_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "logs_1",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_2",
+        "exec_path": "wrong_path",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "logs_3",
+        "exec_path": "{0}darwin_logs",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FLOGS)
@@ -168,19 +277,22 @@ CONF_FLOGS_WRONG_CONF = """{
 # Requests
 
 REQ_MONITOR      = b'{"type": "monitor"}'
+REQ_MONITOR_CUSTOM_STATS = b'{"type": "monitor", "proc_stats": ["name", "pid", "memory_percent"]}'
+REQ_MONITOR_ERROR = b'{"type": "monitor", "proc_stats": ["foo", "bar"]}'
 REQ_UPDATE_EMPTY = b'{"type": "update_filters", "filters": []}'
 REQ_UPDATE_ONE   = b'{"type": "update_filters", "filters": ["logs_1"]}'
 REQ_UPDATE_TWO   = b'{"type": "update_filters", "filters": ["logs_2", "logs_3"]}'
 REQ_UPDATE_THREE = b'{"type": "update_filters", "filters": ["logs_1", "logs_2", "logs_3"]}'
 REQ_UPDATE_NON_EXISTING = b'{"type": "update_filters", "filters": ["tototititata"]}'
+REQ_UPDATE_NO_FILTER = b'{"type": "update_filters"}'
 
 # Responses
 
 RESP_EMPTY     = '{}'
 
-RESP_LOGS_1 = '"logs_1": {"status": "running"}'
-RESP_LOGS_2 = '"logs_2": {"status": "running"}'
-RESP_LOGS_3 = '"logs_3": {"status": "running"}'
+RESP_LOGS_1 = '"logs_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
+RESP_LOGS_2 = '"logs_2": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
+RESP_LOGS_3 = '"logs_3": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
 RESP_STATUS_OK = '"status": "OK"'
 RESP_STATUS_KO = '"status": "KO"'
 RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
