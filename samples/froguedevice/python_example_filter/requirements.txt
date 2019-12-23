@@ -1,2 +1,0 @@
-numpy==1.16.4
-python-sample-package==0.4.0

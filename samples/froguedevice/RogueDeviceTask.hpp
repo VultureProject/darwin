@@ -47,7 +47,7 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    bool ParseLine(rapidjson::Value& line, darwin::toolkit::FileManager& file) final;
+    virtual bool ParseLine(rapidjson::Value& line, darwin::toolkit::FileManager& file) final;
 
 private:
     PyObject *_py_function = nullptr; // the Python function to call in the module
