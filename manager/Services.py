@@ -9,6 +9,7 @@ __doc__ = 'Services / filters management'
 import logging
 import json
 import socket
+import settings
 from threading import Lock
 from copy import deepcopy
 from subprocess import Popen, call, TimeoutExpired
@@ -20,7 +21,6 @@ from HeartBeat import HeartBeat
 from time import sleep
 import psutil
 from config import load_conf, ConfParseError
-import settings as s
 
 logger = logging.getLogger()
 
@@ -372,17 +372,17 @@ class Services:
                     new[n]['failures'] = 0
 
                 new[n]['pid_file'] = '{prefix}/run{suffix}/{name}{extension}.pid'.format(
-                    prefix=s.prefix, suffix=s.suffix,
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
                 new[n]['socket'] = '{prefix}/sockets{suffix}/{name}{extension}.sock'.format(
-                    prefix=s.prefix, suffix=s.suffix,
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
                 new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
-                    prefix=s.prefix, suffix=s.suffix,
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 

@@ -10,7 +10,7 @@ import logging
 import json
 from jsonschema import validators, Draft7Validator
 import psutil
-import settings as s
+import settings
 
 
 logger = logging.getLogger()
@@ -268,20 +268,20 @@ def complete_filters_conf():
         filter['status'] = psutil.STATUS_WAKING
         filter['failures'] = 0
         filter['extension'] = '.1'
-        filter['pid_file'] = '{prefix}/run{suffix}/{filter}{extension}.pid'.format(prefix=s.prefix, suffix=s.suffix, filter=filter['name'], extension=filter['extension'])
+        filter['pid_file'] = '{prefix}/run{suffix}/{filter}{extension}.pid'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
 
         if not filter['next_filter']:
             filter['next_filter_unix_socket'] = 'no'
         else:
             filter['next_filter_unix_socket'] = '{prefix}/sockets{suffix}/{next_filter}.sock'.format(
-                prefix=s.prefix, suffix=s.suffix,
+                prefix=prefix, suffix=suffix,
                 next_filter=filter['next_filter']
             )
 
-        filter['socket'] = '{prefix}/sockets{suffix}/{filter}{extension}.sock'.format(prefix=s.prefix, suffix=s.suffix, filter=filter['name'], extension=filter['extension'])
-        filter['socket_link'] = '{prefix}/sockets{suffix}/{filter}.sock'.format(prefix=s.prefix, suffix=s.suffix, filter=filter['name'])
+        filter['socket'] = '{prefix}/sockets{suffix}/{filter}{extension}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
+        filter['socket_link'] = '{prefix}/sockets{suffix}/{filter}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'])
 
         filter['monitoring'] = '{prefix}/sockets{suffix}/{filter}_mon{extension}.sock'.format(
-            prefix=s.prefix, suffix=s.suffix,
+            prefix=prefix, suffix=suffix,
             filter=filter['name'], extension=filter['extension']
         )
