@@ -381,7 +381,7 @@ class Services:
                     name=n, extension=new[n]['extension']
                 )
 
-                new[n]['monitoring'] = '{prefix}/sockets{suffix}/darwin/{name}_mon{extension}.sock'.format(
+                new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
                     prefix=s.prefix, suffix=s.suffix,
                     name=n, extension=new[n]['extension']
                 )
