@@ -38,4 +38,4 @@ target_link_libraries(
 )
 
 target_include_directories(${INSPECTION_NAME} PUBLIC ${LIBYARA_INCLUDE_DIRS})
-target_include_directories(${INSPECTION_NAME} PUBLIC samples/flogs/)
+target_include_directories(${INSPECTION_NAME} PUBLIC samples/finspection/)

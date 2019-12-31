@@ -25,9 +25,9 @@ namespace darwin {
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex)
-            : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
-              _filter_socket{socket.get_executor()}, _connected{false},
-              _cache{cache}, _cache_mutex{cache_mutex} {}
+            : _filter_name(name), _connected{false}, _socket{std::move(socket)},
+              _filter_socket{socket.get_executor()},
+              _manager{manager}, _cache{cache}, _cache_mutex{cache_mutex} {}
 
     void Session::SetStartingTime() {
         _starting_time = std::chrono::high_resolution_clock::now();

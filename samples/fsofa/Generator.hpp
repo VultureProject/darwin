@@ -28,9 +28,9 @@ private:
     static std::string RandomString();
 
 public:
-    darwin::session_ptr_t
+    virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) noexcept override;
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document& configuration) override final;
