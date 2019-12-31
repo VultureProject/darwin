@@ -56,7 +56,7 @@ You will find compilation and dependencies informations for each filters in the 
 
 ### Usage
 
-Usage: `./darwin filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread cache_size threshold[OPTION]`
+Usage: `./darwin [-h] [-l [DEBUG|INFO|WARNING|ERROR|CRITICAL]] filter_name socket_path config_file monitoring_socket_path pid_file output next_filter_socket_path nb_thread cache_size threshold`
 
 Positional arguments:
 - `filter_name` Specify the name of this filter in the logs
@@ -71,13 +71,10 @@ Positional arguments:
 - `threshold` Integer specifying the filter's threshold (if behind 100, take the filter's default threshold)
 
 OPTIONS:
-- `-d` Debug mode, does not create a daemon, set log level to debug
-- `-i` Set log level to info
-- `-w` Set log level to warning (default)
-- `-e` Set log level to error
-- `-c` Set log level to critical
-
-*Note: The only option taken is the one set after `threshold`.*
+- `-h` Show help and exit 
+- `-l [DEBUG|INFO|WARNING|ERROR|CRITICAL|DEVELOPER]` 
+Set log level to DEBUG, INFO, WARNING (default), ERROR, CRITICAL or DEVELOPER.
+DEVELOPER mode does not create a daemon and log level is DEBUG.
 
 *Note: All filter currently log in the same file `/var/log/darwin/darwin.log`*
 

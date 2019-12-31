@@ -93,8 +93,20 @@ class Services:
         :return: The formatted command.
         """
 
-        cmd = [
-            filt['exec_path'],
+        cmd = [filt['exec_path']]
+
+        try:
+            if filt['log_level'] not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DEVELOPER"]:
+                logger.warning(
+                    'Invalid log level argument provided: "{log_level}". Ignoring'.format(filt['log_level'])
+                )
+            else:
+                cmd.append('-l')
+                cmd.append(filt['log_level'])
+        except KeyError:
+            pass
+
+        cmd += [
             filt['name'],
             filt['socket'],
             filt['config_file'],
@@ -106,28 +118,6 @@ class Services:
             str(filt['cache_size']),
             str(filt['threshold']),
         ]
-
-        try:
-            log_level = filt['log_level'].lower()
-
-            if log_level == "debug":
-                cmd.append('-d')
-            elif log_level == "info":
-                cmd.append('-i')
-            elif log_level == "warning":
-                cmd.append('-w')
-            elif log_level == "error":
-                cmd.append('-e')
-            elif log_level == "critical":
-                cmd.append('-c')
-            elif log_level == "developer":
-                cmd.append('-z')
-            else:
-                logger.warning(
-                    'Invalid log level argument provided: "{log_level}". Ignoring'.format(log_level)
-                )
-        except KeyError:
-            pass
 
         return cmd
 

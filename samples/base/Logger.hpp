@@ -12,6 +12,7 @@
 # include <string>
 # include <fstream>
 # include <iostream>
+# include <unordered_map>
 
 // Default log files
 
@@ -66,6 +67,8 @@ namespace darwin {
             Critical
         };
 
+        
+
         /// \class Logger
         class Logger {
         public:
@@ -85,6 +88,12 @@ namespace darwin {
             ///
             /// \param type The log level to set.
             void setLevel(log_type type);
+
+            /// Set the log Level with a given string.
+            ///
+            /// \param level The string that describe the log level wanted. 
+            /// \return true if success, false otherwise.
+            bool setLogLevel(std::string level);
 
             /// Set the name of the module in the logger.
             ///
@@ -119,6 +128,13 @@ namespace darwin {
             std::ofstream _file;
             std::string _name;
             std::mutex _fileMutex;
+            std::unordered_map<std::string, log_type> _map_log_type = {
+                {"DEBUG", logger::Debug},
+                {"INFO", logger::Info},
+                {"NOTICE", logger::Notice},
+                {"WARNING", logger::Warning},
+                {"ERROR", logger::Error},
+                {"CRITICAL", logger::Critical}};
         };
     }
 }

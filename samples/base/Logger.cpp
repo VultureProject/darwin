@@ -75,6 +75,21 @@ namespace darwin {
             _logLevel = type;
         }
 
+        bool Logger::setLogLevel(std::string level){
+            std::unordered_map<std::string, logger::log_type>::iterator it;
+            it = _map_log_type.find(level);
+
+            if (it != _map_log_type.end()) {
+                // FOUND
+                setLevel(it->second);
+                return true;
+            } else {
+                // NOT FOUND
+                return false;
+            }
+            return false;
+        }
+
         void Logger::setName(std::string const& name) {
             _name = name;
         }
