@@ -54,8 +54,6 @@ private:
     bool RunScript() noexcept;
     bool LoadResponseFromFile();
     virtual bool SendToClient() noexcept override;
-    virtual void SendToClientCallback(const boost::system::error_code& e,
-                                        std::size_t size) override;
 
 private:
     PyObject *_py_function = nullptr; // the Python function to call in the module
@@ -63,5 +61,4 @@ private:
     std::string _csv_output_path; //!< Python Script output
     std::string _json_output_path; //!< Python Script output
     std::string _response_body;
-    darwin_filter_packet_t* _response_packet;
 };

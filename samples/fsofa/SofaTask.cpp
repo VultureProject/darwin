@@ -71,37 +71,34 @@ bool SofaTask::LoadResponseFromFile() {
 
 bool SofaTask::SendToClient() noexcept {
     DARWIN_LOGGER;
-    std::size_t packet_size = sizeof(_response_packet) + _response_body.length();
-    DARWIN_LOG_DEBUG("SofaTask::SendToClient:: Packet size is: " + std::to_string(packet_size));
+    std::size_t packet_size = sizeof(darwin_filter_packet_t) + _response_body.length();
+    DARWIN_LOG_DEBUG("SofaTask::SendToClient:: Packet size is: " + std::to_string(packet_size) + "; Body size is: " + std::to_string(_response_body.length()));
 
-    this->_response_packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
-    if (this->_response_packet == nullptr) {
+    darwin_filter_packet_t* response_packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
+    if (response_packet == nullptr) {
         DARWIN_LOG_ERROR("SofaTask::SendToClient:: Unable to allocate response packet memory");
         return false;
     }
 
     DARWIN_LOG_DEBUG("SofaTask::SendToClient:: Building response packet");
-    memset(this->_response_packet, 0, packet_size);
-    this->_response_packet->type = DARWIN_PACKET_FILTER;
-    this->_response_packet->response = this->_header.response;
-    this->_response_packet->certitude_size = 0;
-    this->_response_packet->filter_code = GetFilterCode();
-    this->_response_packet->body_size = _response_body.length();
-    memcpy(this->_response_packet->evt_id, this->_header.evt_id, 16);
+    memset(response_packet, 0, packet_size);
+    response_packet->type = DARWIN_PACKET_FILTER;
+    response_packet->response = this->_header.response;
+    response_packet->certitude_size = 0;
+    response_packet->filter_code = GetFilterCode();
+    response_packet->body_size = _response_body.length();
+    memcpy(response_packet->evt_id, this->_header.evt_id, 16);
+    memcpy((char*)(response_packet) + sizeof(darwin_filter_packet_t), _response_body.c_str(), _response_body.length());
 
+    DARWIN_LOG_DEBUG("SofaTask::SendToClient:: Sending response packet async");
     boost::asio::async_write(this->_socket,
-                        boost::asio::buffer(this->_response_packet, packet_size),
+                        boost::asio::buffer(response_packet, packet_size),
                         boost::bind(&SofaTask::SendToClientCallback, this,
                                     boost::asio::placeholders::error,
                                     boost::asio::placeholders::bytes_transferred));
+    DARWIN_LOG_DEBUG("SofaTask::SendToClient:: Async response sending done");
+    free(response_packet);
     return true;
-}
-
-void SofaTask::SendToClientCallback(const boost::system::error_code& e,
-                                    std::size_t size) {
-    free(this->_response_packet);
-    this->_response_packet = nullptr;
-    Session::SendToClientCallback(e, size);
 }
 
 bool SofaTask::RunScript() noexcept {
@@ -121,6 +118,7 @@ bool SofaTask::RunScript() noexcept {
                          "function");
         ret = false;
     } else {
+        DARWIN_LOG_DEBUG("SofaTask:: RunScript:: Python Function Call returned true");
         if ((truthy = PyObject_IsTrue(py_return_value)) == -1) {
             DARWIN_LOG_ERROR("SofaTask:: RunScript:: Unable to get python function return");
             ret = false;
@@ -201,7 +199,7 @@ bool SofaTask::ParseLine(rapidjson::Value& line,
             DARWIN_LOG_WARNING("SofaTask:: ParseLine: Value is not an integer.");
             return false;
         }
-        ss << items[i].GetString();
+        ss << '"' << items[i].GetString() << '"';
         if (i < 4)
             ss << ',';
     }
