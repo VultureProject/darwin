@@ -29,6 +29,13 @@ SofaTask::SofaTask(boost::asio::local::stream_protocol::socket& socket,
     _is_cache = _cache != nullptr;
 }
 
+SofaTask::~SofaTask() {
+    // Just in case
+    unlink(this->_csv_input_path.c_str()); // Deleting input csv
+    unlink(this->_csv_output_path.c_str()); // Deleting output csv
+    unlink(this->_json_output_path.c_str()); // Deleting output json
+}
+
 long SofaTask::GetFilterCode() noexcept {
     return DARWIN_FILTER_SOFA;
 }
@@ -44,7 +51,9 @@ void SofaTask::operator()() {
         _response_body.clear();
         DARWIN_LOG_INFO("SofaTask:: Error occured during script run");
     }
-    // unlink(this->_csv_input_path.c_str()); // Deleting input csv
+    unlink(this->_csv_input_path.c_str()); // Deleting input csv
+    unlink(this->_csv_output_path.c_str()); // Deleting output csv
+    unlink(this->_json_output_path.c_str()); // Deleting output json
 }
 
 bool SofaTask::LoadResponseFromFile() {
@@ -193,13 +202,25 @@ bool SofaTask::ParseLine(rapidjson::Value& line,
         return false;
     }
 
-    // ss << "IP,HOSTNAME,OS,PROTO,PORT" << std::endl;
     for (int i = 0; i < 5; ++i) {
         if (not items[i].IsString()) {
             DARWIN_LOG_WARNING("SofaTask:: ParseLine: Value is not an integer.");
             return false;
         }
-        ss << '"' << items[i].GetString() << '"';
+        auto item = items[i].GetString();
+        size_t j = 0;
+        bool quotes = false;
+        while (item[j] != '\0') {
+            if (item[j] == ',') {
+                quotes = true;
+                break;
+            }
+            j++;
+        }
+        if (not quotes)
+            ss << item;
+        else
+            ss << '"' << item << '"';
         if (i < 4)
             ss << ',';
     }

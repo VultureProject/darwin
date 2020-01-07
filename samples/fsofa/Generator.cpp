@@ -98,9 +98,9 @@ bool Generator::LoadPythonCode(const std::string& python_env_path_str, const std
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
-    std::string input_csv = RandomString() + ".csv";
-    std::string output_csv = RandomString() + ".csv";
-    std::string output_json = RandomString() + ".json";
+    std::string input_csv = "/var/tmp/" + RandomString() + ".csv";
+    std::string output_csv = "/var/tmp/" + RandomString() + ".csv";
+    std::string output_json = "/var/tmp/" + RandomString() + ".json";
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<SofaTask>(socket, manager, _cache,
                                             _cache_mutex, _py_function,

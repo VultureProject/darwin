@@ -34,7 +34,7 @@ public:
                             std::string output_csv,
                             std::string output_json);
 
-    ~SofaTask() override = default;
+    ~SofaTask() override;
 
 public:
     // You need to override the functor to compile and be executed by the thread
