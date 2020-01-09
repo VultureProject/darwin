@@ -12,7 +12,6 @@
 #include <iostream>
 #include <stdio.h>
 #include <ctype.h>
-#include <stdio.h>
 
 #include "Generator.hpp"
 #include "Logger.hpp"
