@@ -10,13 +10,12 @@ import socket
 import logging
 import redis
 import os
+import settings
 from JsonSocket import JsonSocket
 from time import sleep
 import json
 
-
 logger = logging.getLogger()
-
 
 class Server:
     """
@@ -30,7 +29,8 @@ class Server:
         self._continue = True
         self.running = False
         self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._socket.bind('/var/sockets/darwin/darwin.sock')
+        self._socket.bind('{}/sockets{}/darwin.sock'
+                          .format(prefix, suffix))
         self._socket.listen(5)
         self._socket.settimeout(1)
 
@@ -39,7 +39,7 @@ class Server:
         Close the socket.
         """
         self._socket.close()
-        os.unlink('/var/sockets/darwin/darwin.sock')
+        os.unlink('{}/sockets{}/darwin.sock'.format(prefix, suffix))
 
     def process(self, services, cli, cmd):
         """

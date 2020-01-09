@@ -11,6 +11,8 @@ import logging
 import argparse
 import signal
 import atexit
+import os
+import settings
 from sys import exit
 from daemon import DaemonContext
 from lockfile import FileLock
@@ -23,6 +25,18 @@ from config import load_conf, ConfParseError
 from config import filters as conf_filters
 from config import stats_reporting as conf_stats_report
 
+def make_setup(dirs, prefix, suffix):
+    """
+        Create directories if it doesn't exist
+        :param dirs: name of the directories to be created
+        :param prefix: directory's path preffix
+        :param suffix : directory's path suffix
+    """
+    for d in dirs:
+        path = '{}/{}{}'.format(prefix, d, suffix)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
 # Argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('config_file', type=str, help='The configuration file to use')
@@ -30,7 +44,29 @@ parser.add_argument('-l', '--log-level',
                     help='Set log level to DEBUG, INFO, WARNING (default), ERROR or CRITICAL',
                     choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                     type=str)
+parser.add_argument('-p', '--prefix-directories',
+                    help='Set the prefix used for darwin files, default : \"/var\"',
+                    default='var',
+                    type=str)
+
+suffix_exclusive = parser.add_mutually_exclusive_group()
+suffix_exclusive.add_argument('-s', '--suffix-directories',
+                    help='Set the suffix used for darwin files, default : \"/darwin\"',
+                    default='darwin',
+                    type=str)
+suffix_exclusive.add_argument('--no-suffix-directories',
+                    help='Use no suffix for darwin files',
+                    action='store_true')
+
 args = parser.parse_args()
+
+prefix = '{}'.format(args.prefix_directories)
+if args.no_suffix_directories:
+    suffix = ''
+else:
+    suffix = '{}'.format(args.suffix_directories)
+
+make_setup(['log', 'run', 'sockets'], prefix, suffix)
 
 # Logger config
 loglevel = logging.WARNING
@@ -49,7 +85,12 @@ logger.setLevel(loglevel)
 formatter = logging.Formatter(
     '{"date":"%(asctime)s","level":"%(levelname)s","message":"%(message)s"}')
 
-file_handler = FileHandler('/var/log/darwin/darwin_manager.log')
+# Create log file if doesn't exist
+log_path = '{}/log{}/darwin_manager.log'.format(prefix, suffix)
+if not os.path.isfile(log_path):
+    open(log_path, "a+").close()
+
+file_handler = FileHandler(log_path, mode="a+")
 
 file_handler.setLevel(loglevel)
 file_handler.setFormatter(formatter)
@@ -83,7 +124,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGHUP, rotate_logs)
 
     logger.info("Starting...")
-    daemon_context = DaemonContext(pidfile=FileLock('/var/run/darwin/manager.pid'),)
+    daemon_context = DaemonContext(pidfile=FileLock('{}/run{}/manager.pid'.format(suffix, prefix)),)
     daemon_context.detach_process = False
     logger.debug("daemon DONE")
 

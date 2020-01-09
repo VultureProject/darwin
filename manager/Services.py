@@ -9,6 +9,7 @@ __doc__ = 'Services / filters management'
 import logging
 import json
 import socket
+import settings
 from threading import Lock
 from copy import deepcopy
 from subprocess import Popen, call, TimeoutExpired
@@ -370,15 +371,18 @@ class Services:
                 except KeyError:
                     new[n]['failures'] = 0
 
-                new[n]['pid_file'] = '/var/run/darwin/{name}{extension}.pid'.format(
+                new[n]['pid_file'] = '{prefix}/run{suffix}/{name}{extension}.pid'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
-                new[n]['socket'] = '/var/sockets/darwin/{name}{extension}.sock'.format(
+                new[n]['socket'] = '{prefix}/sockets{suffix}/{name}{extension}.sock'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
-                new[n]['monitoring'] = '/var/sockets/darwin/{name}_mon{extension}.sock'.format(
+                new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
