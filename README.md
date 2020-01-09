@@ -76,10 +76,6 @@ OPTIONS:
 Set log level to DEBUG, INFO, WARNING (default), ERROR, CRITICAL or DEVELOPER.
 DEVELOPER mode does not create a daemon and log level is DEBUG.
 
-*Note: All filter currently log in the same file `/var/log/darwin/darwin.log`*
-
-*Note: All filter write a pid file in the following path: `/var/run/darwin/filter_name.pid`*
-
 ## Filter Manager
 
 ### Python Version
