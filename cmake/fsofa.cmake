@@ -15,9 +15,9 @@ add_executable(
 target_link_libraries(
     ${SOFA_NAME}
     ${DARWIN_LIBRARIES}
-    python3.6m
+    python3.7m
     boost_filesystem
 )
 
-target_include_directories(${SOFA_NAME} PUBLIC /usr/local/include/python3.6m/)
+target_include_directories(${SOFA_NAME} PUBLIC /usr/local/include/python3.7m/)
 target_include_directories(${SOFA_NAME} PUBLIC samples/fsofa/)
