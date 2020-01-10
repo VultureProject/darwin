@@ -1,5 +1,6 @@
 import filters.fdga as fdga
 import filters.flogs as flogs
+import filters.fsofa as fsofa
 import filters.ftanomaly as ftanomaly 
 import filters.fconnection as fconnection
 import filters.fhostlookup as fhostlookup
@@ -14,6 +15,7 @@ def run():
     fconnection.run()
     flogs.run()
     fhostlookup.run()
+    fsofa.run()
 
     print()
     print()
