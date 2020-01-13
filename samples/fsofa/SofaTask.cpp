@@ -127,7 +127,7 @@ bool SofaTask::RunScript() noexcept {
                          "function");
         ret = false;
     } else {
-        DARWIN_LOG_DEBUG("SofaTask:: RunScript:: Python Function Call returned true");
+        DARWIN_LOG_DEBUG("SofaTask:: RunScript:: Python Function Call succeeded");
         if ((truthy = PyObject_IsTrue(py_return_value)) == -1) {
             DARWIN_LOG_ERROR("SofaTask:: RunScript:: Unable to get python function return");
             ret = false;
