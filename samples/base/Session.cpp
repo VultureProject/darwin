@@ -447,6 +447,7 @@ namespace darwin {
     }
 
     std::string Session::Evt_idToString() {
+        DARWIN_LOGGER;
         char str[37] = {};
         snprintf(str,
                 37,
@@ -457,6 +458,7 @@ namespace darwin {
                 _header.evt_id[12], _header.evt_id[13], _header.evt_id[14], _header.evt_id[15]
         );
         std::string res(str);
+        DARWIN_LOG_DEBUG(std::string("Session::Evt_idToString:: UUID - ") + res);
         return res;
     }
 

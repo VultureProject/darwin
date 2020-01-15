@@ -4,7 +4,7 @@ import os
 from tools.filter import Filter
 from tools.output import print_result
 from darwin import DarwinApi
-from conf import TEST_PATH, PYTHON_ENV_PATH
+from conf import MOCK_PATH, PYTHON_ENV_PATH
 
 EXPECTED_HEADER = "IP,HOSTNAME,OS,PROTO,PORT"
 
@@ -12,7 +12,7 @@ class Sofa(Filter):
     def __init__(self):
         super().__init__(filter_name="sofa")
 
-    def configure(self, env=PYTHON_ENV_PATH, module="sofa_mock", function="main", test_dir=TEST_PATH):
+    def configure(self, env=PYTHON_ENV_PATH, module="sofa_mock", function="main", test_dir=MOCK_PATH):
         content = '{{\n' \
                   '"python_env_path": "{python_env_path}",\n' \
                   '"module": "{module}",\n' \
