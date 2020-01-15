@@ -10,8 +10,9 @@ namespace darwin {
     /// \namespace toolkit
     namespace toolkit{
 
-        FileManager::FileManager(const std::string& file, bool app)
-                : app{app}, file{file} {}
+        FileManager::FileManager(const std::string& file, bool app, bool reopen_on_failure, std::size_t nb_retry)
+                : app{app}, file{file}, reopen_on_failure{reopen_on_failure},
+                _nb_retry{nb_retry} {}
 
         bool FileManager::Open(bool force_reopen) {
             if (not force_reopen && (*this))
@@ -29,18 +30,20 @@ namespace darwin {
         }
 
         bool FileManager::Write(const std::string& s){
-            if(!Open()){
-                return false;
+            bool force_reopen = false;
+            for (std::size_t i = 0; i < this->_nb_retry; ++i) {
+                if(Open(force_reopen)){
+                    try {
+                        std::lock_guard<std::mutex> lock(file_mutex);
+                        file_stream << s << std::flush;
+                        return true;
+                    } catch (std::ofstream::failure& e) {
+                        std::cerr << "Exception when writing in file..." << e.what();
+                    }
+                }
+                force_reopen = true;
             }
-            try {
-                std::lock_guard<std::mutex> lock(file_mutex);
-                file_stream << s << std::flush;
-            }catch (std::ofstream::failure& e) {
-                std::cerr << "Exception when writing in file..." << e.what();
-                return false;
-            }
-
-            return true;
+            return false;
         }
 
         bool FileManager::operator<<(const std::string& str) {
@@ -50,6 +53,14 @@ namespace darwin {
         bool FileManager::operator<<(int val) {
             std::string val_str = std::to_string(val);
             return Write(val_str);
+        }
+
+        bool FileManager::IsOpen() {
+            return this->file_stream.is_open();
+        }
+
+        void FileManager::SetReOpenOnFailure(bool reopen) {
+            reopen_on_failure = reopen;
         }
 
         FileManager::operator bool() {

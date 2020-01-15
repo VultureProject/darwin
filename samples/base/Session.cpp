@@ -25,9 +25,9 @@ namespace darwin {
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex)
-            : _filter_name(name), _socket{std::move(socket)}, _manager{manager},
-              _filter_socket{socket.get_executor()}, _connected{false},
-              _cache{cache}, _cache_mutex{cache_mutex} {}
+            : _filter_name(name), _connected{false}, _socket{std::move(socket)},
+              _filter_socket{socket.get_executor()},
+              _manager{manager}, _cache{cache}, _cache_mutex{cache_mutex} {}
 
     void Session::SetStartingTime() {
         _starting_time = std::chrono::high_resolution_clock::now();
@@ -447,6 +447,7 @@ namespace darwin {
     }
 
     std::string Session::Evt_idToString() {
+        DARWIN_LOGGER;
         char str[37] = {};
         snprintf(str,
                 37,
@@ -457,6 +458,7 @@ namespace darwin {
                 _header.evt_id[12], _header.evt_id[13], _header.evt_id[14], _header.evt_id[15]
         );
         std::string res(str);
+        DARWIN_LOG_DEBUG(std::string("Session::Evt_idToString:: UUID - ") + res);
         return res;
     }
 

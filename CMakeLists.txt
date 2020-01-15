@@ -147,3 +147,7 @@ endif()
 if("TEST" IN_LIST FILTERS)
 include(ftest)
 endif()
+
+if(SOFA IN_LIST FILTERS)
+include(fsofa)
+endif()
