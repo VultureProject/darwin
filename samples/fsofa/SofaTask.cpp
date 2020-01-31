@@ -198,7 +198,7 @@ bool SofaTask::ParseLine(rapidjson::Value& line,
     auto items = line.GetArray();
 
     if (items.Size() != 5) {
-        DARWIN_LOG_WARNING("SofaTask:: ParseLine: You must provide exactly 11 arguments per entry. Ignoring entry...");
+        DARWIN_LOG_WARNING("SofaTask:: ParseLine: You must provide exactly 5 arguments per entry. Ignoring entry...");
         return false;
     }
 
