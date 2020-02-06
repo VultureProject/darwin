@@ -1,8 +1,0 @@
-{
-  "log_file_path": "/var/log/darwin/alerts.log",
-  "redis_socket_path": "/var/sockets/redis/redis.sock",
-  "alert_redis_list_name": "darwin_alerts",
-  "alert_redis_channel_name": "darwin.alerts",
-  "init_data_path": "/home/darwin/conf/fconnection/init_data_file.example",
-  "redis_expire": 300
-}

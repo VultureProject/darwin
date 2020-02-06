@@ -1,6 +1,0 @@
-{
-  "python_env_path": "/home/vlt-os/env/bin/python",
-  "module": "scan_analysis_anomaly_core",
-  "function": "main",
-  "custom_python_path": "/home/darwin/conf/fsofa/"
-}
