@@ -2,6 +2,8 @@ import threading
 
 import filters.fdga as fdga
 import filters.flogs as flogs
+import filters.fsofa as fsofa
+import filters.fanomaly as fanomaly
 import filters.ftanomaly as ftanomaly 
 import filters.fconnection as fconnection
 import filters.fhostlookup as fhostlookup
@@ -15,7 +17,9 @@ def run():
         fconnection,
         flogs,
         fhostlookup,
-        ftanomaly
+        ftanomaly,
+        fsofa,
+        fanomaly
     ]
 
     threads = list()
