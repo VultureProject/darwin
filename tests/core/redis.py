@@ -3,15 +3,30 @@ import threading
 from time import sleep
 from tools.redis_utils import RedisServer
 from tools.output import print_result
-from filters.flogs import Logs
+from tools.filter import Filter
 
 
 REDIS_SOCKET_PATH = "/tmp/redis.socket"
 REDIS_LIST_NAME = "redisTest"
-FLOGS_CONF_TEMPLATE = """{{
+FTEST_CONF_TEMPLATE = """{{
     "redis_socket_path": "{0}",
-    "redis_list_name": "{1}"
+    "alert_redis_list_name": "{1}"
 }}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME)
+
+
+class TestFilter(Filter):
+    def __init__(self, redis_server=None):
+        super().__init__(filter_name='test')
+        self.redis_server = redis_server
+
+    def log(self, log_line):
+        """
+        Send a single log line.
+        """
+        api = DarwinApi(socket_type="unix", socket_path=self.socket)
+        api.call(log_line, filter_code=0x74657374, response_type="no")
+        api.close()
+
 
 def run():
     tests = [
@@ -30,9 +45,9 @@ def run():
 def simple_master_server():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master)
-    filter.configure(FLOGS_CONF_TEMPLATE)
-    filter.start()
+    filter = TestFilter(redis_server=master)
+    filter.configure(FTEST_CONF_TEMPLATE)
+    filter.valgrind_start()
 
     try:
         filter.log(b'The cake is a lie')
@@ -55,9 +70,9 @@ def master_slave():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
-    filter.configure(FLOGS_CONF_TEMPLATE)
-    filter.start()
+    filter = TestFilter(redis_server=slave)
+    filter.configure(FTEST_CONF_TEMPLATE)
+    filter.valgrind_start()
 
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
@@ -82,9 +97,9 @@ def master_slave_master_fail():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
-    filter.configure(FLOGS_CONF_TEMPLATE)
-    filter.start()
+    filter = TestFilter(redis_server=slave)
+    filter.configure(FTEST_CONF_TEMPLATE)
+    filter.valgrind_start()
 
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
@@ -120,11 +135,11 @@ def master_slave_master_off():
     master = RedisServer(address="127.0.0.1", port=1234)
     slave = RedisServer(unix_socket="/tmp/redis.socket", master=master)
 
-    filter = Logs(redis_server=slave)
-    filter.configure(FLOGS_CONF_TEMPLATE)
+    filter = TestFilter(redis_server=slave)
+    filter.configure(FTEST_CONF_TEMPLATE)
     master.stop()
 
-    filter.start()
+    filter.valgrind_start()
 
     try:
         filter.log(b'It s dangerous out there. Take this sword.')
@@ -149,9 +164,9 @@ def master_slave_master_off():
 def master_timeout_restart():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master)
-    filter.configure(FLOGS_CONF_TEMPLATE)
-    filter.start()
+    filter = TestFilter(redis_server=master)
+    filter.configure(FTEST_CONF_TEMPLATE)
+    filter.valgrind_start()
 
     try:
         filter.log(b'The cake is a lie')
@@ -187,9 +202,9 @@ def master_timeout_restart():
 def multi_thread_master():
     master = RedisServer(unix_socket="/tmp/redis.socket")
 
-    filter = Logs(redis_server=master, nb_threads=5)
-    filter.configure(FLOGS_CONF_TEMPLATE)
-    filter.start()
+    filter = TestFilter(redis_server=master, nb_threads=5)
+    filter.configure(FTEST_CONF_TEMPLATE)
+    filter.valgrind_start()
 
     thread_list = []
     def thread_brute(filter, count_log):

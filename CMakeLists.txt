@@ -23,7 +23,6 @@ if (NOT DEFINED FILTER)
         CONNECTION
         TANOMALY
         ANOMALY
-        LOGS
         CONTENT_INSPECTION
     )
 else (NOT DEFINED FILTER)
@@ -111,10 +110,6 @@ set(
 ###########################
 
 message("Generating CMake files for the filters: ${FILTERS}")
-
-if(LOGS IN_LIST FILTERS)
-include(flogs)
-endif()
 
 if(CONNECTION IN_LIST FILTERS)
 include(fconnection)
