@@ -4,6 +4,7 @@ from time import sleep
 from tools.redis_utils import RedisServer
 from tools.output import print_result
 from tools.filter import Filter
+from darwin import DarwinApi
 
 
 REDIS_SOCKET_PATH = "/tmp/redis.socket"
@@ -15,8 +16,8 @@ FTEST_CONF_TEMPLATE = """{{
 
 
 class TestFilter(Filter):
-    def __init__(self, redis_server=None):
-        super().__init__(filter_name='test')
+    def __init__(self, redis_server=None, nb_threads=1):
+        super().__init__(filter_name='test', nb_thread=nb_threads)
         self.redis_server = redis_server
 
     def log(self, log_line):
@@ -24,7 +25,7 @@ class TestFilter(Filter):
         Send a single log line.
         """
         api = DarwinApi(socket_type="unix", socket_path=self.socket)
-        api.call(log_line, filter_code=0x74657374, response_type="no")
+        api.call([log_line], filter_code=0x74657374, response_type="no")
         api.close()
 
 
@@ -50,9 +51,9 @@ def simple_master_server():
     filter.valgrind_start()
 
     try:
-        filter.log(b'The cake is a lie')
-    except Exception:
-        logging.error("simple_master_server: Could not connect to logs filter")
+        filter.log('The cake is a lie')
+    except Exception as e:
+        logging.error("simple_master_server: Could not connect to logs filter: " + str(e))
         return False
 
     sleep(1)
@@ -75,7 +76,7 @@ def master_slave():
     filter.valgrind_start()
 
     try:
-        filter.log(b'It s dangerous out there. Take this sword.')
+        filter.log('It s dangerous out there. Take this sword.')
     except Exception:
         logging.error("master_slave: Could not connect to logs filter")
         return False
@@ -102,7 +103,7 @@ def master_slave_master_fail():
     filter.valgrind_start()
 
     try:
-        filter.log(b'It s dangerous out there. Take this sword.')
+        filter.log('It s dangerous out there. Take this sword.')
     except Exception:
         logging.error("master_slave_master_fail: Could not connect to logs filter")
         return False
@@ -111,7 +112,7 @@ def master_slave_master_fail():
     sleep(1)
 
     try:
-        filter.log(b'You re gonna have a bad time.')
+        filter.log('You re gonna have a bad time.')
     except Exception:
         logging.error("master_slave_master_fail: Could not connect to logs filter")
         return False
@@ -142,7 +143,7 @@ def master_slave_master_off():
     filter.valgrind_start()
 
     try:
-        filter.log(b'It s dangerous out there. Take this sword.')
+        filter.log('It s dangerous out there. Take this sword.')
     except Exception:
         logging.error("master_slave_master_off: Could not connect to logs filter")
         return False
@@ -169,7 +170,7 @@ def master_timeout_restart():
     filter.valgrind_start()
 
     try:
-        filter.log(b'The cake is a lie')
+        filter.log('The cake is a lie')
     except Exception:
         logging.error("master_timeout: Could not connect to logs filter")
         return False
@@ -184,7 +185,7 @@ def master_timeout_restart():
         return False
 
     try:
-        filter.log(b'The cake is a lie')
+        filter.log('The cake is a lie')
     except Exception:
         logging.error("master_timeout: Could not connect to logs filter")
         return False
@@ -210,7 +211,7 @@ def multi_thread_master():
     def thread_brute(filter, count_log):
         for count in range(0, count_log):
             try:
-                filter.log(b'All work and no play makes Jake a dull boy.')
+                filter.log('All work and no play makes Jake a dull boy.')
             except:
                 return False
         return True
