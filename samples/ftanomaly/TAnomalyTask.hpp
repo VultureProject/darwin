@@ -28,7 +28,8 @@ public:
                                        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                        std::mutex& cache_mutex,
                                        std::shared_ptr<AnomalyThreadManager> vat,
-                                       std::string redis_list_name);
+                                       std::string redis_list_name,
+                                       bool& detection_mode);
     ~AnomalyTask() override = default;
 
 public:
@@ -53,7 +54,7 @@ private:
     bool REDISAddEntry() noexcept;
 
 private:
-    bool _learning_mode = true;
+    bool& _detection_mode;
     std::string _redis_list_name;
     std::string _entry;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;

@@ -22,9 +22,10 @@ AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
                              std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                              std::mutex& cache_mutex,
                              std::shared_ptr<AnomalyThreadManager> vat,
-                             std::string redis_list_name)
+                             std::string redis_list_name,
+                             bool& detection_mode)
         : Session{"tanomaly", socket, manager, cache, cache_mutex}, _redis_list_name{std::move(redis_list_name)},
-        _anomaly_thread_manager{std::move(vat)}
+        _anomaly_thread_manager{std::move(vat)}, _detection_mode{detection_mode}
 {
 }
 
@@ -34,7 +35,7 @@ long AnomalyTask::GetFilterCode() noexcept {
 
 void AnomalyTask::operator()() {
     DARWIN_LOGGER;
-    if (_learning_mode){
+    if (_detection_mode){
         _anomaly_thread_manager->Start();
     } else {
         _anomaly_thread_manager->Stop();
@@ -76,30 +77,36 @@ bool AnomalyTask::ParseBody() {
         if (!document.IsObject()) {
             DARWIN_LOG_ERROR("AnomalyTask:: ParseBody:: You must provide a valid Json");
             return false;
+        }else{
+            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body is a json");
         }
 
-        //********LEARNING MODE*********//
-        if (document.HasMember("learning_mode")){
-            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has learning mode");
-            if (!document["learning_mode"].IsString()) {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"learning_mode\" needs to be a string");
+        //********DETECTION MODE*********//
+        if (document.HasMember("detection_mode")){
+            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has detection mode");
+            if (!document["detection_mode"].IsString()) {
+                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"detection_mode\" needs to be a string");
                 return false;
             }
 
-            std::string learning_mode = document["learning_mode"].GetString();
+            std::string detection_mode = document["detection_mode"].GetString();
 
-            if (learning_mode=="on"){
-                _learning_mode = true;
-            } else if (learning_mode=="off"){
-                _learning_mode = false;
+            if (detection_mode=="on"){
+                _detection_mode = true;
+            } else if (detection_mode=="off"){
+                _detection_mode = false;
             } else {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"learning_mode\" has to be either \"on\" or \"off\"");
+                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"detection_mode\" has to be either \"on\" or \"off\"");
                 return false;
             }
-        }
-        //********LEARNING MODE*********//
+        } 
+        //********DETECTION MODE*********//
 
         //*************DATA************//
+        // In case there is no data field in the body
+        _body.SetArray();
+        rapidjson::Document::AllocatorType& allocator = _body.GetAllocator();
+
         if (document.HasMember("data")){
             DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has data");
             rapidjson::Value& data = document["data"];

@@ -125,5 +125,5 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<AnomalyTask>(socket, manager, _cache, _cache_mutex,
-                                          _anomaly_thread_manager, _redis_internal));
+                                          _anomaly_thread_manager, _redis_internal, _detection_mode));
 }

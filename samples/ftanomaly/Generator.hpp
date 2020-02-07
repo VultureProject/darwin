@@ -32,6 +32,7 @@ public:
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
+    bool _detection_mode = true;
     std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
     std::string _redis_internal = REDIS_INTERNAL_LIST;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager;
