@@ -372,7 +372,7 @@ def detection_mode_on_test():
     redis_data = tanomaly_filter.get_internal_redis_data()
 
     if redis_data != set():
-        logging.error("detection_mode_off_test: Expected no data but got {} in redis".format(expected_data, redis_data))
+        logging.error("detection_mode_off_test: Expected no data but got {} in redis".format(redis_data))
         ret = False
 
     # CLEAN
