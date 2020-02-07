@@ -23,10 +23,7 @@
 
 class AnomalyThreadManager: public darwin::toolkit::ThreadManager{
 public:
-    AnomalyThreadManager(std::string& redis_internal,
-                         std::shared_ptr<darwin::toolkit::FileManager> log_file,
-                         std::string& redis_alerts_channel,
-                         std::string& redis_alerts_list);
+    AnomalyThreadManager(std::string& redis_internal);
     ~AnomalyThreadManager() override = default;
 
 private:
@@ -87,10 +84,5 @@ private:
     // ips linked to pre-processed data :   [  ip1,   ip2   ]
     std::vector<std::string> _ips;
 
-    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
-    const std::string _redis_internal; // redis' list which contain our data
-    const std::string _redis_alerts_channel; //the channel on which to publish alerts when detected
-    const std::string _redis_alerts_list; //the list on which to add alerts when detected
-    bool _is_log_redis; //is there a channel and/or list to put alerts to ?
-    bool _is_log_file; //is there a log file to put alerts to ?
+    const std::string _redis_internal;
 };

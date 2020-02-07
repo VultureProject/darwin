@@ -24,27 +24,16 @@ class TAnomaly(Filter):
         self.test_data = None
         self.internal_redis = self.filter_name + "_anomalyFilter_internal"
 
-    def configure(self, legacy=False):
-        if legacy:
-            content = '{{\n' \
-                    '"redis_socket_path": "{redis_socket}",\n' \
-                    '"redis_list_name": "{redis_list}",\n' \
-                    '"redis_channel_name": "{redis_channel}",\n' \
-                    '"log_file_path": "{log_file}"\n'\
-                    '}}'.format(redis_socket=REDIS_SOCKET,
-                                redis_list=REDIS_ALERT_LIST,
-                                redis_channel=REDIS_ALERT_CHANNEL,
-                                log_file=ALERT_FILE)
-        else:
-            content = '{{\n' \
-                    '"redis_socket_path": "{redis_socket}",\n' \
-                    '"alert_redis_list_name": "{redis_list}",\n' \
-                    '"alert_redis_channel_name": "{redis_channel}",\n' \
-                    '"log_file_path": "{log_file}"\n'\
-                    '}}'.format(redis_socket=REDIS_SOCKET,
-                                redis_list=REDIS_ALERT_LIST,
-                                redis_channel=REDIS_ALERT_CHANNEL,
-                                log_file=ALERT_FILE)
+    def configure(self):
+        content = '{{\n' \
+            '"redis_socket_path": "{redis_socket}",\n' \
+            '"alert_redis_list_name": "{redis_list}",\n' \
+            '"alert_redis_channel_name": "{redis_channel}",\n' \
+            '"log_file_path": "{log_file}"\n'\
+            '}}'.format(redis_socket=REDIS_SOCKET,
+                        redis_list=REDIS_ALERT_LIST,
+                        redis_channel=REDIS_ALERT_CHANNEL,
+                        log_file=ALERT_FILE)
         super().configure(content)
 
     def clean_files(self):
@@ -131,9 +120,6 @@ def run():
         alert_in_redis_test,
         alert_published_test,
         alert_in_file_test,
-        alert_in_redis_test_legacy,
-        alert_published_test_legacy,
-        alert_in_file_test_legacy,
     ]
 
     for i in tests:
@@ -331,12 +317,12 @@ def format_alert(alert, test_name):
             logging.error("{} : No time in the alert : {}.".format(test_name, res))
         return res
 
-def alert_in_redis_test(legacy=False):
+def alert_in_redis_test():
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly()
-    tanomaly_filter.configure(legacy)
+    tanomaly_filter.configure()
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -400,12 +386,12 @@ def alert_in_redis_test(legacy=False):
     return ret
 
 
-def alert_published_test(legacy=False):
+def alert_published_test():
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly()
-    tanomaly_filter.configure(legacy)
+    tanomaly_filter.configure()
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -488,12 +474,12 @@ def alert_published_test(legacy=False):
     return ret
 
 
-def alert_in_file_test(legacy=False):
+def alert_in_file_test():
     ret = True
 
     # CONFIG
     tanomaly_filter = TAnomaly()
-    tanomaly_filter.configure(legacy)
+    tanomaly_filter.configure()
 
     # START FILTER
     if not tanomaly_filter.valgrind_start():
@@ -559,18 +545,3 @@ def alert_in_file_test(legacy=False):
         ret = False
 
     return ret
-
-
-# Legacy tests uses legacy configuration format
-def alert_in_redis_test_legacy():
-    return alert_in_redis_test(legacy=True)
-
-
-# Legacy tests uses legacy configuration format
-def alert_published_test_legacy():
-    return alert_published_test(legacy=True)
-
-
-# Legacy tests uses legacy configuration format
-def alert_in_file_test_legacy():
-    return  alert_in_file_test(legacy=True)

@@ -20,6 +20,9 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Test:: Generator:: Loading Configuration...");
 
+    if (configuration.HasMember("fail_config"))
+        return false;
+
     return true;
 }
 
