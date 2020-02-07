@@ -120,7 +120,10 @@ class TAnomaly(Filter):
 
 
 def run():
+
     tests = [
+        detection_mode_off_test,
+        detection_mode_on_test,
         well_formatted_data_test,
         data_too_short_ignored_test,
         not_data_string_ignored_test,
@@ -139,16 +142,14 @@ def run():
     for i in tests:
         print_result("tanomaly: " + i.__name__, i)
 
+def data_to_bytes(data):
+    res = set()
+    for d in data:
+        res.add(str.encode(";".join(d)))
+    return res
 
 def redis_test(test_name, data, expected_data):
-
-    def data_to_bytes(data):
-        res = set()
-        for d in data:
-            res.add(str.encode(";".join(d)))
-
-        return res
-
+    
     ret = True
 
     # CONFIG
@@ -186,7 +187,6 @@ def redis_test(test_name, data, expected_data):
         ret = False
 
     return ret
-
 
 def well_formatted_data_test():
     return redis_test(
@@ -310,6 +310,130 @@ def thread_working_test():
 
     if redis_data != set() :
         logging.error("thread_working_test : Expected no data in Redis but got {}".format(redis_data))
+        ret = False
+
+    # CLEAN
+    darwin_api.close()
+
+    tanomaly_filter.clean_files()
+    # ret = tanomaly_filter.valgrind_stop() or tanomaly_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not tanomaly_filter.valgrind_stop():
+        ret = False
+
+    return ret
+
+def detection_mode_on_test():
+
+    ret = True
+
+    # CONFIG
+    tanomaly_filter = TAnomaly()
+    tanomaly_filter.configure()
+
+    # START FILTER
+    if not tanomaly_filter.valgrind_start():
+        return False
+
+    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
+                           socket_type="unix", )
+
+    # SEND TEST
+    data = [
+            ["73.90.76.52","199.184.81.66","1017","17"],
+            ["250.230.92.234","54.220.65.198","2922","6"],
+            ["171.104.231.132","0.127.226.192","467","17"],
+            ["42.214.30.108","246.163.54.146","2979","1"],
+            ["79.187.169.202","46.126.241.248","2677","1"],
+            ["57.126.101.247","255.171.17.199","2468","17"],
+            ["102.27.128.38","75.125.227.149","2249","1"],
+            ["116.145.214.73","182.20.121.254","1687","1"],
+            ["248.78.140.91","112.67.123.34","1119","1"],
+            ["47.159.155.135","117.9.1.88","1740","6"]
+        ]
+    
+    data_json = {"detection_mode": "off"} 
+    data_json = json.dumps(data_json).encode('utf-8')
+    tanomaly_filter.send(data_json)
+
+    data_json = {"detection_mode": "on"} 
+    data_json = json.dumps(data_json).encode('utf-8')
+    tanomaly_filter.send(data_json)
+
+    darwin_api.bulk_call(
+        data,
+        filter_code="TANOMALY",
+        response_type="no",
+    )
+
+    # We wait for the thread to activate
+    sleep(302)
+
+    redis_data = tanomaly_filter.get_internal_redis_data()
+
+    if redis_data != set():
+        logging.error("detection_mode_off_test: Expected no data but got {} in redis".format(expected_data, redis_data))
+        ret = False
+
+    # CLEAN
+    darwin_api.close()
+
+    tanomaly_filter.clean_files()
+    # ret = tanomaly_filter.valgrind_stop() or tanomaly_filter.valgrind_stop()
+    # would erase upper ret if this function return True
+    if not tanomaly_filter.valgrind_stop():
+        ret = False
+
+    return ret
+
+
+def detection_mode_off_test():
+
+    ret = True
+
+    # CONFIG
+    tanomaly_filter = TAnomaly()
+    tanomaly_filter.configure()
+
+    # START FILTER
+    if not tanomaly_filter.valgrind_start():
+        return False
+
+    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
+                           socket_type="unix", )
+
+    # SEND TEST
+    data = [
+            ["73.90.76.52","199.184.81.66","1017","17"],
+            ["250.230.92.234","54.220.65.198","2922","6"],
+            ["171.104.231.132","0.127.226.192","467","17"],
+            ["42.214.30.108","246.163.54.146","2979","1"],
+            ["79.187.169.202","46.126.241.248","2677","1"],
+            ["57.126.101.247","255.171.17.199","2468","17"],
+            ["102.27.128.38","75.125.227.149","2249","1"],
+            ["116.145.214.73","182.20.121.254","1687","1"],
+            ["248.78.140.91","112.67.123.34","1119","1"],
+            ["47.159.155.135","117.9.1.88","1740","6"]
+        ]
+    
+    data_json = {"detection_mode": "off"} 
+    data_json = json.dumps(data_json).encode('utf-8')
+    tanomaly_filter.send(data_json)
+
+    darwin_api.bulk_call(
+        data,
+        filter_code="TANOMALY",
+        response_type="no",
+    )
+
+    # We wait for the thread to activate
+    sleep(302)
+
+    redis_data = tanomaly_filter.get_internal_redis_data()
+    expected_data = data_to_bytes(data)
+
+    if redis_data!=expected_data:
+        logging.error("detection_mode_off_test: Expected this data : {} but got {} in redis".format(expected_data, redis_data))
         ret = False
 
     # CLEAN
