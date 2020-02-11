@@ -117,7 +117,6 @@ namespace darwin {
         /// \return evt_di as string
         std::string Evt_idToString();
 
-
         /// Get the name of the filter
         std::string GetFilterName();
 
@@ -135,7 +134,6 @@ namespace darwin {
         /// and should be called between every entry to check validity (no early parsing).
         virtual bool ParseLine(rapidjson::Value &line) = 0;
 
-    private:
         /// Send
         virtual void SendNext() final;
 
@@ -155,7 +153,7 @@ namespace darwin {
         /// \param size The number of byte sent.
         virtual void
         SendToClientCallback(const boost::system::error_code& e,
-                     std::size_t size) final;
+                     std::size_t size);
 
         /// Called when data is sent using SendToFilter() method.
         /// Terminate the filter session on failure.
@@ -163,8 +161,9 @@ namespace darwin {
         /// \param size The number of byte sent.
         virtual void
         SendToFilterCallback(const boost::system::error_code& e,
-                             std::size_t size) final;
+                             std::size_t size);
 
+private:
         /// Set the async read for the header.
         ///
         /// \return -1 on error, 0 on socket closed & sizeof(header) on success.
@@ -191,9 +190,6 @@ namespace darwin {
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
-        boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
-        Manager& _manager; //!< The associated connection manager.
-        boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
         bool _connected; //!< True if the socket to the next filter is connected.
         std::string _next_filter_path; //!< The socket path to the next filter.
         config::output_type _output; //!< The filter's output.
@@ -202,6 +198,9 @@ namespace darwin {
 
         // Accessible by children
     protected:
+        boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
+        boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
+        Manager& _manager; //!< The associated connection manager.
         darwin_filter_packet_t _header; //!< Header received from the session.
         rapidjson::Document _body; //!< Body received from session (if any).
         std::string _raw_body; //!< Body received from session (if any), that will not be parsed.
