@@ -182,7 +182,8 @@ namespace darwin {
                    "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
         std::cout << "  -l\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n" 
-                  << "    \tDefault it's WARNING, DEVELOPER mode does not create a daemon and log level is DEBUG." 
+                  << "    \tDefault is WARNING."
+                  << "    \tNOTE: DEVELOPER mode does not create a daemon and sets log level to DEBUG."
                   << std::endl;
         std::cout << "  -h\tPrint help" << std::endl;
     }
