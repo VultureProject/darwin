@@ -85,7 +85,7 @@ bool AnomalyTask::ParseBody() {
         if (document.HasMember("detection_mode")){
             DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has detection mode");
             if (!document["detection_mode"].IsString()) {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"detection_mode\" needs to be a string");
+                DARWIN_LOG_ERROR("AnomalyTask:: ParseBody:: \"detection_mode\" needs to be a string");
                 return false;
             }
 
