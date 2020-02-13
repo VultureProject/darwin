@@ -75,19 +75,19 @@ bool Generator::LoadPythonCode(const std::string& python_env_path_str, const std
     DARWIN_LOGGER;
 
     if (!darwin::pythonutils::InitPythonProgram(python_env_path_str, &_program_name, custom_python_path_str)) {
-        DARWIN_LOG_CRITICAL("RogueDevice:: Generator:: Could not initialize generator: "
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Could not initialize generator: "
                             "Python program initialization went wrong");
         return false;
     }
 
     if (!darwin::pythonutils::ImportPythonModule(module_str, &_py_module)) {
-        DARWIN_LOG_CRITICAL("RogueDevice:: Generator:: Could not initialize generator: "
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Could not initialize generator: "
                             "Python module import went wrong");
         return false;
     }
 
     if (!darwin::pythonutils::GetPythonFunction(_py_module, function_str, &_py_function)) {
-        DARWIN_LOG_CRITICAL("RogueDevice:: Generator:: Could not initialize generator: "
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Could not initialize generator: "
                             "Something went wrong while getting Python function");
         return false;
     }
