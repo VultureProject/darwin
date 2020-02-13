@@ -17,7 +17,7 @@ class Filter():
         self.pid = pid_file if pid_file else "/tmp/{}.pid".format(filter_name)
         self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_thread), str(cache_size), str(thresold)]
         self.process = None
-        self.error_code = 99  # For valgrind testing
+        self.error_code = 99 # For valgrind testing
 
     def __del__(self):
         if self.process and self.process.poll() is None:
