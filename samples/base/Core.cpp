@@ -87,7 +87,7 @@ namespace darwin {
             return true;
         }
 
-        return log.setLogLevel(level);
+        return log.setLevel(level);
     }
 
     bool Core::Configure(int ac, char** av) {

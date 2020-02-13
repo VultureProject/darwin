@@ -89,11 +89,11 @@ namespace darwin {
             /// \param type The log level to set.
             void setLevel(log_type type);
 
-            /// Set the log Level with a given string.
+            /// Set the logging Level with a given string.
             ///
             /// \param level The string that describe the log level wanted. 
             /// \return true if success, false otherwise.
-            bool setLogLevel(std::string level);
+            bool setLevel(std::string level);
 
             /// Set the name of the module in the logger.
             ///
