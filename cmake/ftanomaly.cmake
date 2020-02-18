@@ -33,8 +33,8 @@ add_executable(
 target_link_libraries(
     ${TANOMALY_NAME}
     ${DARWIN_LIBRARIES}
-    lapack
-    blas
+    lapacke
+    openblas
     ${ARMADILLO_LIBRARY}
     ${MLPACK_LIBRARY}
 )
