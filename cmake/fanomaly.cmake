@@ -29,8 +29,8 @@ add_executable(
 target_link_libraries(
     ${ANOMALY_NAME}
     ${DARWIN_LIBRARIES}
-    lapack
-    blas
+    lapacke
+    openblas
     ${ARMADILLO_LIBRARY}
     ${MLPACK_LIBRARY}
 )
