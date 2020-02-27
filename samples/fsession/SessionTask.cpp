@@ -64,7 +64,7 @@ void SessionTask::operator()() {
     }
 }
 
-bool SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
+unsigned int SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
     DARWIN_LOGGER;
 
     //Check that the session value has the expected length
@@ -72,7 +72,7 @@ bool SessionTask::ReadFromSession(const std::string &token, const std::vector<st
         DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Invalid token size: " + std::to_string(token.size()) +
                          ". Expected size: " + std::to_string(TOKEN_SIZE));
 
-        return false;
+        return IS_NOT_AUTHENT;
     }
 
     return REDISLookup(token, repo_ids);
@@ -97,6 +97,7 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
     unsigned int session_status = 0;
     std::any result;
     std::vector<std::any> result_vector;
+    bool found = false;
 
     if (repo_ids.empty()) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: No repository ID given");
@@ -127,23 +128,39 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
     }
 
     for(auto& object : result_vector) {
+        found = false;
+
         try {
             std::string replyObject(std::any_cast<std::string>(object));
             if(replyObject == "1") {
-                session_status = 1;
-                break;
+                session_status = IS_AUTHENT;
+                found = true;
+            }else{
+                DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " not authenticated on repository IDs " +
+                    JoinRepoIDs(repo_ids) + " = " + std::to_string(IS_NOT_AUTHENT));
+                return IS_NOT_AUTHENT;
             }
         }
         catch(const std::bad_any_cast&) {}
 
-        try {
-            int replyObject = std::any_cast<int>(object);
-            if(replyObject == 1) {
-                session_status = 1;
-                break;
+        if(not found){
+            try {
+                int replyObject = std::any_cast<int>(object);
+                if(replyObject == 1) {
+                    session_status = IS_AUTHENT;
+                }else{
+                    DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " not authenticated on repository IDs " +
+                        JoinRepoIDs(repo_ids) + " = " + std::to_string(IS_NOT_AUTHENT));
+                    return IS_NOT_AUTHENT;
+                }
+            }
+            catch(std::bad_any_cast&) {
+                DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " not authenticated on repository IDs " +
+                    JoinRepoIDs(repo_ids) + " = " + std::to_string(IS_NOT_AUTHENT));
+                return IS_NOT_AUTHENT;
             }
         }
-        catch(std::bad_any_cast&) {}
+        
     }
 
     DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " authenticated on repository IDs " +
@@ -191,7 +208,13 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
 
     _token = values[0].GetString();
     std::string raw_repo_ids = values[1].GetString();
-    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';});
+    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';}, boost::token_compress_on);
+    if(_repo_ids.at(0) == ""){
+        _repo_ids.erase(_repo_ids.begin());
+    }
+    if(_repo_ids.at(_repo_ids.size()-1) == ""){
+        _repo_ids.erase(_repo_ids.end());
+    }
 
     DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + _token + " | " + raw_repo_ids);
 

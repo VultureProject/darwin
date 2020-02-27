@@ -27,6 +27,8 @@ extern "C" {
 
 #define DARWIN_FILTER_SESSION 0x73657373
 
+#define IS_AUTHENT 1U
+#define IS_NOT_AUTHENT 0U
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -57,7 +59,7 @@ private:
     /// call the method appropriate to the data type received.
     ///
     /// \return true on success, false otherwise.
-    bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
+    unsigned int ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
 
     /// Read a session number (from Cookie or HTTP header) from the session and
     /// perform a redis lookup.
