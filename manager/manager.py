@@ -52,7 +52,7 @@ parser.add_argument('-p', '--prefix-directories',
 suffix_exclusive = parser.add_mutually_exclusive_group()
 suffix_exclusive.add_argument('-s', '--suffix-directories',
                     help='Set the suffix used for darwin files, default : \"/darwin\"',
-                    default='darwin',
+                    default='/darwin',
                     type=str)
 suffix_exclusive.add_argument('--no-suffix-directories',
                     help='Use no suffix for darwin files',
