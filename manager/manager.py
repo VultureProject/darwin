@@ -27,7 +27,7 @@ from config import stats_reporting as conf_stats_report
 
 def make_setup(dirs, prefix, suffix):
     """
-        Create directories if it doesn't exist
+        Create directories if they don't exist
         :param dirs: name of the directories to be created
         :param prefix: directory's path preffix
         :param suffix : directory's path suffix
