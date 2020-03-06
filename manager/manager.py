@@ -46,7 +46,7 @@ parser.add_argument('-l', '--log-level',
                     type=str)
 parser.add_argument('-p', '--prefix-directories',
                     help='Set the prefix used for darwin files, default : \"/var\"',
-                    default='var',
+                    default='/var',
                     type=str)
 
 suffix_exclusive = parser.add_mutually_exclusive_group()
