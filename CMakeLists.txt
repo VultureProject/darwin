@@ -101,6 +101,7 @@ set(
         toolkit/Files.cpp toolkit/Files.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/FileManager.cpp toolkit/FileManager.hpp
+        toolkit/Encoders.h
 )
 
 
