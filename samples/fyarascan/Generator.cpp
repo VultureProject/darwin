@@ -13,56 +13,9 @@
 #include "YaraScanTask.hpp"
 #include "Generator.hpp"
 
-bool Generator::Configure(std::string const& configFile, const std::size_t cache_size) {
+bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
-
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Configuring...");
-
-    if (!SetUpClassifier(configFile)) return false;
-
-    DARWIN_LOG_DEBUG("Generator:: Cache initialization. Cache size: " + std::to_string(cache_size));
-    if (cache_size > 0) {
-        _cache = std::make_shared<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>>(cache_size);
-    }
-
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Configured");
-    return true;
-}
-
-bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
-
-    std::ifstream conf_file_stream;
-    conf_file_stream.open(configuration_file_path, std::ifstream::in);
-
-    if (!conf_file_stream.is_open()) {
-        DARWIN_LOG_ERROR("Yara:: Generator:: Could not open the configuration file");
-
-        return false;
-    }
-
-    std::string raw_configuration((std::istreambuf_iterator<char>(conf_file_stream)),
-                                  (std::istreambuf_iterator<char>()));
-
-    rapidjson::Document configuration;
-    configuration.Parse(raw_configuration.c_str());
-
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Reading configuration...");
-
-    if (!LoadClassifier(configuration)) {
-        return false;
-    }
-
-    conf_file_stream.close();
-
-    return true;
-}
-
-bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Yara:: Generator:: Loading classifier...");
+    DARWIN_LOG_DEBUG("Yara:: Generator:: Loading configuration...");
     _yaraCompiler = std::make_shared<darwin::toolkit::YaraCompiler>();
 
     if (!configuration.IsObject()) {
@@ -78,7 +31,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         _fastmode = configuration["fastmode"].GetBool();
     }
     else {
-        _fastmode = false;
+        _fastmode = true;
     }
 
     if(configuration.HasMember("timeout")) {
@@ -123,6 +76,7 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
         }
         else {
             _yaraCompiler->AddRuleFile(pfile, "", filename);
+            fclose(pfile);
         }
     }
 
@@ -133,8 +87,5 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<YaraScanTask>(socket, manager, _cache, _yaraCompiler->GetEngine(_fastmode, _timeout)));
-}
-
-Generator::~Generator() {
+            std::make_shared<YaraScanTask>(socket, manager, _cache, _cache_mutex, _yaraCompiler->GetEngine(_fastmode, _timeout)));
 }

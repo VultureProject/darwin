@@ -24,6 +24,7 @@ public:
     explicit YaraScanTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
                             std::shared_ptr<darwin::toolkit::YaraEngine> yaraEngine);
 
     ~YaraScanTask() override = default;
@@ -39,15 +40,10 @@ protected:
     long GetFilterCode() noexcept override;
 
 private:
-    /// According to the header response,
-    /// init the following Darwin workflow
-    void Workflow();
-
     /// Parse the body received.
-    bool ParseBody() override;
+    bool ParseLine(rapidjson::Value &line) final;
 
 private:
-    std::string _current_chunk;
-    std::vector<std::string> _chunks;
+    std::string _chunk;
     std::shared_ptr<darwin::toolkit::YaraEngine> _yaraEngine = nullptr;
 };

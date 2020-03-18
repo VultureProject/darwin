@@ -27,4 +27,4 @@ target_link_libraries(
 )
 
 target_include_directories(${YARA_NAME} PUBLIC ${LIBYARA_INCLUDE_DIRS})
-target_include_directories(${YARA_NAME} PUBLIC samples/fyara/)
+target_include_directories(${YARA_NAME} PUBLIC samples/fyarascan/)

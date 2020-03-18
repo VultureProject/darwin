@@ -12,25 +12,22 @@
 #include <string>
 
 #include "Session.hpp"
+#include "AGenerator.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "../toolkit/Yara.hpp"
 
-class Generator {
+class Generator : public AGenerator {
 public:
     Generator() = default;
-    ~Generator();
+    ~Generator() = default;
 
 public:
-    // The config file is the database here
-    bool Configure(std::string const& configFile, const std::size_t cache_size);
-
     darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept;
+               darwin::Manager& manager) noexcept override final;
 
 private:
-    bool SetUpClassifier(const std::string &configuration_file_path);
-    bool LoadClassifier(const rapidjson::Document &configuration);
+    virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
 
 private:
     bool _fastmode;
