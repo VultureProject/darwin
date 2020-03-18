@@ -176,7 +176,7 @@ namespace darwin {
             }
 
             if(_status == YaraCompilerStatus::ALL_RULES_COMPILED) {
-                DARWIN_LOG_ERROR("Toolkit::YaraCompiler::AddRuleFie:: cannot add new rules to compiler after compilation");
+                DARWIN_LOG_ERROR("Toolkit::YaraCompiler::AddRuleFile:: cannot add new rules to compiler after compilation");
                 return false;
             }
 

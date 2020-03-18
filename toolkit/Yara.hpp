@@ -5,6 +5,7 @@ extern "C" {
 #include <yara.h>
 }
 
+#include <memory>
 #include <vector>
 #include <set>
 #include "rapidjson/document.h"
