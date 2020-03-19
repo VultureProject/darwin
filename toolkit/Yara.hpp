@@ -54,6 +54,8 @@ namespace darwin {
 
             bool AddRuleFile(FILE *file, std::string nameSpace, std::string filename);
 
+            bool ReadyToScan();
+
             YR_RULES *GetCompiledRules();
 
             std::shared_ptr<YaraEngine> GetEngine(bool fastode = false, int timeout = 0);
@@ -70,7 +72,7 @@ namespace darwin {
 
         private:
             YR_COMPILER *_compiler; //Yara compiler object
-            YaraCompilerStatus _status;
+            YaraCompilerStatus _status = YaraCompilerStatus::NO_RULES;
         };
     }
 }
