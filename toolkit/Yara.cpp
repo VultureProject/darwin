@@ -166,6 +166,10 @@ namespace darwin {
             }
         }
 
+        bool YaraCompiler::ReadyToScan() {
+            return _status != YaraCompilerStatus::NO_RULES;
+        }
+
         bool YaraCompiler::AddRuleFile(FILE *file, std::string nameSpace, std::string filename) {
             DARWIN_LOGGER;
             int errNum;

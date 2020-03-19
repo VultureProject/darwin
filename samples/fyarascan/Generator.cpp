@@ -80,6 +80,11 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         }
     }
 
+    if(not _yaraCompiler->ReadyToScan()) {
+        DARWIN_LOG_CRITICAL("Yara::Generator:: no rules have been added to the engine, unable to start scanning");
+        return false;
+    }
+
     return true;
 }
 

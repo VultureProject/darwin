@@ -8,6 +8,7 @@
 #include <string>
 #include <string.h>
 #include <thread>
+#include <boost/algorithm/string.hpp>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
@@ -136,14 +137,14 @@ bool YaraScanTask::ParseLine(rapidjson::Value& line) {
 
     encoding = fields[0].GetString();
     encodedChunk = fields[1].GetString();
-    if(encoding.compare("hex") == 0 || encoding.compare("HEX") == 0) {
+    if(boost::iequals(encoding, "hex")) {
         std::string err = darwin::toolkit::Hex::Decode(encodedChunk, _chunk);
         if(not err.empty()) {
             DARWIN_LOG_ERROR("YaraScanTask:: ParseLine: error while decoding hex data -> " + err);
             return false;
         }
     }
-    else if(encoding.compare("base64") == 0 || encoding.compare("BASE64") == 0) {
+    else if(boost::iequals(encoding, "base64")) {
         std::string err = darwin::toolkit::Base64::Decode(encodedChunk, _chunk);
         if(not err.empty()) {
             DARWIN_LOG_ERROR("YaraScanTask:: ParseLine: error while decoding base64 data -> " + err);
@@ -152,7 +153,7 @@ bool YaraScanTask::ParseLine(rapidjson::Value& line) {
     }
     else {
         DARWIN_LOG_ERROR("YaraScanTask:: ParseLine: unsuported encoding -> " + encoding +
-                        ", supported encodings are base64/BASE64 and hex/HEX");
+                        ", supported encodings are base64 and hex");
         return false;
     }
 
