@@ -18,7 +18,7 @@ namespace darwin {
 
         ThreadManager::ThreadManager() = default;
 
-        bool ThreadManager::Start() {
+        bool ThreadManager::Start(unsigned int interval) {
             DARWIN_LOGGER;
             std::lock_guard<std::mutex> lck(_thread_mutex);
             DARWIN_LOG_DEBUG("ThreadManager:: Start thread");
@@ -28,6 +28,8 @@ namespace darwin {
                 return true;
             }
 
+            _interval = interval;
+            DARWIN_LOG_INFO("interval between 2 wake-ups: " + std::to_string(_interval) + "s");
             _is_stop = false;
             try {
                 _thread = std::thread(&ThreadManager::ThreadMain, this);

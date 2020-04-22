@@ -25,6 +25,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     std::string redis_alerts_channel; //the channel on which to publish alerts when detected
     std::string redis_alerts_list; //the list on which to add alerts when detected
+    unsigned int detection_frequency = 300; //detection thread launching frequence in seconds
 
     if(not configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("TAnomaly::Generator:: \"redis_socket_path\" parameter missing, mandatory");
@@ -41,6 +42,12 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     if(not redis.SetUnixPath(redis_socket_path)) {
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to Redis socket '" + redis_socket_path + "'.");
         return false;
+    }
+
+    if(configuration.HasMember("detection_frequency") and configuration["detection_frequency"].IsInt()) {
+        detection_frequency = configuration["detection_frequency"].GetUint64();
+        DARWIN_LOG_INFO("TAnomaly:: Generator:: detection frequence manually set to "
+                            + std::to_string(detection_frequency));
     }
 
     bool is_log_redis = configuration.HasMember("redis_list_name") or configuration.HasMember("redis_channel_name");
@@ -112,7 +119,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     _anomaly_thread_manager = std::make_shared<AnomalyThreadManager>(_redis_internal, _log_file, redis_alerts_channel, redis_alerts_list);
-    if(!_anomaly_thread_manager->Start()) {
+    if(!_anomaly_thread_manager->Start(detection_frequency)) {
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Error when starting polling thread");
         return false;
     }
