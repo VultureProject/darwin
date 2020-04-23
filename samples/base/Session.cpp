@@ -164,20 +164,20 @@ namespace darwin {
             } else {
                 if (_raw_body.empty()) {
                     DARWIN_LOG_WARNING("Session::ReadBodyCallback Empty body retrieved");
-
+                    this->SendErrorResponse("Error receiving body: Empty body retrieved", 400);
                     return;
                 }
                 if (_header.body_size <= 0) {
                     DARWIN_LOG_ERROR(
                             "Session::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
-
+                    this->SendErrorResponse("Error receiving body: Body is not empty, but the header appears to be invalid", 400);
                     return;
                 }
 
                 if (!ParseBody()) {
                     DARWIN_LOG_DEBUG("Session::ReadBodyCallback Something went wrong while parsing the body");
-
+                    this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", 400);
                     return;
                 }
 
@@ -221,12 +221,11 @@ namespace darwin {
                 DARWIN_LOG_ERROR("Session:: ParseBody: You must provide a list");
                 return false;
             }
-
         } catch (...) {
             DARWIN_LOG_CRITICAL("Session:: ParseBody: Could not parse raw body");
             return false;
         }
-        DARWIN_LOG_DEBUG("Session:: ParseBody:: parsed body : " + _raw_body);
+        // DARWIN_LOG_DEBUG("Session:: ParseBody:: parsed body : " + _raw_body);
         return true;
     }
 
@@ -256,12 +255,15 @@ namespace darwin {
             packet_size = sizeof(darwin_filter_packet_t);
         }
 
+        if (not this->_response_body.empty()) {
+            packet_size += this->_response_body.size();
+        }
+
         DARWIN_LOG_DEBUG("Session::SendToClient: Computed packet size: " + std::to_string(packet_size));
 
-        darwin_filter_packet_t* packet;
-        packet = (darwin_filter_packet_t *) malloc(packet_size);
+        darwin_filter_packet_t* packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
 
-        if (!packet) {
+        if (packet == nullptr) {
             DARWIN_LOG_CRITICAL("Session::SendToClient: Could not create a Darwin packet");
             return false;
         }
@@ -280,8 +282,9 @@ namespace darwin {
         packet->response = _header.response;
         packet->certitude_size = certitude_size;
         packet->filter_code = GetFilterCode();
-        packet->body_size = 0;
+        packet->body_size = this->_response_body.size();
         memcpy(packet->evt_id, _header.evt_id, 16);
+        memcpy((char*)(packet) + sizeof(darwin_filter_packet_t), _response_body.c_str(), _response_body.length());
 
         boost::asio::async_write(_socket,
                                 boost::asio::buffer(packet, packet_size),
@@ -290,6 +293,7 @@ namespace darwin {
                                             boost::asio::placeholders::bytes_transferred));
 
         free(packet);
+        this->_response_body.clear();
         return true;
     }
 
@@ -464,5 +468,13 @@ namespace darwin {
 
     std::string Session::GetFilterName() {
         return _filter_name;
+    }
+
+    void Session::SendErrorResponse(const std::string& message, const unsigned int code) {
+        if (this->_header.response != DARWIN_RESPONSE_SEND_BACK && this->_header.response != DARWIN_RESPONSE_SEND_BOTH)
+            return;
+        this->_response_body.clear();
+        this->_response_body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
+        this->SendToClient();
     }
 }
