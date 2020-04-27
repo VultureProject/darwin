@@ -34,16 +34,10 @@ long AnomalyTask::GetFilterCode() noexcept {
 
 void AnomalyTask::operator()() {
     DARWIN_LOGGER;
-    if (_learning_mode){
-        _anomaly_thread_manager->Start();
-    } else {
-        _anomaly_thread_manager->Stop();
-    }
-
     // Should not fail, as the Session body parser MUST check for validity !
     auto array = _body.GetArray();
 
-    DARWIN_LOG_DEBUG("AnomalyTask:: got " + std::to_string(array.Size()) + " lines to treat");
+    DARWIN_LOG_DEBUG("TAnomalyTask:: got " + std::to_string(array.Size()) + " lines to treat");
 
     for (auto& line : array) {
         STAT_INPUT_INC;
@@ -58,81 +52,11 @@ void AnomalyTask::operator()() {
     }
 }
 
-bool AnomalyTask::ParseBody() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: parse raw body: " + _raw_body);
-
-    try {
-        rapidjson::Document document;
-        document.Parse(_raw_body.c_str());
-
-        if (document.IsArray()) {
-            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body is an array");
-            _body.Swap(document);
-            DARWIN_LOG_DEBUG("TAnomalyTask:: ParseBody:: body is " + JsonStringify(_body));
-            return true;
-        }
-
-        if (!document.IsObject()) {
-            DARWIN_LOG_ERROR("AnomalyTask:: ParseBody:: You must provide a valid Json");
-            return false;
-        }
-
-        //********LEARNING MODE*********//
-        if (document.HasMember("learning_mode")){
-            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has learning mode");
-            if (!document["learning_mode"].IsString()) {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"learning_mode\" needs to be a string");
-                return false;
-            }
-
-            std::string learning_mode = document["learning_mode"].GetString();
-
-            if (learning_mode=="on"){
-                _learning_mode = true;
-            } else if (learning_mode=="off"){
-                _learning_mode = false;
-            } else {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"learning_mode\" has to be either \"on\" or \"off\"");
-                return false;
-            }
-        }
-        //********LEARNING MODE*********//
-
-        //*************DATA************//
-        if (document.HasMember("data")){
-            DARWIN_LOG_DEBUG("AnomalyTask:: ParseBody:: Body has data");
-            rapidjson::Value& data = document["data"];
-
-            if (!data.IsArray()) {
-                DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: \"data\" needs to be an array");
-                return false;
-            }
-
-            _body.SetArray();
-            rapidjson::Document::AllocatorType& allocator = _body.GetAllocator();
-
-            for (auto &value : data.GetArray()) {
-                _body.PushBack(value, allocator);
-            }
-
-            DARWIN_LOG_DEBUG("TAnomalyTask:: ParseBody:: body is " + JsonStringify(_body));
-        }
-        //*************DATA************//
-
-    } catch (...) {
-        DARWIN_LOG_CRITICAL("AnomalyTask:: ParseBody:: Unknown Error");
-        return false;
-    }
-
-    return true;
-}
-
 bool AnomalyTask::ParseLine(rapidjson::Value& line){
     DARWIN_LOGGER;
 
     if(not line.IsArray()) {
-        DARWIN_LOG_ERROR("AnomalyTask:: ParseLine:: The input line is not an array");
+        DARWIN_LOG_ERROR("TAnomalyTask:: ParseLine:: The input line is not an array");
         return false;
     }
 
@@ -142,7 +66,7 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
     for (auto& value : values){
 
         if (!value.IsString()) {
-            DARWIN_LOG_WARNING("AnomalyTask:: ParseLine:: Every entry must be a string");
+            DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: Every entry must be a string");
             return false;
         }
         _entry += value.GetString();
@@ -156,7 +80,7 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
             "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
             "(([0-9]+;(17|6))|([0-9]*;*1))")))
     {
-        DARWIN_LOG_WARNING("AnomalyTask:: ParseLine:: The data: "+ _entry +", isn't valid, ignored. "
+        DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: The data: "+ _entry +", isn't valid, ignored. "
                                                                             "Format expected : "
                                                                             "[\"[ip4]\",\"[ip4]\",((\"[port]\","
                                                                             "\"[ip_protocol udp or tcp]\")|"
@@ -169,7 +93,7 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
 
 bool AnomalyTask::REDISAddEntry() noexcept {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AnomalyTask::REDISAdd:: Add data in Redis...");
+    DARWIN_LOG_DEBUG("TAnomalyTask::REDISAddEntry:: Add data in Redis...");
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
