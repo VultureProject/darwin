@@ -15,6 +15,7 @@
 #include "AGenerator.hpp"
 #include "../toolkit/Files.hpp"
 #include "../toolkit/rapidjson/document.h"
+#include "../toolkit/RedisManager.hpp"
 
 class Generator: public AGenerator {
 public:
@@ -28,4 +29,10 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+
+private:
+    bool ConfigRedis(std::string redis_socket_path);
+
+    std::string _redis_list_name;
+    std::string _redis_channel_name;
 };
