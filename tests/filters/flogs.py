@@ -24,11 +24,9 @@ FLOGS_CONFIG_ALL = """{{"redis_socket_path": "{1}",
 
 
 class Logs(Filter):
-    def __init__(self, log_file=None, redis_server=None, nb_threads=1):
-        super().__init__(filter_name="logs", nb_thread=nb_threads)
+    def __init__(self, log_file=None):
+        super().__init__(filter_name="logs")
         self.log_file = log_file if log_file else LOG_FILE
-        self.redis = redis_server if redis_server else RedisServer(unix_socket=REDIS_SOCKET)
-        self.pubsub = None
         try:
             os.remove(self.log_file)
         except:
@@ -74,39 +72,23 @@ class Logs(Filter):
             return None
         return l
 
-    def get_log_from_redis(self):
+    def __del__(self):
+        if self.pubsub is not None:
+            self.pubsub.close()
+        super().__del__()
+
+    def get_log_from_redis(redis, list):
         res = None
 
         try:
-            r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
-            res = r.rpop(REDIS_LIST_NAME)
-            r.close()
+            with redis.connect() as redis_connection:
+                res = redis_connection.rpop(list).decode('utf-8')
         except Exception as e:
             logging.error("Unable to connect to redis: {}".format(e))
             return None
 
         return res
 
-    def redis_subscribe(self, channel):
-        r = redis.Redis(unix_socket_path=self.redis.unix_socket, db=0)
-        self.pubsub = r.pubsub(ignore_subscribe_messages=True)
-        self.pubsub.subscribe(channel)
-        sleep(0.1)
-        self.pubsub.get_message()
-
-    def redis_channel_get_message(self):
-        ret = None
-        if self.pubsub is not None:
-            try:
-                ret = self.pubsub.get_message().get('data')
-            except:
-                pass
-        return ret
-
-    def __del__(self):
-        if self.pubsub is not None:
-            self.pubsub.close()
-        super().__del__()
 
 def run():
     tests = [
@@ -150,6 +132,7 @@ def single_log_to_file():
 
 
 def single_log_to_redis():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
@@ -162,20 +145,21 @@ def single_log_to_redis():
         logging.error("single_log_to_redis: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.get_log_from_redis()
-    if log != b'If you think your users are idiots, only idiots will use it. Linus Torvald\n':
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    if log != 'If you think your users are idiots, only idiots will use it. Linus Torvald\n':
         logging.error("single_log_to_redis: Log line not matching: {}".format(log))
         return False
 
     return True
 
 def single_log_to_redis_channel():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS_CHANNEL)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'Surveillance is the business model of the Internet. Bruce Schneier\n')
@@ -184,8 +168,8 @@ def single_log_to_redis_channel():
         logging.error("single_log_to_redis_channel: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.redis_channel_get_message()
-    if log != b'Surveillance is the business model of the Internet. Bruce Schneier\n':
+    log = redis_server.channel_get_message()
+    if log != 'Surveillance is the business model of the Internet. Bruce Schneier\n':
         logging.error("single_log_to_redis_channel: Log line not matching: {}".format(log))
         return False
 
@@ -193,12 +177,13 @@ def single_log_to_redis_channel():
 
 
 def single_log_to_all():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_ALL)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n')
@@ -212,13 +197,13 @@ def single_log_to_all():
         logging.error("single_log_to_all: Log line not matching: {}".format(logs))
         return False
 
-    redis_log = filter.get_log_from_redis()
-    if redis_log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
+    redis_log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    if redis_log != 'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
         logging.error("single_log_to_all: Log line not matching: {}".format(log))
         return False
 
-    redis_channel_log = filter.redis_channel_get_message()
-    if redis_channel_log != b'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
+    redis_channel_log = redis_server.channel_get_message()
+    if redis_channel_log != 'There are only two things wrong with C++:  The initial concept and the implementation. Bertrand Meyer\n':
         logging.error("single_log_to_all: Log line not matching: {}".format(log))
         return False
 
@@ -251,6 +236,7 @@ def multiple_log_to_file():
 
 
 def multiple_log_to_redis():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
@@ -264,25 +250,26 @@ def multiple_log_to_redis():
         logging.error("multiple_log_to_redis: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.get_log_from_redis()
-    if log != b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n':
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    if log != 'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n':
         logging.error("multiple_log_to_redis: Log line not matching: {}".format(log))
         return False
 
-    log = filter.get_log_from_redis()
-    if log != b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    if log != 'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
         logging.error("multiple_log_to_redis: Log line not matching: {}".format(log))
         return False
 
     return True
 
 def multiple_log_to_redis_channel():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS_CHANNEL)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n')
@@ -292,17 +279,17 @@ def multiple_log_to_redis_channel():
         logging.error("multiple_log_to_redis_channel: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.redis_channel_get_message()
-    if log != b'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n':
+    log = redis_server.channel_get_message()
+    if log != 'Computers are good at following instructions, but not at reading your mind. Donald Knuth\n':
         logging.error("multiple_log_to_redis_channel: Log line not matching: {}".format(log))
         return False
 
-    log = filter.redis_channel_get_message()
-    if log != b'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
+    log = redis_server.channel_get_message()
+    if log != 'If we wish to count lines of code, we should not regard them as lines produced but as lines spent. Edsger Dijkstra\n':
         logging.error("multiple_log_to_redis_channel: Log line not matching: {}".format(log))
         return False
 
-    log = filter.redis_channel_get_message()
+    log = redis_server.channel_get_message()
     if log is not None:
         logging.error("multiple_log_to_redis_channel: Log line not matching: waited '' but got '{}'".format(log))
         return False
@@ -310,12 +297,13 @@ def multiple_log_to_redis_channel():
     return True
 
 def multiple_log_to_all():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_ALL)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n')
@@ -333,18 +321,18 @@ def multiple_log_to_all():
         logging.error("multiple_log_to_all: Log line not matching: {}".format(logs))
         return False
 
-    log = filter.get_log_from_redis()
-    channel_log = filter.redis_channel_get_message()
-    if log != b'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n':
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    channel_log = redis_server.channel_get_message()
+    if log != 'UNIX is simple.  It just takes a genius to understand its simplicity. Denis Ritchie\n':
         logging.error("multiple_log_to_all: Log line not matching: {}".format(log))
         return False
     if log != channel_log:
         logging.error("multiple_log_to_all: channel log line not matching: {}".format(channel_log))
         return False
 
-    log = filter.get_log_from_redis()
-    channel_log = filter.redis_channel_get_message()
-    if log != b'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n':
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
+    channel_log = redis_server.channel_get_message()
+    if log != 'A hacker is someone who enjoys playful cleverness, not necessarily with computers. Richard Stallman\n':
         logging.error("multiple_log_to_all: Log line not matching: {}".format(log))
         return False
     if log != channel_log:
@@ -376,6 +364,7 @@ def empty_log_to_file():
 
 
 def empty_log_to_redis():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
@@ -388,7 +377,7 @@ def empty_log_to_redis():
         logging.error("empty_log_to_redis: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.get_log_from_redis()
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
     if log is not None:
         logging.error("empty_log_to_redis: Log line not matching: {}".format(log))
         return False
@@ -396,12 +385,13 @@ def empty_log_to_redis():
     return True
 
 def empty_log_to_redis_channel():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_REDIS)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'')
@@ -410,7 +400,7 @@ def empty_log_to_redis_channel():
         logging.error("empty_log_to_redis_channel: Unable to connect to filter: {}".format(e))
         return False
 
-    log = filter.redis_channel_get_message()
+    log = redis_server.channel_get_message()
     if log is not None:
         logging.error("empty_log_to_redis_channel: Log line not matching: {}".format(log))
         return False
@@ -418,12 +408,13 @@ def empty_log_to_redis_channel():
     return True
 
 def empty_log_to_all():
+    redis_server = RedisServer(unix_socket=REDIS_SOCKET)
     filter = Logs()
     filter.configure(FLOGS_CONFIG_ALL)
     if not filter.valgrind_start():
         return False
 
-    filter.redis_subscribe(REDIS_CHANNEL_NAME)
+    redis_server.channel_subscribe(REDIS_CHANNEL_NAME)
 
     try:
         filter.log(b'')
@@ -437,12 +428,12 @@ def empty_log_to_all():
         logging.error("empty_log_to_all: Log line not matching: {}".format(logs))
         return False
 
-    log = filter.get_log_from_redis()
+    log = Logs.get_log_from_redis(redis_server, REDIS_LIST_NAME)
     if log is not None:
         logging.error("empty_log_to_all: Log line not matching: {}".format(log))
         return False
 
-    channel_log = filter.redis_channel_get_message()
+    channel_log = redis_server.channel_get_message()
     if channel_log is not None:
         logging.error("empty_log_to_all: channel log line not matching: {}".format(channel_log))
         return False
