@@ -178,7 +178,7 @@ bool AnomalyTask::REDISAddEntry() noexcept {
     arguments.emplace_back(_redis_list_name);
     arguments.emplace_back(_entry);
 
-    if(redis.Query(arguments) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyTask::REDISAdd:: Not the expected Redis response");
         return false;
     }

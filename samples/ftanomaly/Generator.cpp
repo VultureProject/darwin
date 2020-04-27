@@ -39,8 +39,11 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     std::string redis_socket_path = configuration["redis_socket_path"].GetString();
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    if(not redis.SetUnixPath(redis_socket_path)) {
-        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to Redis socket '" + redis_socket_path + "'.");
+
+    redis.SetUnixConnection(redis_socket_path);
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    if(not redis.FindAndConnect()) {
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to a redis!");
         return false;
     }
 

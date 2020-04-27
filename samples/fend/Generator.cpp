@@ -72,7 +72,9 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     std::string redis_socket_path = configuration["redis_socket_path"].GetString();
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    return redis.SetUnixPath(redis_socket_path);
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    return redis.FindAndConnect();
 }
 
 darwin::session_ptr_t
