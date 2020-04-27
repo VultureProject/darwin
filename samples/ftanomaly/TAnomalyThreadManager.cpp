@@ -47,8 +47,8 @@ bool AnomalyThreadManager::Main(){
         DARWIN_LOG_DEBUG("AnomalyThread::ThreadMain:: Not enough log in Redis, wait for more");
         return true;
     } else if (len<0 || !REDISPopLogs(len, logs)){
-        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis, stopping the thread");
-        return false;
+        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis");
+        return true;
     } else{
         PreProcess(logs);
         if (_matrix.n_cols<10){
