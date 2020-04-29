@@ -47,8 +47,8 @@ bool AnomalyThreadManager::Main(){
         DARWIN_LOG_DEBUG("AnomalyThread::ThreadMain:: Not enough log in Redis, wait for more");
         return true;
     } else if (len<0 || !REDISPopLogs(len, logs)){
-        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis, stopping the thread");
-        return false;
+        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis");
+        return true;
     } else{
         PreProcess(logs);
         if (_matrix.n_cols<10){
@@ -132,7 +132,7 @@ bool AnomalyThreadManager::WriteRedis(const std::string& log_line){
 
     if(not _redis_alerts_list.empty()) {
         DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Writing to Redis list: " + _redis_alerts_list);
-        if(redis.Query(std::vector<std::string>{"LPUSH", _redis_alerts_list, log_line}) == REDIS_REPLY_ERROR) {
+        if(redis.Query(std::vector<std::string>{"LPUSH", _redis_alerts_list, log_line}, true) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_WARNING("AnomalyThreadManager::REDISAddLogs:: Failed to add log in Redis !");
             return false;
         }
@@ -140,7 +140,7 @@ bool AnomalyThreadManager::WriteRedis(const std::string& log_line){
 
     if(not _redis_alerts_channel.empty()) {
         DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Writing to Redis channel" + _redis_alerts_channel);
-        if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_alerts_channel, log_line}) == REDIS_REPLY_ERROR) {
+        if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_alerts_channel, log_line}, true) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_WARNING("AnomalyThreadManager::REDISAddLogs:: Failed to publish log in Redis !");
             return false;
         }
@@ -277,7 +277,7 @@ long long int AnomalyThreadManager::REDISListLen() noexcept {
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(redis.Query(std::vector<std::string>{"SCARD", _redis_internal}, result) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(std::vector<std::string>{"SCARD", _redis_internal}, result, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISListLen:: Not the expected Redis response");
         return -1;
     }
@@ -294,9 +294,9 @@ bool AnomalyThreadManager::REDISPopLogs(long long int len, std::vector<std::stri
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(redis.Query(std::vector<std::string>{"SPOP", _redis_internal, std::to_string(len)}, result) != REDIS_REPLY_ARRAY) {
+    if(redis.Query(std::vector<std::string>{"SPOP", _redis_internal, std::to_string(len)}, result, true) != REDIS_REPLY_ARRAY) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISPopLogs:: Not the expected Redis response");
-        return -1;
+        return false;
     }
 
     try {
@@ -330,8 +330,9 @@ bool AnomalyThreadManager::REDISReinsertLogs(std::vector<std::string> &logs) noe
         arguments.emplace_back(log);
     }
 
-    if(redis.Query(arguments) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISReinsertLogs:: Not the expected Redis response");
+        return false;
     }
 
     DARWIN_LOG_DEBUG("AnomalyThread::REDISReinsertLogs:: Reinsertion done");

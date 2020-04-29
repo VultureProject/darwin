@@ -1,7 +1,10 @@
 import subprocess
 import logging
 import os
+import random
 import redis
+import string
+import threading
 from time import sleep
 
 class RedisServer():
@@ -10,7 +13,7 @@ class RedisServer():
         self.unix_socket = unix_socket
         self.port = port
         self.process = None
-        self.config_file = "/tmp/redis_conf_{port}.conf".format(port=self.port)
+        self.config_file = "/tmp/redis_conf_{random_id}.conf".format(random_id=''.join(random.choices(string.digits, k=10)))
         self.master = master
         self.cmd = ["redis-server", self.config_file]
 
@@ -20,17 +23,25 @@ class RedisServer():
         self.write_conf()
         self.start()
 
+
     def write_conf(self):
         with open(self.config_file, "w") as f:
             if self.address:
                 f.write("bind " + self.address + "\r\n")
                 f.write("port " + str(self.port) + "\r\n")
+            else:
+                f.write("port 0\r\n")
+
             if self.unix_socket:
                 f.write("unixsocket " + self.unix_socket + "\r\n")
 
-            if self.master:
-                if self.master.address:
+            if self.master is not None:
+                if self.master.address is not None:
                     f.write("slaveof " + self.master.address + " " + str(self.master.port) + "\r\n")
+
+            # do not save anything to dump file
+            f.write('save ""')
+
 
     def clear_conf(self):
         try:
@@ -62,12 +73,24 @@ class RedisServer():
             r = redis.Redis(host=self.address, port=self.port, db=0)
         else:
             r = redis.Redis(unix_socket_path=self.unix_socket, db=0)
-
         return r
 
     def get_number_of_connections(self):
-        connection = self.connect()
+        # remove this connection from the pool
+        return len(self.connect().client_list()) - 1
 
-        ret = connection.client_list()
+    def channel_subscribe(self, channel):
+        with self.connect() as connection:
+            self.pubsub = connection.pubsub(ignore_subscribe_messages=True)
+        self.pubsub.subscribe(channel)
+        sleep(0.1)
+        self.pubsub.get_message()
 
-        return len(ret)
+
+    def channel_get_message(self):
+        ret = None
+        try:
+            ret = self.pubsub.get_message().get('data').decode("utf-8")
+        except:
+            pass
+        return ret

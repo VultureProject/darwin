@@ -66,7 +66,9 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
     std::vector<std::string> arguments;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    if(not redis.SetUnixPath(redis_socket_path)) {
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    if(not redis.FindAndConnect()) {
         DARWIN_LOG_ERROR("ConnectionSupervision::Generator::ConfigureRedis:: Could not configure Redis connection.");
         return false;
     }
@@ -110,7 +112,7 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
         }
         arguments.emplace_back("0");
 
-        if (redis.Query(arguments) == REDIS_REPLY_ERROR) {
+        if (redis.Query(arguments, true) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::ConfigRedis:: "
                              "Error when trying to add line \"" + current_line + "\" from initial data for redis, line "
                                                                                  "not added");

@@ -45,15 +45,11 @@ private:
     /// \warning modifies _entry class attribute
     bool ParseLine(rapidjson::Value& line) final;
 
-    /// Parse the body received.
-    bool ParseBody() override;
-
     /// Add the _entry parsed to REDIS
     /// \return true on success, false otherwise.
     bool REDISAddEntry() noexcept;
 
 private:
-    bool _learning_mode = true;
     std::string _redis_list_name;
     std::string _entry;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager = nullptr;

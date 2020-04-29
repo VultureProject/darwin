@@ -89,9 +89,9 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     DARWIN_LOG_DEBUG("Logs:: Generator:: Redis configuration...");
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    bool ret = redis.SetUnixPath(redis_socket_path);
-
-    return ret;
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    return redis.FindAndConnect();
 }
 
 darwin::session_ptr_t

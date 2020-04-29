@@ -110,8 +110,8 @@ namespace darwin {
         DARWIN_LOG_DEBUG("AlertManager:: Redis configuration...");
 
         darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-        bool ret = redis.SetUnixPath(redis_socket_path);
-        return ret;
+        redis.SetUnixConnection(redis_socket_path);
+        return redis.FindAndConnect();
     }
 
     void AlertManager::Alert(const std::string& str) {
@@ -154,14 +154,14 @@ namespace darwin {
         darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
         if(not _redis_list_name.empty()) {
-            if(redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}) == REDIS_REPLY_ERROR) {
+            if(redis.Query(std::vector<std::string>{"LPUSH", _redis_list_name, logs}, true) == REDIS_REPLY_ERROR) {
                 DARWIN_LOG_WARNING("AlertManager::REDISAddLogs:: Failed to add log in Redis !");
                 return false;
             }
         }
 
         if(not _redis_channel_name.empty()) {
-            if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_channel_name, logs}) == REDIS_REPLY_ERROR) {
+            if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_channel_name, logs}, true) == REDIS_REPLY_ERROR) {
                 DARWIN_LOG_WARNING("AlertManager::REDISAddLogs:: Failed to publish log in Redis !");
                 return false;
             }
