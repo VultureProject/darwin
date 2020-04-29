@@ -187,6 +187,12 @@ private:
         /// Execute the filter and
         virtual void ExecuteFilter() final;
 
+        /// Sends a response with a body containing an error message
+        ///
+        /// \param message The error message to send
+        /// \param code The error code to send
+        virtual void SendErrorResponse(const std::string& message, const unsigned int code) final;
+
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
@@ -212,6 +218,7 @@ private:
         std::mutex& _cache_mutex;
         bool _is_cache = false;
         std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD; //!<Default threshold
+        std::string _response_body; //!< The body to send back to the client
     };
 
     /// Definition of a session's self-managing pointer.
