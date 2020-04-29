@@ -15,6 +15,7 @@
 #include "Logger.hpp"
 #include "Manager.hpp"
 #include "Session.hpp"
+#include "errors.hpp"
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
@@ -164,20 +165,20 @@ namespace darwin {
             } else {
                 if (_raw_body.empty()) {
                     DARWIN_LOG_WARNING("Session::ReadBodyCallback Empty body retrieved");
-                    this->SendErrorResponse("Error receiving body: Empty body retrieved", 400);
+                    this->SendErrorResponse("Error receiving body: Empty body retrieved", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
                 if (_header.body_size <= 0) {
                     DARWIN_LOG_ERROR(
                             "Session::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
-                    this->SendErrorResponse("Error receiving body: Body is not empty, but the header appears to be invalid", 400);
+                    this->SendErrorResponse("Error receiving body: Body is not empty, but the header appears to be invalid", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
 
                 if (!ParseBody()) {
                     DARWIN_LOG_DEBUG("Session::ReadBodyCallback Something went wrong while parsing the body");
-                    this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", 400);
+                    this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
 
