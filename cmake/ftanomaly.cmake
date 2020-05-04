@@ -4,18 +4,18 @@ set(TANOMALY_NAME darwin_tanomaly)
 # FILTER DEPENDENCIES #
 #######################
 
-find_library(ARMADILLO_LIBRARY armadillo PATHS ${ARMADILLO_LIBRARY_DIRS})
+find_package(Armadillo 9.400.0 REQUIRED)
 
-find_library(MLPACK_LIBRARY mlpack PATHS ${MLPACK_LIBRARY_DIRS})
+find_package(MLPACK 3.0.1 REQUIRED)
 
-if(NOT ARMADILLO_LIBRARY)
-message(WARNING "Did not find lib armadillo, will not be able to compile filters anomaly/tanomaly")
-endif()
-
-if(NOT MLPACK_LIBRARY)
-message(WARNING "Did not find lib mlpack, will not be able to compile filters anomaly/tanomaly")
-endif()
-
+set(Boost_STATIC_LIBS ON)
+# MLPACK Boost dependencies
+find_package(Boost
+	COMPONENTS
+        program_options
+        unit_test_framework
+        serialization
+	REQUIRED)
 
 ###################
 #    EXECUTABLE   #
@@ -33,11 +33,11 @@ add_executable(
 target_link_libraries(
     ${TANOMALY_NAME}
     ${DARWIN_LIBRARIES}
-    lapacke
-    openblas
-    ${ARMADILLO_LIBRARY}
-    ${MLPACK_LIBRARY}
-)
+    ${ARMADILLO_LIBRARIES}
+    ${MLPACK_LIBRARIES}
+    Boost::program_options
+    Boost::unit_test_framework
+    Boost::serialization)
 
 target_include_directories(${TANOMALY_NAME} PUBLIC ${ARMADILLO_INCLUDE_DIRS})
 target_include_directories(${TANOMALY_NAME} PUBLIC ${MLPACK_INCLUDE_DIRS})
