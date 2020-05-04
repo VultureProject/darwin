@@ -46,7 +46,7 @@ find_package(PkgConfig)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
 
-set(Boost_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost
 	COMPONENTS
 	  system
