@@ -8,16 +8,23 @@ on:
 
 jobs:
 
-  build-faup:
+  faup:
     runs-on: ubuntu-latest
+    env:
+      VERSION: v1.5
     steps:
       - uses: actions/checkout@v2
       - name: Build faup docker image
-        uses: whoan/docker-build-with-cache-action@v5
+        run: |
+          GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
+          echo $GITHUB_LOWERCASE_REPO
+
+      - uses: whoan/docker-build-with-cache-action@v5
         with:
           image_name: faup
           username: ${{ github.actor }}
           password: ${{ github.token }}
-          registry: docker.pkg.github.com/${{ github.repository }}
-          image_tag: latest
+          registry: docker.pkg.github.com/${GITHUB_LOWERCASE_REPO}
+          image_tag: $VERSION
           dockerfile: docker/faup/Dockerfile
+          build_extra_args: --build-arg VERSION=$VERSION

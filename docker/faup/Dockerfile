@@ -1,4 +1,7 @@
-# FAUP v1.5
+# FAUP
+
+ARG VERSION
+
 FROM ubuntu:18.04
 WORKDIR /root
 RUN apt-get update && apt-get install -y\
@@ -6,7 +9,7 @@ RUN apt-get update && apt-get install -y\
  cmake\
  g++\
  pkg-config
-RUN git clone git://github.com/stricaud/faup --single-branch --branch v1.5 &&\
+RUN git clone git://github.com/stricaud/faup --single-branch --branch ${VERSION} &&\
  cd faup/build &&\
  cmake .. &&\
  make -j2 install DESTDIR=../install
