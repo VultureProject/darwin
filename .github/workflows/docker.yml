@@ -15,9 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build faup docker image
-        run: |
-          GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
-          echo $GITHUB_LOWERCASE_REPO
+        run: GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
 
       - uses: whoan/docker-build-with-cache-action@v5
         with:
@@ -27,4 +25,4 @@ jobs:
           registry: docker.pkg.github.com/${GITHUB_LOWERCASE_REPO}
           image_tag: $VERSION
           dockerfile: docker/faup/Dockerfile
-          build_extra_args: --build-arg VERSION=$VERSION
+          build_extra_args: --build-arg VERSION=${VERSION}
