@@ -25,4 +25,4 @@ jobs:
           registry: docker.pkg.github.com/${GITHUB_LOWERCASE_REPO}
           image_tag: $VERSION
           dockerfile: docker/faup/Dockerfile
-          build_extra_args: --build-arg VERSION=${VERSION}
+          build_extra_args: --build-arg VERSION=${{ env.VERSION }}
