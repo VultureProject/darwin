@@ -32,4 +32,4 @@ jobs:
       - name: test listing docker images
         run: docker images
       - name: test building again
-        run: docker build . -t test -f docker/faup/Dockerfile
+        run: docker build . -t test --cache-from docker.pkg.github.com/frikilax/darwin/faup --build-arg FAUP_VERSION=v1.5 -f docker/faup/Dockerfile
