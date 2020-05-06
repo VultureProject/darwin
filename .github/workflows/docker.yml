@@ -22,7 +22,7 @@ jobs:
           image_name: faup
           username: ${{ github.actor }}
           password: ${{ github.token }}
-          registry: docker.pkg.github.com/${GITHUB_LOWERCASE_REPO}
-          image_tag: $VERSION
+          registry: docker.pkg.github.com/${{ env.GITHUB_LOWERCASE_REPO }}
+          image_tag: ${{ env.VERSION }}
           dockerfile: docker/faup/Dockerfile
           build_extra_args: --build-arg VERSION=${{ env.VERSION }}
