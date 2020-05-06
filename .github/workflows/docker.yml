@@ -15,14 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build faup docker image
-        run: GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
+        run: |
+          GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
+          echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
 
       - uses: whoan/docker-build-with-cache-action@v5
         with:
           image_name: faup
           username: ${{ github.actor }}
           password: ${{ github.token }}
-          registry: docker.pkg.github.com/${{ env.GITHUB_LOWERCASE_REPO }}
+          registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
           image_tag: ${{ env.VERSION }}
           dockerfile: docker/faup/Dockerfile
           build_extra_args: --build-arg VERSION=${{ env.VERSION }}
