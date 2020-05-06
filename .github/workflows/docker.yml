@@ -28,3 +28,8 @@ jobs:
           image_tag: ${{ env.VERSION }}
           dockerfile: docker/faup/Dockerfile
           build_extra_args: --build-arg VERSION=${{ env.VERSION }}
+        
+      - name: test listing docker images
+        run: docker images
+      - name: test building again
+        run: docker build . -t test -f docker/faup/Dockerfile
