@@ -1,0 +1,23 @@
+name: Docker Image CI test
+
+on:
+  push:
+    branches: [ docker ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build-faup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build faup docker image
+        uses: whoan/docker-build-with-cache-action@v5
+        with:
+          image_name: faup
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          registry: docker.pkg.github.com/${{ github.repository }}
+          image_tag: latest
+          dockerfile: docker/faup/Dockerfile
