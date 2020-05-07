@@ -1,0 +1,3 @@
+[submodule "docker/tensorflow_cc"]
+	path = docker/tensorflow_cc
+	url = https://github.com/floopcz/tensorflow_cc
