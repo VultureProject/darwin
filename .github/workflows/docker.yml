@@ -16,7 +16,7 @@ jobs:
       TF_VERSION: 1.13.0
     steps:
       - uses: actions/checkout@v2
-      - name: Build darwin development docker image
+      - name: Prepare build
         run: |
           GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
           echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
@@ -30,8 +30,3 @@ jobs:
           image_tag: dev
           dockerfile: docker/darwin
           build_extra_args: --target darwin_builder --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }}
-        
-      - name: test listing docker images
-        run: docker images
-      - name: test running image
-        run: docker run docker.pkg.github.com/${{ env.github_lowercase_repo }}/darwin:dev bash -c 'echo "ok"'
