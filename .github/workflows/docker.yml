@@ -1,35 +1,37 @@
-name: Docker Image CI test
+name: dev docker
 
 on:
   push:
     branches: [ docker ]
-  pull_request:
-    branches: [ master ]
 
 jobs:
 
-  faup:
+  darwin-docker-dev:
     runs-on: ubuntu-latest
     env:
-      VERSION: v1.5
+      FAUP_VERSION: 1.5
+      BOOST_VERSION: 1.71.0
+      ARMADILLO_VERSION: 9.850.x
+      MLPACK_VERSION: 3.2.0
+      TF_VERSION: 1.13.0
     steps:
       - uses: actions/checkout@v2
-      - name: Build faup docker image
+      - name: Build darwin development docker image
         run: |
           GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
           echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
 
       - uses: whoan/docker-build-with-cache-action@v5
         with:
-          image_name: faup
+          image_name: darwin
           username: ${{ github.actor }}
           password: ${{ github.token }}
           registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
-          image_tag: ${{ env.VERSION }}
-          dockerfile: docker/faup/Dockerfile
-          build_extra_args: --build-arg VERSION=${{ env.VERSION }}
+          image_tag: dev
+          dockerfile: docker/darwin
+          build_extra_args: --target darwin_builder --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }}
         
       - name: test listing docker images
         run: docker images
-      - name: test building again
-        run: docker build . -t test --cache-from docker.pkg.github.com/frikilax/darwin/faup --build-arg FAUP_VERSION=v1.5 -f docker/faup/Dockerfile
+      - name: test running image
+        run: docker run docker.pkg.github.com/${{ env.github_lowercase_repo }}/darwin:dev bash -c 'echo "ok"'
