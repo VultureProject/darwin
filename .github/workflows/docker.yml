@@ -4,12 +4,12 @@ on:
   push:
     branches: [ docker ]
 
-  env:
-    FAUP_VERSION: 1.5
-    BOOST_VERSION: 1.71.0
-    ARMADILLO_VERSION: 9.850.x
-    MLPACK_VERSION: 3.2.0
-    TF_VERSION: 1.13.0
+env:
+  FAUP_VERSION: 1.5
+  BOOST_VERSION: 1.71.0
+  ARMADILLO_VERSION: 9.850.x
+  MLPACK_VERSION: 3.2.0
+  TF_VERSION: 1.13.0
 
 jobs:
 
