@@ -4,16 +4,18 @@ on:
   push:
     branches: [ docker ]
 
+  env:
+    FAUP_VERSION: 1.5
+    BOOST_VERSION: 1.71.0
+    ARMADILLO_VERSION: 9.850.x
+    MLPACK_VERSION: 3.2.0
+    TF_VERSION: 1.13.0
+
 jobs:
 
   darwin-docker-dev:
     runs-on: ubuntu-latest
-    env:
-      FAUP_VERSION: 1.5
-      BOOST_VERSION: 1.71.0
-      ARMADILLO_VERSION: 9.850.x
-      MLPACK_VERSION: 3.2.0
-      TF_VERSION: 1.13.0
+
     steps:
       - uses: actions/checkout@v2
       - name: Prepare build
@@ -31,7 +33,10 @@ jobs:
           dockerfile: docker/darwin
           build_extra_args: --target darwin_builder --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }}
 
-      - name: test listing docker images
-        run: docker images
-      - name: test running image
-        run: docker run docker.pkg.github.com/${{ env.github_lowercase_repo }}/darwin:dev bash -c 'echo "ok"'
+      - name: push image to docker hub
+        run: |
+          echo ${{secrets.DOCKER_HUB_TOKEN}} | docker login -u ${{ github.actor }} --password-stdin
+          docker tag docker.pkg.github.com/frikilax/darwin/darwin:dev frikilax/darwin_dev:dev
+          docker images
+          docker push frikilax/darwin_dev:dev
+          docker logout
