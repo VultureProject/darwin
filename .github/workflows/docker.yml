@@ -36,7 +36,7 @@ jobs:
       - name: push image to docker hub
         run: |
           echo ${{secrets.DOCKER_HUB_TOKEN}} | docker login -u ${{ github.actor }} --password-stdin
-          docker tag docker.pkg.github.com/frikilax/darwin/darwin:dev frikilax/darwin_dev:dev
+          docker tag docker.pkg.github.com/frikilax/darwin/darwin:dev frikilax/darwin:dev
           docker images
-          docker push frikilax/darwin_dev:dev
+          docker push frikilax/darwin:dev
           docker logout
