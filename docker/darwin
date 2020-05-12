@@ -154,7 +154,7 @@ RUN pip3 install -r manager/requirements.txt\
 FROM ubuntu:18.04 AS darwin
 WORKDIR /home/darwin
 ENV LOGLEVEL WARNING
-CMD ["sh", "-c", "python3", "./manager/manager.py", "-l", "${LOGLEVEL}", "/home/darwin/conf/darwin.conf"]
+CMD sh -c "python3 ./manager/manager.py -l ${LOGLEVEL} /home/darwin/conf/darwin.conf"
 
 RUN mkdir -p /var/sockets/darwin \
  && mkdir -p /var/run/darwin \
@@ -167,6 +167,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  libyara3 \
  liblapacke \
  libopenblas-base \
+ libgomp1 \
  python3 \
  python3-pip \
  python3-setuptools \
@@ -178,7 +179,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip3 install jsonschema==3.2.0
 
-COPY --from=darwin_builder /home/darwin/filters /home/darwin/filters
+COPY --from=faup_builder /root/faup/install/ /
+COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
 COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
 COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
 
