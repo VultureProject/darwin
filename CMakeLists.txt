@@ -57,7 +57,7 @@ find_package(Hiredis REQUIRED)
 set(
     DARWIN_LIBRARIES
     Threads::Threads
-    ${HIREDIS_LIBRARIES}
+    Hiredis::Hiredis
     ${Boost_LIBRARIES}
 )
 
