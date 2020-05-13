@@ -17,7 +17,7 @@ env:
 
 jobs:
 
-  darwin-docker-dev:
+  darwin-docker-release:
     runs-on: ubuntu-latest
 
     steps:
