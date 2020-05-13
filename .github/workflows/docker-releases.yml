@@ -26,6 +26,7 @@ jobs:
         run: |
           GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
           echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
+          echo "::set-env name=tag_name::$(echo ${{ github.ref }} | cut -d / -f 3)"
 
       - uses: whoan/docker-build-with-cache-action@v5
         with:
@@ -42,6 +43,6 @@ jobs:
           echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
           docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:${{ github.ref }} ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ github.ref }}
           docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:latest ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ github.ref }}
+          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.tag_name }}
           docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:latest
           docker logout
