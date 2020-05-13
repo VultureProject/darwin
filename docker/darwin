@@ -152,10 +152,6 @@ RUN pip3 install -r manager/requirements.txt\
 
 
 FROM ubuntu:18.04 AS darwin
-WORKDIR /home/darwin
-ENV LOGLEVEL WARNING
-CMD sh -c "python3 ./manager/manager.py -l ${LOGLEVEL} /home/darwin/conf/darwin.conf"
-
 RUN mkdir -p /var/sockets/darwin \
  && mkdir -p /var/run/darwin \
  && mkdir -p /var/log/darwin
@@ -184,4 +180,14 @@ COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
 COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
 COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
 
+RUN find conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
+
+WORKDIR /home/darwin
+ENV LOGLEVEL WARNING
+CMD sh -c "python3 ./manager/manager.py -l ${LOGLEVEL} /home/darwin/conf/darwin.conf"
 VOLUME ["/home/darwin/conf"]
+VOLUME ["/var/sockets/darwin"]
+VOLUME ["/var/log/darwin"]
+
+# define default final image
+FROM darwin
