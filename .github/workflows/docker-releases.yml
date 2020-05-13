@@ -25,7 +25,7 @@ jobs:
       - name: Prepare build
         run: |
           GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
-          GITHUB_TAG=`echo "${{ github.ref }}"" | cut -d / -f 3`
+          GITHUB_TAG=`echo "${{ github.ref }}" | cut -d / -f 3`
           echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
           echo "::set-env name=tag_name::${GITHUB_TAG}"
 
