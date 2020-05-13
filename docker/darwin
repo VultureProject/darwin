@@ -180,7 +180,7 @@ COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
 COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
 COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
 
-RUN find conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
+RUN find /home/darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
 
 WORKDIR /home/darwin
 ENV LOGLEVEL WARNING
