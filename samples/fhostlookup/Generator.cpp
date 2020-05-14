@@ -94,8 +94,10 @@ bool Generator::LoadEntry(const rapidjson::Value& entry) {
     }
     if (entry.HasMember("score") and entry["score"].IsInt()) {
         score = entry["score"].GetInt();
-        if (score < 0 or score > 100)
+        if (score < 0 or score > 100) {
+            DARWIN_LOG_WARNING("HostlookupGenerator:: Found score not between 0 and 100 in database " + this->_feed_name);
             score = 100;
+        }
     }
     this->_database[entry["entry"].GetString()] = score;
     return true;
