@@ -4,7 +4,7 @@
   "alert_redis_list_name": "darwin_alerts",
   "alert_redis_channel_name": "darwin.alerts",
   "maxConnections": 64000,
-  "yaraRuleFile": "/root/darwin/conf/fcontent_inspection/exampleRule.yar.example",
+  "yaraRuleFile": "/home/darwin/conf/fcontent_inspection/exampleRule.yar",
   "yaraScanType": "packet",
   "yaraScanMaxSize": 16384,
   "maxMemoryUsage": 10
