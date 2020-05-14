@@ -11,13 +11,13 @@ find_library(
   FAUP_LIBRARY
   NAMES ${FAUP_NAMES}
   HINTS ${FAUP_ROOT}
-  PATH_SUFFIXES usr/local/lib/)
+  PATH_SUFFIXES lib/ usr/local/lib/)
 
 find_path(
   FAUP_INCLUDE_DIR
   NAMES faup/faup.h
   HINTS ${FAUP_ROOT}
-  PATH_SUFFIXES usr/local/include/)
+  PATH_SUFFIXES include/ usr/local/include/)
 
 if(FAUP_LIBRARY)
   set(FAUP_FOUND "YES")

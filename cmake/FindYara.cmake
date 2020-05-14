@@ -45,11 +45,14 @@ pkg_check_modules(PC_Yara QUIET yara)
 find_path(Yara_INCLUDE_DIR
   NAMES yara.h
   PATHS ${PC_Yara_INCLUDE_DIRS}
-  PATH_SUFFIXES yara
+  HINTS ${YARA_ROOT}
+  PATH_SUFFIXES include/
 )
-find_library(Yara_LIBRARY
+  find_library(Yara_LIBRARY
   NAMES yara
   PATHS ${PC_Yara_LIBRARY_DIRS}
+  HINTS ${YARA_ROOT}
+  PATH_SUFFIXES lib/
 )
 
 set(Yara_VERSION ${PC_Yara_VERSION})

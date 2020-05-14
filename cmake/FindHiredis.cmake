@@ -43,13 +43,16 @@ pkg_check_modules(PC_Hiredis QUIET hiredis)
 
 
 find_path(Hiredis_INCLUDE_DIR
-  NAMES hiredis.h
+  NAMES hiredis/hiredis.h
   PATHS ${PC_Hiredis_INCLUDE_DIRS}
-  PATH_SUFFIXES hiredis
+  HINTS ${HIREDIS_ROOT}
+  PATH_SUFFIXES usr/local/include/
 )
 find_library(Hiredis_LIBRARY
   NAMES libhiredis.a hiredis
   PATHS ${PC_Hiredis_LIBRARY_DIRS}
+  HINTS ${HIREDIS_ROOT}
+  PATH_SUFFIXES usr/local/lib/
 )
 
 set(Hiredis_VERSION ${PC_Hiredis_VERSION})
