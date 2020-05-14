@@ -39,7 +39,7 @@ def run():
         db_empty_data,
         db_no_entry_field,
         db_no_usable_entry_field,
-        db_worng_entry_type,
+        db_wrong_entry_type,
         exec_one_good,
         exec_one_bad,
         exec_one_bad_no_score,
