@@ -235,7 +235,7 @@ def db_no_usable_entry_field():
     return False
 
 
-def db_worng_entry_type():
+def db_wrong_entry_type():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
