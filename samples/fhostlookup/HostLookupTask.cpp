@@ -100,7 +100,7 @@ const std::string HostLookupTask::BuildAlert(const std::string& host,
         R"(", "time": ")" + darwin::time_utils::GetTime() +
         R"(", "filter": ")" + GetFilterName() +
         R"(", "entry": ")" + host +
-        R"(", "feed": )" + _feed_name +
+        R"(", "feed": ")" + _feed_name +
         R"(", "certitude": )" + std::to_string(certitude) + "}";
         return alert_log;
 }
