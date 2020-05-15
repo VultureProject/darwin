@@ -41,8 +41,7 @@ The following cache variables may also be set:
 set(YARA_NAMES ${YARA_NAMES} yara libyara.a)
 
 find_package(PkgConfig)
-pkg_check_modules(PC_Yara QUIET yara)
-
+pkg_check_modules(PC_Yara QUIET yara crypto)
 
 find_path(Yara_INCLUDE_DIR
   NAMES yara.h

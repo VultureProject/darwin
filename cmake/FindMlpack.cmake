@@ -58,7 +58,8 @@ if (MLPACK_INCLUDE_DIR)
 endif()
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Mlpack
+find_package_handle_standard_args(
+  Mlpack
   REQUIRED_VARS MLPACK_LIBRARY MLPACK_INCLUDE_DIR
   VERSION_VAR MLPACK_VERSION_STRING)
 
