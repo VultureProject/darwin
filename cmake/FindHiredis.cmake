@@ -38,6 +38,8 @@ The following cache variables may also be set:
 
 #]=======================================================================]
 
+set(HIREDIS_NAMES ${HIREDIS_NAMES} libhiredis.a hiredis)
+
 find_package(PkgConfig)
 pkg_check_modules(PC_Hiredis QUIET hiredis)
 
@@ -49,7 +51,7 @@ find_path(Hiredis_INCLUDE_DIR
   PATH_SUFFIXES usr/local/include/
 )
 find_library(Hiredis_LIBRARY
-  NAMES libhiredis.a hiredis
+  NAMES ${HIREDIS_NAMES}
   PATHS ${PC_Hiredis_LIBRARY_DIRS}
   HINTS ${HIREDIS_ROOT}
   PATH_SUFFIXES usr/local/lib/

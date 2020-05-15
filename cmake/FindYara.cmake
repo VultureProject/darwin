@@ -38,6 +38,8 @@ The following cache variables may also be set:
 
 #]=======================================================================]
 
+set(YARA_NAMES ${YARA_NAMES} yara libyara.a)
+
 find_package(PkgConfig)
 pkg_check_modules(PC_Yara QUIET yara)
 
@@ -49,7 +51,7 @@ find_path(Yara_INCLUDE_DIR
   PATH_SUFFIXES include/
 )
   find_library(Yara_LIBRARY
-  NAMES yara
+  NAMES ${YARA_NAMES}
   PATHS ${PC_Yara_LIBRARY_DIRS}
   HINTS ${YARA_ROOT}
   PATH_SUFFIXES lib/
