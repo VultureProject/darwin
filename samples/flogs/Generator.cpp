@@ -24,13 +24,13 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     if (!_redis and !_log){
         DARWIN_LOG_CRITICAL("Logs:: Generator:: Need at least one of these parameters: "
-                            "\"redis_socket_path\" or \"log_file_path\"");
+                            "'redis_socket_path' or 'log_file_path'");
         return false;
     }
 
     if (_redis){
         if (!configuration["redis_socket_path"].IsString()) {
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_socket_path\" needs to be a string");
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: 'redis_socket_path' needs to be a string");
             return false;
         }
 
@@ -38,25 +38,25 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
         if (configuration.HasMember("redis_list_name")){
             if (not configuration["redis_list_name"].IsString()) {
-                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_list_name\" needs to be a string");
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: 'redis_list_name' needs to be a string");
                 return false;
             }
             _redis_list_name = configuration["redis_list_name"].GetString();
-            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_list_name\" set to " + _redis_list_name);
+            DARWIN_LOG_INFO("Logs:: Generator:: 'redis_list_name' set to " + _redis_list_name);
         }
 
         if (configuration.HasMember("redis_channel_name")){
             if (not configuration["redis_channel_name"].IsString()) {
-                DARWIN_LOG_CRITICAL("Logs:: Generator:: \"redis_channel_name\" needs to be a string");
+                DARWIN_LOG_CRITICAL("Logs:: Generator:: 'redis_channel_name' needs to be a string");
                 return false;
             }
             _redis_channel_name = configuration["redis_channel_name"].GetString();
-            DARWIN_LOG_INFO("Logs:: Generator:: \"redis_channel_name\" set to " + _redis_channel_name);
+            DARWIN_LOG_INFO("Logs:: Generator:: 'redis_channel_name' set to " + _redis_channel_name);
         }
 
         if(_redis_list_name.empty() and _redis_channel_name.empty()) {
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: if \"redis_socket_path\" is provided, you need to provide at least"
-                                    " \"redis_list_name\" or \"redis_channel_name\"");
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: if 'redis_socket_path' is provided, you need to provide at least"
+                                    " 'redis_list_name' or 'redis_channel_name'");
             return false;
         }
 
@@ -68,7 +68,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     if (_log){
         if (!configuration["log_file_path"].IsString()) {
-            DARWIN_LOG_CRITICAL("Logs:: Generator:: \"log_file_path\" needs to be a string");
+            DARWIN_LOG_CRITICAL("Logs:: Generator:: 'log_file_path' needs to be a string");
             return false;
         }
         _log_file_path = configuration["log_file_path"].GetString();

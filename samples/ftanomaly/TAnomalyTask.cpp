@@ -82,9 +82,9 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
     {
         DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: The data: "+ _entry +", isn't valid, ignored. "
                                                                             "Format expected : "
-                                                                            "[\"[ip4]\",\"[ip4]\",((\"[port]\","
-                                                                            "\"[ip_protocol udp or tcp]\")|"
-                                                                            "\"[ip_protocol icmp]\")]");
+                                                                            "[\\\"[ip4]\\\",\\\"[ip4]\\\",((\\\"[port]\\\","
+                                                                            "\\\"[ip_protocol udp or tcp]\\\")|"
+                                                                            "\\\"[ip_protocol icmp]\\\")]");
         return false;
     }
 

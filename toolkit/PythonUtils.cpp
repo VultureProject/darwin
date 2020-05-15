@@ -38,7 +38,7 @@ namespace darwin {
             Py_Initialize();
 
             if (PyRun_SimpleString("import sys") != 0) {
-                DARWIN_LOG_DEBUG("darwin:: pythonutils:: InitPythonProgram:: An error occurred while loading the \"sys\" module");
+                DARWIN_LOG_DEBUG("darwin:: pythonutils:: InitPythonProgram:: An error occurred while loading the 'sys' module");
                 PyErr_Print();
                 return false;
             }
@@ -48,9 +48,9 @@ namespace darwin {
                 std::string command = "sys.path.append(\"" + *custom_python_path + "\")";
                 if (PyRun_SimpleString(command.c_str()) != 0) {
                     DARWIN_LOG_DEBUG(
-                            "darwin:: pythonutils:: InitPythonProgram:: An error occurred while appending the custom path \"" +
+                            "darwin:: pythonutils:: InitPythonProgram:: An error occurred while appending the custom path '" +
                             *custom_python_path +
-                            "\" to the Python path"
+                            "' to the Python path"
                     );
 
                     PyErr_Print();
@@ -58,7 +58,7 @@ namespace darwin {
                 }
             } else {
                 if (PyRun_SimpleString("import os") != 0) {
-                    DARWIN_LOG_DEBUG("darwin:: pythonutils:: InitPythonProgram:: An error occurred while loading the \"os\" module");
+                    DARWIN_LOG_DEBUG("darwin:: pythonutils:: InitPythonProgram:: An error occurred while loading the 'os' module");
                     PyErr_Print();
                     return false;
                 }
@@ -75,7 +75,7 @@ namespace darwin {
 
         bool ImportPythonModule(const std::string &module_str, PyObject **py_module) {
             DARWIN_LOGGER;
-            DARWIN_LOG_DEBUG("darwin:: pythonutils:: ImportPythonModule:: Importing the Python module \"" + module_str + "\"...");
+            DARWIN_LOG_DEBUG("darwin:: pythonutils:: ImportPythonModule:: Importing the Python module '" + module_str + "'...");
             PyObject *py_module_str = nullptr;
 
             if ((py_module_str = PyUnicode_FromString(module_str.c_str())) == nullptr) {
@@ -95,10 +95,10 @@ namespace darwin {
 
         bool GetPythonFunction(PyObject *py_module, const std::string &function_str, PyObject **py_function) {
             DARWIN_LOGGER;
-            DARWIN_LOG_DEBUG("darwin:: pythonutils:: GetPythonFunction:: Getting the Python function \"" + function_str + "\"...");
+            DARWIN_LOG_DEBUG("darwin:: pythonutils:: GetPythonFunction:: Getting the Python function '" + function_str + "'...");
 
             if ((*py_function = PyObject_GetAttrString(py_module, function_str.c_str())) == nullptr) {
-                DARWIN_LOG_DEBUG("darwin:: pythonutils:: GetPythonFunction:: An error occurred while getting the Python function \"" + function_str + "\"");
+                DARWIN_LOG_DEBUG("darwin:: pythonutils:: GetPythonFunction:: An error occurred while getting the Python function '" + function_str + "'");
                 PyErr_Print();
                 return false;
             }
