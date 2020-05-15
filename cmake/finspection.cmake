@@ -8,6 +8,7 @@ link_directories(
     ${LIBYARA_LIBRARY_DIRS}
 )
 
+find_package(Yara REQUIRED)
 
 ###################
 #    EXECUTABLE   #
@@ -34,8 +35,7 @@ add_executable(
 target_link_libraries(
     ${INSPECTION_NAME}
     ${DARWIN_LIBRARIES}
-    yara
+    Yara::Yara
 )
 
-target_include_directories(${INSPECTION_NAME} PUBLIC ${LIBYARA_INCLUDE_DIRS})
 target_include_directories(${INSPECTION_NAME} PUBLIC samples/finspection/)
