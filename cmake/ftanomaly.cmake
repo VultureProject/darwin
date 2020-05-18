@@ -6,7 +6,7 @@ set(TANOMALY_NAME darwin_tanomaly)
 
 find_package(Armadillo 9.400.0 REQUIRED)
 
-find_package(MLPACK 3.0.1 REQUIRED)
+find_package(Mlpack 3.0.1 REQUIRED)
 
 set(Boost_STATIC_LIBS ON)
 # MLPACK Boost dependencies
