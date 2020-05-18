@@ -12,21 +12,38 @@ if(TensorflowCC_FOUND)
 else()
   message("didn't find TensorflowCC target, linking tensorflow manually")
 
-  find_library(TF_CC_LIBRARY
-          NAMES libtensorflow_cc.so
-          PATH_SUFFIXES tensorflow/)
-  find_library(TF_FRAMEWORK_LIBRARY
-          NAMES libtensorflow_framework.so
-          PATH_SUFFIXES tensorflow/)
+  find_library(
+    TF_CC_LIBRARY
+    NAMES libtensorflow_cc.so
+    PATH_SUFFIXES tensorflow/)
+  find_library(
+    TF_FRAMEWORK_LIBRARY
+    NAMES libtensorflow_framework.so
+    PATH_SUFFIXES tensorflow/)
+
+  find_path(
+    PROTOBUF_SOURCE
+    NAMES google/protobuf/stubs/common.h
+    PATH_SUFFIXES contrib/protobuf/src/)
+  find_path(
+    EIGEN_SOURCE
+    NAMES unsupported/Eigen/CXX11/Tensor
+    PATH_SUFFIXES contrib/eigen)
+  find_path(
+      ABSL_SOURCE
+      NAMES absl/strings/string_view.h
+      PATH_SUFFIXES contrib/absl)
 
   set(TENSORFLOW_LIBRARIES ${TENSORFLOW_LIBRARIES} ${TF_CC_LIBRARY})
   set(TENSORFLOW_LIBRARIES ${TENSORFLOW_LIBRARIES} ${TF_FRAMEWORK_LIBRARY})
-  set(TENSORFLOW_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS} /usr/local/include/contrib/eigen/)
-  set(TENSORFLOW_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS} /usr/local/include/contrib/absl/)
+  set(TENSORFLOW_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS} ${PROTOBUF_SOURCE})
+  set(TENSORFLOW_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS} ${EIGEN_SOURCE})
+  set(TENSORFLOW_INCLUDE_DIRS ${TENSORFLOW_INCLUDE_DIRS} ${ABSL_SOURCE})
 
   include (FindPackageHandleStandardArgs)
   find_package_handle_standard_args(
-    tensorflow DEFAULT_MSG TF_CC_LIBRARY TF_FRAMEWORK_LIBRARY)
+    Tensorflow
+    REQUIRED_VARS TF_CC_LIBRARY TF_FRAMEWORK_LIBRARY)
 
   mark_as_advanced(TENSORFLOW_LIBRARIES TENSORFLOW_INCLUDE_DIRS)
 endif()

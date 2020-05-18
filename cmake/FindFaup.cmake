@@ -30,7 +30,9 @@ set(FAUP_INCLUDE_DIRS ${FAUP_INCLUDE_DIR})
 
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-  faup DEFAULT_MSG FAUP_LIBRARIES FAUP_INCLUDE_DIRS)
+  Faup
+  DEFAULT_MSG
+  FAUP_LIBRARIES FAUP_INCLUDE_DIRS)
 
 mark_as_advanced(FAUP_LIBRARY)
 mark_as_advanced(FAUP_INCLUDE_DIR)
