@@ -29,12 +29,12 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     unsigned int detection_frequency = 300; //detection thread launching frequency in seconds
 
     if(not configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("TAnomaly::Generator:: \"redis_socket_path\" parameter missing, mandatory");
+        DARWIN_LOG_CRITICAL("TAnomaly::Generator:: 'redis_socket_path' parameter missing, mandatory");
         return false;
     }
 
     if (not configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"redis_socket_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
 
@@ -57,7 +57,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     // Override start_detection_thread with parameter
     if(configuration.HasMember("start_detection_thread") and configuration["start_detection_thread"].IsBool()) {
         start_detection_thread = configuration["detect"].GetBool();
-        DARWIN_LOG_INFO("TAnomaly:: Generator:: \"start_detection_thread\" specified, "
+        DARWIN_LOG_INFO("TAnomaly:: Generator:: 'start_detection_thread' specified, "
                         + std::string((start_detection_thread ? "enabling" : "disabling")) + " detection");
     }
 
@@ -72,43 +72,43 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     if (not is_log_redis and not is_log_file){
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Need at least one of these parameters: "
-                            "\"redis_socket_path\" or \"log_file_path\"");
+                            "'redis_socket_path' or 'log_file_path'");
         return false;
     }
 
     if (is_log_redis){
         if (configuration.HasMember("redis_list_name")){
             if (not configuration["redis_list_name"].IsString()) {
-                DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"redis_list_name\" needs to be a string");
+                DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_list_name' needs to be a string");
                 return false;
             }
             redis_alerts_list = configuration["redis_list_name"].GetString();
-            DARWIN_LOG_INFO("TAnomaly:: Generator:: \"redis_list_name\" set to " + redis_alerts_list);
+            DARWIN_LOG_INFO("TAnomaly:: Generator:: 'redis_list_name' set to " + redis_alerts_list);
         }
 
         if (configuration.HasMember("redis_channel_name")){
             if (not configuration["redis_channel_name"].IsString()) {
-                DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"redis_channel_name\" needs to be a string");
+                DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_channel_name' needs to be a string");
                 return false;
             }
             redis_alerts_channel = configuration["redis_channel_name"].GetString();
-            DARWIN_LOG_INFO("TAnomaly:: Generator:: \"redis_channel_name\" set to " + redis_alerts_channel);
+            DARWIN_LOG_INFO("TAnomaly:: Generator:: 'redis_channel_name' set to " + redis_alerts_channel);
         }
 
         if(redis_alerts_list.empty() and redis_alerts_channel.empty()) {
-            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: if \"redis_socket_path\" is provided, you need to provide at least"
-                                    " \"redis_list_name\" or \"redis_channel_name\", they cannot be empty");
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: if 'redis_socket_path' is provided, you need to provide at least"
+                                    " 'redis_list_name' or 'redis_channel_name', they cannot be empty");
             return false;
         }
 
         if(not redis_alerts_list.compare(_redis_internal)) {
             redis_alerts_list.clear();
             if(not redis_alerts_channel.empty()) {
-                DARWIN_LOG_WARNING("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                DARWIN_LOG_WARNING("TAnomaly:: Generator:: 'redis_list_name' parameter cannot be set to '" +
                                     std::string(_redis_internal) + "' (forbidden name), parameter ignored.");
             }
             else {
-                DARWIN_LOG_ERROR("TAnomaly:: Generator:: \"redis_list_name\" parameter cannot be set to '" +
+                DARWIN_LOG_ERROR("TAnomaly:: Generator:: 'redis_list_name' parameter cannot be set to '" +
                                 std::string(_redis_internal) + "' (forbidden name). No alternative for Redis, aborting.");
                 return false;
             }
@@ -119,7 +119,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     if (is_log_file){
         if (!configuration["log_file_path"].IsString()) {
-            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: \"log_file_path\" needs to be a string");
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'log_file_path' needs to be a string");
             return false;
         }
 

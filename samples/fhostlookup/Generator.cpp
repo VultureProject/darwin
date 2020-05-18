@@ -25,11 +25,11 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     rapidjson::Document database;
 
     if (!configuration.HasMember("database")) {
-        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Missing parameter: \"database\"");
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Missing parameter: 'database'");
         return false;
     }
     if (!configuration["database"].IsString()) {
-        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: \"database\" needs to be a string");
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: 'database' needs to be a string");
         return false;
     }
     db = configuration["database"].GetString();

@@ -114,7 +114,7 @@ DGATask::~DGATask() = default;
 
 bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Analyzing domain \"" + _domain + "\"");
+    DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Analyzing domain '" + _domain + "'");
 
     bool is_domain_valid = darwin::validator::IsDomainValid(_domain);
 
@@ -131,34 +131,34 @@ bool DGATask::ExtractRegisteredDomain(std::string &to_predict) {
         );
 
         if (tld == "yu" || tld == "za") {
-            DARWIN_LOG_DEBUG("ExtractRegisteredDomain::TLD found is \"" + tld + "\", returning false");
+            DARWIN_LOG_DEBUG("ExtractRegisteredDomain::TLD found is '" + tld + "', returning false");
             faup_terminate(fh);
             return false;
         }
 
-        DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: TLD found is \"" + tld + "\"");
+        DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: TLD found is '" + tld + "'");
 
         std::string registered_domain = _domain.substr(
                 faup_get_domain_without_tld_pos(fh),
                 faup_get_domain_without_tld_size(fh)
         );
 
-        DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Registered domain found is \"" + registered_domain + "\"");
+        DARWIN_LOG_DEBUG("ExtractRegisteredDomain:: Registered domain found is '" + registered_domain + "'");
 
         to_predict = registered_domain + "." + tld;
 
     } catch (const std::out_of_range& exception) {
-        DARWIN_LOG_INFO("ExtractRegisteredDomain:: domain appears to be invalid: \"" + _domain + "\"");
+        DARWIN_LOG_INFO("ExtractRegisteredDomain:: domain appears to be invalid: '" + _domain + "'");
         faup_terminate(fh);
         return false;
 
     } catch (const std::exception& exception) {
-        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unexpected error with domain \"" + _domain + "\": \"" +
-                         exception.what() + "\"");
+        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unexpected error with domain '" + _domain + "': '" +
+                         exception.what() + "'");
         faup_terminate(fh);
         return false;
     } catch (...) {
-        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unknown error with domain \"" + _domain + "\"");
+        DARWIN_LOG_ERROR("ExtractRegisteredDomain:: Unknown error with domain '" + _domain + "'");
         faup_terminate(fh);
         return false;
     }
@@ -178,7 +178,7 @@ void DGATask::DomainTokenizer(std::vector<std::size_t> &domain_tokens, const std
 
         // token is not in our dictionary
         if (it == _token_map.end()) {
-            DARWIN_LOG_DEBUG("DomainTokenizer:: No token has been found for the character \"" + character + "\"");
+            DARWIN_LOG_DEBUG("DomainTokenizer:: No token has been found for the character '" + character + "'");
             continue;
         }
 
@@ -200,7 +200,7 @@ unsigned int DGATask::Predict() {
     }
 
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Predict:: Classifying \"" + to_predict + "\"...");
+    DARWIN_LOG_DEBUG("Predict:: Classifying '" + to_predict + "'...");
 
     std::vector<std::size_t> domain_tokens(_max_tokens, 0);
     DomainTokenizer(domain_tokens, to_predict);

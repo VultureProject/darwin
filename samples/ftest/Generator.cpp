@@ -29,14 +29,14 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
             if (configuration.HasMember("redis_list_name")){
                 if (configuration["redis_list_name"].IsString()) {
                     _redis_list_name = configuration["redis_list_name"].GetString();
-                    DARWIN_LOG_INFO("Test:: Generator:: \"redis_list_name\" set to " + _redis_list_name);
+                    DARWIN_LOG_INFO("Test:: Generator:: 'redis_list_name' set to " + _redis_list_name);
                 }
             }
 
             if (configuration.HasMember("redis_channel_name")){
                 if (configuration["redis_channel_name"].IsString()) {
                     _redis_channel_name = configuration["redis_channel_name"].GetString();
-                    DARWIN_LOG_INFO("Test:: Generator:: \"redis_channel_name\" set to " + _redis_channel_name);
+                    DARWIN_LOG_INFO("Test:: Generator:: 'redis_channel_name' set to " + _redis_channel_name);
                 }
             }
 
@@ -46,7 +46,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
             }
         }
         else {
-            DARWIN_LOG_WARNING("Test:: Generator:: \"redis_socket_path\" needs to be a string, ignoring");
+            DARWIN_LOG_WARNING("Test:: Generator:: 'redis_socket_path' needs to be a string, ignoring");
         }
     }
 

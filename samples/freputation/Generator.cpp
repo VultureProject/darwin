@@ -28,7 +28,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
 bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Reputation:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("Reputation:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("Reputation:: Generator:: Parsing configuration from '" + configuration_file_path + "'...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
@@ -67,17 +67,17 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     }
 
     if (!configuration.HasMember("mmdb_database")) {
-        DARWIN_LOG_CRITICAL("Reputation:: Generator:: Missing parameter: \"mmdb_database\"");
+        DARWIN_LOG_CRITICAL("Reputation:: Generator:: Missing parameter: 'mmdb_database'");
         return false;
     }
 
     if (!configuration["mmdb_database"].IsString()) {
-        DARWIN_LOG_CRITICAL("Reputation:: Generator:: \"mmdb_database\" needs to be a string");
+        DARWIN_LOG_CRITICAL("Reputation:: Generator:: 'mmdb_database' needs to be a string");
         return false;
     }
-   
+
     db = configuration["mmdb_database"].GetString();
-    
+
     auto status = MMDB_open(db.c_str(), MMDB_MODE_MMAP, &_database);
     if (status != MMDB_SUCCESS) {
         DARWIN_LOG_CRITICAL("Reputation:: Generator:: Configure:: Cannot open database");

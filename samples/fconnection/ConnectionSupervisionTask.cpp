@@ -100,9 +100,9 @@ bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
     {
         DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLine:: The data: "+ _connection +", isn't valid, ignored. "
                                                                                         "Format expected : "
-                                                                                        "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
-                                                                                        "\"[ip_protocol udp or tcp]\")|"
-                                                                                        "\"[ip_protocol icmp]\")]");
+                                                                                        "[\\\"[ip4]\\\";\\\"[ip4]\\\";((\\\"[port]\\\";"
+                                                                                        "\\\"[ip_protocol udp or tcp]\\\")|"
+                                                                                        "\\\"[ip_protocol icmp]\\\")]");
         return false;
     }
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseLine: Parsed element: " + _connection);

@@ -61,8 +61,8 @@ void LogsTask::operator()() {
 
 bool LogsTask::WriteLogs() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("WriteLogsTask::WriteLogs:: Starting writing in log file: \""
-                     + _log_file_path + "\"...");
+    DARWIN_LOG_DEBUG("WriteLogsTask::WriteLogs:: Starting writing in log file: '"
+                     + _log_file_path + "'...");
     unsigned int retry = RETRY;
     bool fail;
 

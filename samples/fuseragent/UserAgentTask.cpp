@@ -105,7 +105,7 @@ void UserAgentTask::UserAgentTokenizer(const std::string &user_agent, std::vecto
 
             // "UNK" token is not in the dictionary: this should NEVER happen!
             if (it == _token_map.end()) {
-                DARWIN_LOG_ERROR("UserAgentTokenizer:: Error: Invalid dictionary file: \"UNK\" token not found!");
+                DARWIN_LOG_ERROR("UserAgentTokenizer:: Error: Invalid dictionary file: 'UNK' token not found!");
                 continue;
             }
         }
@@ -166,7 +166,7 @@ unsigned int UserAgentTask::Predict(const std::string &user_agent) {
     unsigned int certitude = 0;
 
     for (auto it = result.begin(); it != result.end(); ++it) {
-        DARWIN_LOG_DEBUG("Predict:: \"" + it->first + "\": " + std::to_string(it->second));
+        DARWIN_LOG_DEBUG("Predict:: '" + it->first + "': " + std::to_string(it->second));
 
         if (it->first == "Bad bot") {
             certitude = (unsigned int)round((double)it->second * 100);

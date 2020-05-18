@@ -27,9 +27,9 @@ namespace darwin {
             bool is_valid = std::regex_search(domain.begin(), domain.end(), match, domain_regex);
 
             if (is_valid) {
-                DARWIN_LOG_DEBUG("The domain \"" + domain + "\" is valid");
+                DARWIN_LOG_DEBUG("The domain '" + domain + "' is valid");
             } else {
-                DARWIN_LOG_DEBUG("The domain \"" + domain + "\" is not valid");
+                DARWIN_LOG_DEBUG("The domain '" + domain + "' is not valid");
             }
 
             return is_valid;
