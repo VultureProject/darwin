@@ -25,7 +25,7 @@ HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& sock
                                std::mutex& cache_mutex,
                                tsl::hopscotch_map<std::string, int>& db,
                                const std::string& feed_name)
-        : Session{"host_lookup", socket, manager, cache, cache_mutex}, _database{db},
+        : Session{"hostlookup", socket, manager, cache, cache_mutex}, _database{db},
         _feed_name{feed_name} {
     _is_cache = _cache != nullptr;
 }
@@ -61,6 +61,7 @@ void HostLookupTask::operator()() {
                         std::string alert_log = this->BuildAlert(_host, certitude);
                         DARWIN_RAISE_ALERT(alert_log);
                         if (is_log) {
+                            _logs += alert_log + "\n";
                         }
                     }
                     _certitudes.push_back(certitude);
@@ -74,6 +75,7 @@ void HostLookupTask::operator()() {
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 STAT_MATCH_INC;
                 std::string alert_log = this->BuildAlert(_host, certitude);
+                DARWIN_RAISE_ALERT(alert_log);
                 if (is_log){
                     _logs += alert_log + "\n";
                 }

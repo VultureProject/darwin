@@ -30,8 +30,10 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
-    bool LoadDatabase(const rapidjson::Document& database);
-    bool LoadEntry(const rapidjson::Value& entry);
+    bool LoadTextFile(const std::string& filename);
+    bool LoadJsonFile(const std::string& filename);
+    bool LoadJsonDatabase(const rapidjson::Document& database);
+    bool LoadJsonEntry(const rapidjson::Value& entry);
 
 private:
     // This implementation is thread safe with multiple reader

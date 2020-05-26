@@ -41,6 +41,31 @@ namespace darwin {
             }
         }
 
+        std::string GetNameFromPath(const std::string& filename) {
+            char sep = '/';
+
+        #ifdef _WIN32
+            sep = '\\';
+        #endif
+
+            size_t i = filename.rfind(sep, filename.length());
+            if (i != std::string::npos) {
+                return(filename.substr(i+1, filename.length() - i));
+            }
+
+            return("");
+        }
+
+        void ReplaceExtension(std::string& filename, const std::string& new_extension) {
+            std::string::size_type i = filename.rfind('.', filename.length());
+
+            if (i != std::string::npos) {
+                if (new_extension.empty())
+                    filename = filename.substr(0, i);
+                else
+                    filename.replace(i+1, new_extension.length(), new_extension);
+            }
+        }
 
     }
 }
