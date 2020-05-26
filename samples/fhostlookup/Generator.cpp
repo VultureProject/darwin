@@ -79,7 +79,7 @@ bool Generator::LoadTextFile(const std::string& filename) {
     }
     file.close();
 
-    // Get feed namme from file name
+    // Get feed name from file name
     buf = darwin::files_utils::GetNameFromPath(filename); // Filename already proven valid
     darwin::files_utils::ReplaceExtension(buf, "");
     this->_feed_name = buf;
