@@ -19,36 +19,36 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("SofaTask:: Generator:: Loading configuration file...");
 
     if (!configuration.HasMember("python_env_path")) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: \"python_env_path\"");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: 'python_env_path'");
         return false;
     }
 
     if (!configuration["python_env_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: \"python_env_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: 'python_env_path' needs to be a string");
         return false;
     }
 
     std::string python_env_path_str = configuration["python_env_path"].GetString();
 
     if (!configuration.HasMember("module")) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: \"module\"");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: 'module'");
         return false;
     }
 
     if (!configuration["module"].IsString()) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: \"module\" needs to be a string");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: 'module' needs to be a string");
         return false;
     }
 
     std::string module_str = configuration["module"].GetString();
 
     if (!configuration.HasMember("function")) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: \"function\"");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: Missing parameter: 'function'");
         return false;
     }
 
     if (!configuration["function"].IsString()) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: \"function\" needs to be a string");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: 'function' needs to be a string");
         return false;
     }
 
@@ -61,7 +61,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     if (!configuration["custom_python_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: \"custom_python_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("SofaTask:: Generator:: 'custom_python_path' needs to be a string");
         return false;
     }
 
