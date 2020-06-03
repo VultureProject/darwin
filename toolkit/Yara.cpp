@@ -167,7 +167,7 @@ namespace darwin {
         }
 
         bool YaraCompiler::ReadyToScan() {
-            return _status != YaraCompilerStatus::NO_RULES;
+            return this->_status != YaraCompilerStatus::NO_RULES && this->_status != YaraCompilerStatus::ERROR;
         }
 
         bool YaraCompiler::AddRuleFile(FILE *file, std::string nameSpace, std::string filename) {

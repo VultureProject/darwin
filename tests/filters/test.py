@@ -5,7 +5,7 @@ import filters.fanomaly as fanomaly
 import filters.ftanomaly as ftanomaly 
 import filters.fconnection as fconnection
 import filters.fhostlookup as fhostlookup
-import filters.fyarascan as fyarascan
+import filters.fyara as fyara
 from tools.output import print_results
 
 
@@ -19,7 +19,7 @@ def run():
     fhostlookup.run()
     fsofa.run()
     fanomaly.run()
-    fyarascan.run()
+    fyara.run()
 
     print()
     print()

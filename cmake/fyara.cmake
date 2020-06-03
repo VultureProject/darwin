@@ -4,9 +4,15 @@ set(YARA_NAME darwin_yara)
 # FILTER DEPENDENCIES #
 #######################
 
-link_directories(
-    ${LIBYARA_LIBRARY_DIRS}
-)
+find_package(Yara REQUIRED)
+
+# Search for static OpenSSL libs, then fall back to dynamic ones
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL QUIET)
+if(NOT OpenSSL_FOUND)
+    set(OPENSSL_USE_STATIC_LIBS FALSE)
+    find_package(OpenSSL)
+endif()
 
 ###################
 #    EXECUTABLE   #
@@ -15,16 +21,16 @@ link_directories(
 add_executable(
     ${YARA_NAME}
     ${DARWIN_SOURCES}
-    samples/fyarascan/Generator.cpp samples/fyarascan/Generator.hpp
-    samples/fyarascan/YaraScanTask.cpp samples/fyarascan/YaraScanTask.hpp
+    samples/fyara/Generator.cpp samples/fyara/Generator.hpp
+    samples/fyara/YaraTask.cpp samples/fyara/YaraTask.hpp
     toolkit/Yara.cpp toolkit/Yara.hpp
 )
 
 target_link_libraries(
     ${YARA_NAME}
     ${DARWIN_LIBRARIES}
-    yara
+    Yara::Yara
+    OpenSSL::Crypto
 )
 
-target_include_directories(${YARA_NAME} PUBLIC ${LIBYARA_INCLUDE_DIRS})
-target_include_directories(${YARA_NAME} PUBLIC samples/fyarascan/)
+target_include_directories(${YARA_NAME} PUBLIC samples/fyara/)

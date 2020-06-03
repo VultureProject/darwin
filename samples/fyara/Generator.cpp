@@ -10,7 +10,7 @@
 
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
-#include "YaraScanTask.hpp"
+#include "YaraTask.hpp"
 #include "Generator.hpp"
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
@@ -81,7 +81,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     if(not _yaraCompiler->ReadyToScan()) {
-        DARWIN_LOG_CRITICAL("Yara::Generator:: no rules have been added to the engine, unable to start scanning");
+        DARWIN_LOG_CRITICAL("Yara::Generator:: error(s) occured while trying to add rules to compiler, cannot start");
         return false;
     }
 
@@ -92,5 +92,5 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<YaraScanTask>(socket, manager, _cache, _cache_mutex, _yaraCompiler->GetEngine(_fastmode, _timeout)));
+            std::make_shared<YaraTask>(socket, manager, _cache, _cache_mutex, _yaraCompiler->GetEngine(_fastmode, _timeout)));
 }
