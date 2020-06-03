@@ -21,9 +21,10 @@
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("HostLookup:: Generator:: Loading classifier...");
-    std::string  db;
-    rapidjson::Document database;
+    std::string db;
+    std::string db_type;
 
+    // Load DB Name
     if (!configuration.HasMember("database")) {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Missing parameter: 'database'");
         return false;
@@ -33,16 +34,72 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         return false;
     }
     db = configuration["database"].GetString();
-    std::ifstream file(db.c_str());
+
+    // Load DB Type
+    if (configuration.HasMember("db_type")) {
+            if (!configuration["db_type"].IsString()) {
+            DARWIN_LOG_CRITICAL("HostLookup:: Generator:: 'db_type' needs to be a string");
+            return false;
+        }
+        db_type = configuration["db_type"].GetString();
+    } else {
+        db_type = "text";
+    }
+
+    // Load the DB according to the given type
+    if (db_type == "json") {
+        return this->LoadJsonFile(db);
+    } else if (db_type == "text") {
+        return this->LoadTextFile(db);
+    } else {
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Unknown 'db_type'");
+        return false;
+    }
+    return false; // Put it there just in case.
+}
+
+bool Generator::LoadTextFile(const std::string& filename) {
+    DARWIN_LOGGER;
+    std::ifstream file(filename.c_str());
+    std::string buf;
+
+    // Load file content
     if (!file) {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Cannot open host database");
         return false;
     }
+    while (!darwin::files_utils::GetLineSafe(file, buf).eof()) {
+        if(file.fail() or file.bad()){
+            DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Error when reading host database");
+            return false;
+        }
+        if (!buf.empty()){
+            _database.insert({buf,100});
+        }
+    }
+    file.close();
 
+    // Get feed name from file name
+    buf = darwin::files_utils::GetNameFromPath(filename); // Filename already proven valid
+    darwin::files_utils::ReplaceExtension(buf, "");
+    this->_feed_name = buf;
+
+    return true;
+}
+
+bool Generator::LoadJsonFile(const std::string& filename) {
+    DARWIN_LOGGER;
+    std::ifstream file(filename.c_str());
+    rapidjson::Document database;
+
+    if (!file) {
+        DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Cannot open host database");
+        return false;
+    }
     DARWIN_LOG_DEBUG("HostlookupGenerator:: Parsing database...");
     rapidjson::IStreamWrapper isw(file);
     database.ParseStream(isw);
-    if (not this->LoadDatabase(database)) {
+    if (not this->LoadJsonDatabase(database)) {
         file.close();
         return false;
     }
@@ -50,7 +107,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     return true;
 }
 
-bool Generator::LoadDatabase(const rapidjson::Document& database) {
+bool Generator::LoadJsonDatabase(const rapidjson::Document& database) {
     DARWIN_LOGGER;
     if (not database.IsObject()) {
         DARWIN_LOG_CRITICAL("HostlookupGenerator:: Database is not a JSON object");
@@ -71,7 +128,7 @@ bool Generator::LoadDatabase(const rapidjson::Document& database) {
         return false;
     }
     for (auto& entry : entries) {
-        this->LoadEntry(entry);
+        this->LoadJsonEntry(entry);
     }
     if (this->_database.size() == 0) {
         DARWIN_LOG_CRITICAL("HostlookupGenerator:: No usable entry in the database. Stopping.");
@@ -80,7 +137,7 @@ bool Generator::LoadDatabase(const rapidjson::Document& database) {
     return true;
 }
 
-bool Generator::LoadEntry(const rapidjson::Value& entry) {
+bool Generator::LoadJsonEntry(const rapidjson::Value& entry) {
     DARWIN_LOGGER;
     int score = 100;
     std::string sentry;

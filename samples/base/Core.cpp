@@ -189,13 +189,19 @@ namespace darwin {
     bool Core::GetULArg(unsigned long& res, const char* arg) {
         DARWIN_LOGGER;
         char* endptr{nullptr};
+        errno = 0;
 
         res = strtoull(arg, &endptr, 10);
         if ((errno == ERANGE &&
-             (res == ULONG_MAX || res == 0))
+             (res == ULLONG_MAX || res == 0))
             || (errno != 0 && res == 0)) {
             DARWIN_LOG_CRITICAL(std::string("Core:: Program Arguments:: ") +
                          strerror(errno));
+            return false;
+        }
+
+        if (endptr == arg) {
+            DARWIN_LOG_ERROR("Core:: Program Arguments:: could not parse number");
             return false;
         }
         return true;
