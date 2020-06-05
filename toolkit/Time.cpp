@@ -10,8 +10,8 @@ namespace darwin {
             std::string res;
 
             time(&rawtime);
-            timeinfo = localtime(&rawtime);
-            strftime(str_time, sizeof(str_time), "%F%Z%T%z", timeinfo);
+            timeinfo = gmtime(&rawtime);
+            strftime(str_time, sizeof(str_time), "%FT%TZ", timeinfo);
             res = str_time;
 
             return res;
