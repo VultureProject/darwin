@@ -11,11 +11,18 @@ else ()
     SET(CMAKE_CXX_FLAGS "-W -Wall -Wextra")
 endif ()
 
+###############
+#   OPTIONS   #
+###############
+
 option(DEBUG "Compile Darwin filters with debugging capabilities" OFF)
 option(GIT_SUBMODULE "Check submodules during build" ON)
+option(BUILD_TESTS "Determines whether to build Darwin's unit tests (using Catch2)" OFF)
 
-#include catch unit tests cmake
-include(${PROJECT_SOURCE_DIR}/cmake/catch_tests.cmake)
+
+##################
+#   SUBMODULES   #
+##################
 
 if(GIT_SUBMODULE)
     find_package(Git QUIET)
@@ -32,6 +39,11 @@ if(GIT_SUBMODULE)
         message(FATAL_ERROR "git not present, could not check submodules ! Please install git or disable submodules checking with -DGIT_SUBMODULE=OFF !")
     endif()
 endif()
+
+
+#include catch unit tests cmake
+include(${PROJECT_SOURCE_DIR}/cmake/catch_tests.cmake)
+
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -123,7 +135,8 @@ set(
         toolkit/Files.cpp toolkit/Files.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/FileManager.cpp toolkit/FileManager.hpp
-        toolkit/Encoders.h
+        toolkit/xxhash.h toolkit/xxhash.hpp
+        toolkit/lru_cache.hpp
 )
 
 

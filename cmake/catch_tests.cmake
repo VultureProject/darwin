@@ -1,5 +1,3 @@
-option(BUILD_TESTS "Determines whether to build Darwin's unit tests (using Catch2)" OFF)
-
 set(DARWIN_TESTS_CPP
     ${PROJECT_SOURCE_DIR}/tests/units/testsBase.cpp
     ${PROJECT_SOURCE_DIR}/tests/units/testsEncoders.cpp)
