@@ -1,6 +1,7 @@
-#include "catch2/catch.hpp"
-#include "../toolkit/Encoders.h"
+#include <iostream>
 
+#include "catch2/catch.hpp"
+#include "Encoders.h"
 
 TEST_CASE("Base64", "[toolkit][encoders]") {
     std::string out;
