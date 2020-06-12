@@ -166,6 +166,7 @@ namespace darwin {
         YaraCompiler::~YaraCompiler() {
             DARWIN_LOGGER;
             yr_compiler_destroy(_compiler);
+            if(_rules) yr_rules_destroy(_rules);
 
             if(yr_finalize() != 0) {
                 DARWIN_LOG_ERROR("Toolkit::YaraCompiler::~YaraCompiler:: could not finalize yara module");
