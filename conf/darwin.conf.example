@@ -1,50 +1,12 @@
 {
-    "logs_1": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file": "/home/darwin/conf/flogs/flogs.conf.example",
-        "nb_thread": 5,
-        "log_level": "ERROR",
-        "cache_size": 0,
-        "output": "NONE",
-        "next_filter": ""
-    },
-    "session_1": {
-        "exec_path": "/home/darwin/filters/darwin_session",
-        "config_file": "/home/darwin/conf/fsession/fsession.conf.example",
-        "nb_thread": 5,
-        "log_level": "ERROR",
-        "cache_size": 0,
-        "output": "LOG",
-        "next_filter": "logs_1"
-    },
-    "content_inspection_1": {
-        "exec_path": "/home/darwin/filters/darwin_content_inspection",
-        "config_file": "/home/darwin/conf/fcontent_inspection/fcontent_inspection.conf.example",
-        "nb_thread": 20,
+    "buffer_1": {
+        "exec_path": "/home/darwin/build/darwin_buffer",
+        "config_file": "/home/darwin/conf/fbuffer/fbuffer.conf.example",
         "log_level": "DEBUG",
-        "cache_size": 0,
         "output": "LOG",
-        "next_filter": "logs_1",
-        "threshold": 80
-    },
-    "dga_1": {
-        "exec_path": "/home/darwin/filters/darwin_dga",
-        "config_file": "/home/darwin/conf/fdga/fdga.conf.example",
-        "nb_thread": 5,
-        "log_level": "DEBUG",
-        "cache_size": 1000,
-        "output": "LOG",
-        "next_filter": "logs_1",
-        "threshold": 80
-    },
-    "tanomaly_1": {
-        "exec_path": "/home/darwin/filters/darwin_tanomaly",
-        "config_file": "/home/darwin/conf/ftanomaly/ftanomaly.conf.example",
-        "nb_thread": 5,
-        "log_level": "DEBUG",
-        "cache_size": 0,
-        "output": "NONE",
         "next_filter": "",
+        "nb_thread": 5,
+        "cache_size": 1000,
         "threshold": 80
     }
 }

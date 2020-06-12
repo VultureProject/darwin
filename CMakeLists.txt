@@ -24,6 +24,7 @@ if (NOT DEFINED FILTER)
         ANOMALY
         LOGS
         CONTENT_INSPECTION
+        BUFFER
     )
 else (NOT DEFINED FILTER)
     set(
@@ -148,4 +149,8 @@ endif()
 
 if("SOFA" IN_LIST FILTERS)
 include(fsofa)
+endif()
+
+if("BUFFER" IN_LIST FILTERS)
+include(fbuffer)
 endif()
