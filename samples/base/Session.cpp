@@ -17,9 +17,9 @@
 #include "Session.hpp"
 #include "errors.hpp"
 
-#include "../../toolkit/lru_cache.hpp"
-#include "../../toolkit/xxhash.h"
-#include "../../toolkit/xxhash.hpp"
+#include "lru_cache.hpp"
+#include "xxhash.h"
+#include "xxhash.hpp"
 
 namespace darwin {
     Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
