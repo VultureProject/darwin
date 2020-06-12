@@ -1,4 +1,4 @@
-/// \file     Yara.hpp
+/// \file     toolkit/Yara.hpp
 /// \authors  tbertin
 /// \version  1.0
 /// \date     10/10/19
@@ -9,8 +9,16 @@
 
 #include <string>
 
-#include "../../toolkit/lru_cache.hpp"
-#include "../toolkit/Yara.hpp"
+#include "lru_cache.hpp"
+#include "xxhash.h"
+#include "xxhash.hpp"
+#include "../../toolkit/rapidjson/document.h"
+#include "../../toolkit/rapidjson/stringbuffer.h"
+#include "../../toolkit/rapidjson/writer.h"
+#include "Encoders.h"
+
+#include "lru_cache.hpp"
+#include "Yara.hpp"
 #include "Session.hpp"
 
 #define DARWIN_FILTER_YARA_SCAN 0x79617261

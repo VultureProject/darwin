@@ -10,18 +10,11 @@
 #include <thread>
 #include <boost/algorithm/string.hpp>
 
-#include "../../toolkit/lru_cache.hpp"
-#include "../../toolkit/xxhash.h"
-#include "../../toolkit/xxhash.hpp"
-#include "../toolkit/rapidjson/document.h"
-#include "../toolkit/rapidjson/stringbuffer.h"
-#include "../toolkit/rapidjson/writer.h"
 #include "YaraTask.hpp"
 #include "Stats.hpp"
 #include "Logger.hpp"
 #include "AlertManager.hpp"
 
-#include "../../toolkit/Encoders.h"
 
 YaraTask::YaraTask(boost::asio::local::stream_protocol::socket& socket,
                                darwin::Manager& manager,
@@ -30,7 +23,6 @@ YaraTask::YaraTask(boost::asio::local::stream_protocol::socket& socket,
                                std::shared_ptr<darwin::toolkit::YaraEngine> yaraEngine)
         : Session{"yara", socket, manager, cache, cache_mutex},
         _yaraEngine{yaraEngine} {
-    DARWIN_LOGGER;
     _is_cache = _cache != nullptr;
 }
 
@@ -52,25 +44,28 @@ void YaraTask::operator()() {
     for(auto &line : array) {
         STAT_INPUT_INC;
         SetStartingTime();
-        unsigned int score;
+        unsigned int certitude = 0;
         xxh::hash64_t hash;
 
         if(ParseLine(line)) {
             if (_is_cache) {
                 hash = GenerateHash();
 
-                if (GetCacheResult(hash, score)) {
+                if (GetCacheResult(hash, certitude)) {
                     DARWIN_LOG_DEBUG("YaraTask:: has certitude in cache");
 
-                    if (score>=_threshold and score < DARWIN_ERROR_RETURN){
+                    if (certitude>=_threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(score) + "}\n";
+                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
                         DARWIN_RAISE_ALERT(alert_log);
+                        if (is_log) {
+                            _logs += alert_log + '\n';
+                        }
                     }
-                    _certitudes.push_back(score);
+                    _certitudes.push_back(certitude);
                     DARWIN_LOG_DEBUG("YaraTask:: processed entry in "
-                                    + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(score));
+                                    + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                     continue;
                 }
             }
@@ -78,34 +73,31 @@ void YaraTask::operator()() {
             const unsigned char* raw_decoded = reinterpret_cast<const unsigned char *>(_chunk.c_str());
             std::vector<unsigned char> data(raw_decoded, raw_decoded + _chunk.size());
 
-            score = _yaraEngine->ScanData(data);
-
-            if(score < 0) {
-                DARWIN_LOG_WARNING("YaraTask:: could not scan data, ignoring chunk");
+            if(_yaraEngine->ScanData(data, certitude) == -1) {
+                DARWIN_LOG_WARNING("YaraTask:: error while scanning, ignoring chunk");
                 _certitudes.push_back(DARWIN_ERROR_RETURN);
                 continue;
             }
 
-            if (score>=_threshold){
+            if (certitude >= _threshold){
+                STAT_MATCH_INC;
                 rapidjson::Document results = _yaraEngine->GetResults();
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 results.Accept(writer);
 
                 std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                        R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(score) + 
+                        R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                         R"(, "yara": )" + buffer.GetString() + "}\n";
                 DARWIN_RAISE_ALERT(alert_log);
-
-                if(is_log) {
-                    _logs += alert_log + "\n";
+                if (is_log) {
+                    _logs += alert_log + '\n';
                 }
-                
             }
-            _certitudes.push_back(score);
+            _certitudes.push_back(certitude);
 
             if (_is_cache) {
-                SaveToCache(hash, score);
+                SaveToCache(hash, certitude);
             }
         }
         else {
@@ -131,50 +123,50 @@ bool YaraTask::ParseLine(rapidjson::Value& line) {
     _chunk.clear();
     auto fields = line.GetArray();
 
-    size_t num_fields = fields.Size();
-
-    // Simple entry, no encoding
-    if(num_fields == 1) {
-        DARWIN_LOG_DEBUG("YaraTask:: ParseLine: no encoding given, expecting simple text");
-        
-        if(not fields[0].IsString()) {
-            DARWIN_LOG_ERROR("YaraTask:: ParseLine: field should be a string");
+    switch(fields.Size()){
+        case 2:
+            if(not fields[1].IsString()){
+                DARWIN_LOG_ERROR("YaraTask:: ParseLine: second field should be a string");
+                return false;
+            }
+            else {
+                encoding = fields[1].GetString();
+            }
+            // No break here!
+        case 1:
+            if(not fields[0].IsString()){
+                DARWIN_LOG_ERROR("YaraTask:: ParseLine: first field should be a string");
+                return false;
+            }
+            else {
+                encodedChunk = fields[0].GetString();
+            }
+            break;
+        default:
+            DARWIN_LOG_ERROR("YaraTask:: ParseLine: This filter accepts between 1 and 2 parameters (chunk [encoding])");
             return false;
-        }
-
-        _chunk = fields[0].GetString();
     }
-    // Entry with encoding ["encoding", "encoded_chunk"]
-    else if(num_fields == 2) {
-        if(not fields[0].IsString() || not fields[1].IsString()) {
-            DARWIN_LOG_ERROR("YaraTask:: ParseLine: fields should both be strings");
+
+    if(encoding.empty()) {
+        _chunk = encodedChunk;
+    }
+    else if(boost::iequals(encoding, "hex")) {
+        std::string err = darwin::toolkit::Hex::Decode(encodedChunk, _chunk);
+        if(not err.empty()) {
+            DARWIN_LOG_ERROR("YaraTask:: ParseLine: error while decoding hex data -> " + err);
             return false;
         }
-
-        encoding = fields[0].GetString();
-        encodedChunk = fields[1].GetString();
-        if(boost::iequals(encoding, "hex")) {
-            std::string err = darwin::toolkit::Hex::Decode(encodedChunk, _chunk);
-            if(not err.empty()) {
-                DARWIN_LOG_ERROR("YaraTask:: ParseLine: error while decoding hex data -> " + err);
-                return false;
-            }
-        }
-        else if(boost::iequals(encoding, "base64")) {
-            std::string err = darwin::toolkit::Base64::Decode(encodedChunk, _chunk);
-            if(not err.empty()) {
-                DARWIN_LOG_ERROR("YaraTask:: ParseLine: error while decoding base64 data -> " + err);
-                return false;
-            }
-        }
-        else {
-            DARWIN_LOG_ERROR("YaraTask:: ParseLine: unsuported encoding '" + encoding +
-                            "', supported encodings are base64 and hex");
+    }
+    else if(boost::iequals(encoding, "base64")) {
+        std::string err = darwin::toolkit::Base64::Decode(encodedChunk, _chunk);
+        if(not err.empty()) {
+            DARWIN_LOG_ERROR("YaraTask:: ParseLine: error while decoding base64 data -> " + err);
             return false;
         }
     }
     else {
-        DARWIN_LOG_ERROR("Yaratask:: ParseLine: incorrect number of fields, got " + std::to_string(num_fields) + ", but expected 1 or 2");
+        DARWIN_LOG_ERROR("YaraTask:: ParseLine: unsuported encoding -> " + encoding +
+                        ", supported encodings are base64 and hex");
         return false;
     }
 

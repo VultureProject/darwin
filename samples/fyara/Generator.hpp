@@ -13,8 +13,8 @@
 
 #include "Session.hpp"
 #include "AGenerator.hpp"
-#include "../toolkit/rapidjson/document.h"
-#include "../toolkit/Yara.hpp"
+#include "../../toolkit/rapidjson/document.h"
+#include "Yara.hpp"
 
 class Generator : public AGenerator {
 public:

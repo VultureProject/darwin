@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 
-#include "../../toolkit/lru_cache.hpp"
+#include "lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "YaraTask.hpp"
 #include "Generator.hpp"
@@ -18,8 +18,13 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("Yara:: Generator:: Loading configuration...");
     _yaraCompiler = std::make_shared<darwin::toolkit::YaraCompiler>();
 
+    if(not _yaraCompiler->Init()) {
+        DARWIN_LOG_CRITICAL("Yara::Generator:: Could not initialize yara compiler");
+        return false;
+    }
+
     if (!configuration.IsObject()) {
-        DARWIN_LOG_CRITICAL("Yara:: Generator:: Configuration is not a JSON object");
+        DARWIN_LOG_CRITICAL("Yara::Generator:: Configuration is not a JSON object");
         return false;
     }
 
@@ -80,8 +85,14 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         }
     }
 
-    if(not _yaraCompiler->ReadyToScan()) {
-        DARWIN_LOG_CRITICAL("Yara::Generator:: error(s) occured while trying to add rules to compiler, cannot start");
+    if (_yaraCompiler->GetStatus() == darwin::toolkit::YaraCompiler::Status::NEW_RULES) {
+        if(not _yaraCompiler->CompileRules()) {
+            DARWIN_LOG_CRITICAL("Yara::Generator:: could not compile rules");
+            return false;
+        }
+    }
+    else {
+        DARWIN_LOG_ERROR("Yara::Generator:: no rules added");
         return false;
     }
 
