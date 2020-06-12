@@ -168,7 +168,7 @@ namespace darwin {
                     try {
                         high = HexValue(input[i++]);
                         low = HexValue(input[i++]);
-                        out.push_back((high << 4) & 0xF0 | low & 0x0F);
+                        out.push_back(((high << 4) & 0xF0) | (low & 0x0F));
                     }
                     catch (const std::invalid_argument& e) {
                         return e.what();
