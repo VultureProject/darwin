@@ -58,6 +58,7 @@ if (NOT DEFINED FILTER)
         ANOMALY
         LOGS
         CONTENT_INSPECTION
+        YARA
     )
 else (NOT DEFINED FILTER)
     set(
