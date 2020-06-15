@@ -9,8 +9,8 @@
 
 #include "fAnomalyConnector.hpp"
 
-fAnomalyConnector::fAnomalyConnector(std::string filter_socket_path, int interval, std::string redis_list) : 
-                    AConnector(ANOMALY, filter_socket_path, interval, redis_list) {}
+fAnomalyConnector::fAnomalyConnector(std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen) : 
+                    AConnector(ANOMALY, filter_socket_path, interval, redis_list, minLogLen) {}
 
 bool fAnomalyConnector::sendData(std::map<std::string, std::string> input_line) {
     _input_line = input_line;

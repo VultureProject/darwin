@@ -52,14 +52,14 @@
     {
       "filter_type": "fanomaly",
       "filter_socket_path": "toto",
-      "interval": 60,
+      "interval": 20,
       "redis_list_name": "darwin_buffer_anomaly",
       "required_log_lines": 2
     },
     {
       "filter_type": "fsofa",
       "filter_socket_path": "tata",
-      "interval": 48,
+      "interval": 20,
       "redis_list_name": "darwin_buffer_sofa",
       "required_log_lines": 2
     }

@@ -11,7 +11,7 @@
 
 class fAnomalyConnector : public AConnector {
     public:
-    fAnomalyConnector(std::string filter_socket_path, int interval, std::string redis_list);
+    fAnomalyConnector(std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen);
     virtual ~fAnomalyConnector() override final = default;
 
     public:

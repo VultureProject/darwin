@@ -35,7 +35,7 @@ private:
     bool LoadInputs(const rapidjson::Value &inputs_array);
     valueType _typeToEnum(std::string type);
     bool LoadOutputs(const rapidjson::Value &outputs_array);
-    std::shared_ptr<AConnector> _createOutput(std::string filter_type, std::string filter_socket_path, int interval, std::string redis_list_name);
+    std::shared_ptr<AConnector> _createOutput(std::string filter_type, std::string filter_socket_path, int interval, std::string redis_list_name, unsigned int min_log_lines);
     
 
     std::shared_ptr<BufferThreadManager> _buffer_thread_manager;

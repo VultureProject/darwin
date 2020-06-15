@@ -51,8 +51,6 @@ class BufferThread {
 
 
     private:
-    static constexpr int MIN_LOGS_LINES = 10; // TODO : A déplacer dans le fichier de config du fbuffer, pour chacun des outputs
-
     int _interval; // Interval between 2 wake-ups in seconds.
     std::thread _thread;
     std::atomic<bool> _is_stop{true}; // To know if the thread is stopped or not

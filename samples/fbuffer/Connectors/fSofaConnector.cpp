@@ -9,8 +9,8 @@
 
 #include "fSofaConnector.hpp"
 
-fSofaConnector::fSofaConnector(std::string filter_socket_path, int interval, std::string redis_list) : 
-                    AConnector(SOFA, filter_socket_path, interval, redis_list) {}
+fSofaConnector::fSofaConnector(std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen) : 
+                    AConnector(SOFA, filter_socket_path, interval, redis_list, minLogLen) {}
 
 bool fSofaConnector::sendData(std::map<std::string, std::string> input_line) {
     _input_line = input_line;

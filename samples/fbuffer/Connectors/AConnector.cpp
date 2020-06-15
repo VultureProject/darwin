@@ -8,11 +8,12 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "AConnector.hpp"
 
-AConnector::AConnector(outputType filter_type, std::string filter_socket_path, int interval, std::string redis_list) :
+AConnector::AConnector(outputType filter_type, std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen) :
                         _filter_type(std::move(filter_type)),
                         _filter_socket_path(std::move(filter_socket_path)),
                         _interval(interval),
-                        _redis_list(redis_list) {}
+                        _redis_list(redis_list),
+                        _minLogLen(minLogLen) {}
 
 int AConnector::getInterval() const {
     return this->_interval;
@@ -20,6 +21,10 @@ int AConnector::getInterval() const {
 
 std::string AConnector::getRedisList() const {
     return this->_redis_list;
+}
+
+unsigned int AConnector::getRequiredLogLength() const {
+    return this->_minLogLen;
 }
 
 bool AConnector::parseData(std::string fieldname) {

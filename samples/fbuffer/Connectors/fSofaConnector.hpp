@@ -11,7 +11,7 @@
 
 class fSofaConnector : public AConnector {
     public:
-    fSofaConnector(std::string filter_socket_path, int interval, std::string redis_list);
+    fSofaConnector(std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen);
     virtual ~fSofaConnector() override final = default;
 
     public:

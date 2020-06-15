@@ -163,13 +163,13 @@ valueType Generator::_typeToEnum(std::string type) {
     return UNKNOWN;
 }
 
-std::shared_ptr<AConnector> Generator::_createOutput(std::string filter_type, std::string filter_socket_path, int interval, std::string redis_list_name) {
+std::shared_ptr<AConnector> Generator::_createOutput(std::string filter_type, std::string filter_socket_path, int interval, std::string redis_list_name, unsigned int nb_log_lines) {
     DARWIN_LOGGER;
     if (filter_type == "fanomaly") {
-        std::shared_ptr<fAnomalyConnector> output = std::make_shared<fAnomalyConnector>(filter_socket_path, interval, redis_list_name);
+        std::shared_ptr<fAnomalyConnector> output = std::make_shared<fAnomalyConnector>(filter_socket_path, interval, redis_list_name, nb_log_lines);
         return std::static_pointer_cast<AConnector>(output);
     } else if (filter_type == "fsofa") {
-        std::shared_ptr<fSofaConnector> output = std::make_shared<fSofaConnector>(filter_socket_path, interval, redis_list_name);
+        std::shared_ptr<fSofaConnector> output = std::make_shared<fSofaConnector>(filter_socket_path, interval, redis_list_name, nb_log_lines);
         return std::static_pointer_cast<AConnector>(output);
     }
     DARWIN_LOG_WARNING("Buffer::Generator::_createOutput " + filter_type + " is not recognized as a valid filter.");
@@ -182,30 +182,38 @@ bool Generator::LoadOutputs(const rapidjson::Value &array) {
         if (not array[i].HasMember("filter_type") or not array[i]["filter_type"].IsString()) {
             DARWIN_LOG_WARNING("Buffer::Generator::LoadOutputs 'filter_type' field missing or is not a string in outputs. Output ignored.");
             continue;
-        } else if (not array[i].HasMember("filter_socket_path") or not array[i]["filter_socket_path"].IsString()) {
+        } 
+        if (not array[i].HasMember("filter_socket_path") or not array[i]["filter_socket_path"].IsString()) {
             DARWIN_LOG_WARNING("Buffer::Generator::LoadOutputs 'filter_socket_path' field missing or is not a string in outputs. Output " + 
                                 std::string(array[i]["filter_type"].GetString()) + " ignored.");
             continue;
-        } else if (not array[i].HasMember("interval") or not array[i]["interval"].IsInt64()) {
+        } 
+        if (not array[i].HasMember("interval") or not array[i]["interval"].IsInt64()) {
             DARWIN_LOG_WARNING("Buffer::Generator::LoadOutputs 'interval' field missing or is not an integer in outputs. Output " + 
                                 std::string(array[i]["filter_type"].GetString()) + " ignored.");        
             continue;
-        } else if (not array[i].HasMember("redis_list_name") or not array[i]["redis_list_name"].IsString()) {
+        }
+        if (not array[i].HasMember("redis_list_name") or not array[i]["redis_list_name"].IsString()) {
             DARWIN_LOG_WARNING("Buffer::Generator::LoadOuptuts 'redis_list_name' field missing or is not astring. Output " +
                                 std::string(array[i]["filter_type"].GetString()) + " ignored");
             continue;
-        } else {
-            std::shared_ptr<AConnector> output = _createOutput(array[i]["filter_type"].GetString(), 
+        }
+        if (not array[i].HasMember("required_log_lines") or not array[i]["required_log_lines"].IsInt64()) {
+            DARWIN_LOG_WARNING("Buffer::Generator::LoadOuptuts 'required_log_lines' field missing or is not an integer. Output " +
+                                std::string(array[i]["filter_type"].GetString()) + " ignored");
+            continue;
+        }
+        std::shared_ptr<AConnector> output = _createOutput(array[i]["filter_type"].GetString(), 
                                                                 array[i]["filter_socket_path"].GetString(), 
                                                                 array[i]["interval"].GetInt64(),
-                                                                array[i]["redis_list_name"].GetString());
-            if (output == nullptr) {
-                DARWIN_LOG_WARNING("Buffer::Generator::LoadOutputs Unable to create the Output. Output " + 
+                                                                array[i]["redis_list_name"].GetString(),
+                                                                array[i]["required_log_lines"].GetInt64());
+        if (output == nullptr) {
+            DARWIN_LOG_WARNING("Buffer::Generator::LoadOutputs Unable to create the Output. Output " + 
                                     std::string(array[i]["filter_type"].GetString()) + " ignored.");   
-                continue;
-            }
-            _outputs.push_back(output);
+            continue;
         }
+        _outputs.push_back(output);
     }
     if (_outputs.empty()) {
         DARWIN_LOG_CRITICAL("Buffer::Generator::LoadOutputs No outputs available. The filter is about to Stop");

@@ -16,18 +16,19 @@
 
 class AConnector {
     public: //Constructors & Destructor
-    AConnector(outputType filter_type, std::string filter_socket_path, int interval, std::string redis_list);
+    AConnector(outputType filter_type, std::string filter_socket_path, int interval, std::string redis_list, unsigned int minLogLen);
     virtual ~AConnector() = default;
 
     public:
     int getInterval() const;
+    unsigned int getRequiredLogLength() const;
     std::string getRedisList() const;
-
     /// Add the _entry parsed to REDIS
     /// \return true on success, false otherwise.
     bool REDISAddEntry();
-
     bool parseData(std::string fildname);
+
+    public: // To be implemented by children
     virtual bool sendData(std::map<std::string, std::string> input_line) = 0;
 
     protected:
@@ -37,6 +38,7 @@ class AConnector {
     std::string _redis_list;
     std::string _entry;
     std::map<std::string, std::string> _input_line;
+    unsigned int _minLogLen;
 
     private:// Childs will have to implement there own datas to transfert to their filter
 };

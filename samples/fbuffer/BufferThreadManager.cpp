@@ -49,10 +49,10 @@ bool BufferThread::Main() {
     DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: There are " + std::to_string(len) + " entries in " + this->_redis_list + " redis list.");
     std::vector<std::string> logs;
 
-    if (len>=0 && len<MIN_LOGS_LINES){
+    if (len >= 0 && len < this->_connector->getRequiredLogLength()){
         DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Not enough log in Redis, wait for more");
         return true;
-    } else if (len<0) {// || !REDISPopLogs(len, logs)) {
+    } else if (len<0 || !REDISPopLogs(len, logs)) {
         DARWIN_LOG_ERROR("BufferThread::ThreadMain:: Error when querying Redis");
         return false;
     } else {
@@ -88,23 +88,6 @@ bool BufferThread::Stop() {
     return true;
 }
 
-//TODO Legacy function, bound to disapear
-/*
-bool BufferThread::WriteRedis(const std::string& log_line){
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThread::WriteRedis:: Starting writing alerts in Redis...");
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-
-    if(not _redis_internal.empty()) {
-        DARWIN_LOG_DEBUG("BufferThread::WriteRedis:: Writing to Redis list: " + _redis_internal);
-        if(redis.Query(std::vector<std::string>{"SADD", _redis_internal, log_line}, true) == REDIS_REPLY_ERROR) {
-            DARWIN_LOG_WARNING("BufferThreadManager::REDISAddLogs:: Failed to add log in Redis !");
-            return false;
-        }
-    }
-    return true;
-}
-*/
 long long int BufferThread::REDISListLen() noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("BufferThread::REDISListLen:: Querying Redis for list size...");
@@ -113,13 +96,14 @@ long long int BufferThread::REDISListLen() noexcept {
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
+    std::cout << "RedisListen on list: " << _redis_list << std::endl;
     if(redis.Query(std::vector<std::string>{"SCARD", _redis_list}, result, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("BufferThread::REDISListLen:: Not the expected Redis response");
         return -1;
     }
     return result;
 }
-/*
+
 bool BufferThread::REDISPopLogs(long long int len, std::vector<std::string> &logs) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("BufferThread::REDISPopLogs:: Querying Redis for logs...");
@@ -129,7 +113,7 @@ bool BufferThread::REDISPopLogs(long long int len, std::vector<std::string> &log
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(redis.Query(std::vector<std::string>{"SPOP", _redis_internal, std::to_string(len)}, result, true) != REDIS_REPLY_ARRAY) {
+    if(redis.Query(std::vector<std::string>{"SPOP", this->_redis_list, std::to_string(len)}, result, true) != REDIS_REPLY_ARRAY) {
         DARWIN_LOG_ERROR("BufferThread::REDISPopLogs:: Not the expected Redis response");
         return false;
     }
@@ -152,7 +136,7 @@ bool BufferThread::REDISPopLogs(long long int len, std::vector<std::string> &log
 
     return true;
 }
-
+/*
 bool BufferThread::REDISReinsertLogs(std::vector<std::string> &logs) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("BufferThread::REDISReinsertLogs:: Querying Redis to reinsert logs...");
@@ -189,7 +173,6 @@ bool BufferThreadManager::Start(std::shared_ptr<AConnector> output) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ThreadManager:: Starting threads");
 
-//  std::lock_guard<std::mutex> lck(thread.getMutex())
     if (this->_threads.size() > this->_max_nb_threads) {
         DARWIN_LOG_WARNING("ThreadManager:: The maximum number of threads already reached.");
         return false;
