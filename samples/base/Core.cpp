@@ -93,44 +93,44 @@ namespace darwin {
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
 
-        int opt; 
+        int opt;
         std::string log_level;
 
         // OPTIONS
         log.setLevel(logger::Warning); // Log level by default
         opt = -1;
-        while((opt = getopt(ac, av, ":l:h")) != -1)  
-        {  
-            DARWIN_LOG_CRITICAL("OPT : " + opt);
-            DARWIN_LOG_CRITICAL("OPTIND : " + std::to_string(optind));
-            switch(opt)  
-            {  
-                case 'l':  
+        while((opt = getopt(ac, av, ":l:h")) != -1)
+        {
+            DARWIN_LOG_DEBUG("OPT : " + opt);
+            DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
+            switch(opt)
+            {
+                case 'l':
                     log_level.assign(optarg);
                     if(!Core::SetLogLevel(log_level)){
-                        DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Bad options given");
+                        DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown log-level given");
                         Core::Usage();
                         return false;
                     }
-                    break;  
-                case 'h':  
+                    break;
+                case 'h':
                     Core::Usage();
                     return false;
-                    break;  
-                case ':':  
-                    DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Option needs a value");
+                    break;
+                case ':':
+                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing option argument");
                     Core::Usage();
                     return false;
-                case '?':  
-                    DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Unknown option");
+                case '?':
+                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown option");
                     Core::Usage();
                     return false;
-            }  
-        }  
+            }
+        }
 
         // After options we need 10 mandatory arguments
         if(ac-optind < 10){
-            DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
+            DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
         }
@@ -150,7 +150,7 @@ namespace darwin {
             return false;
         if (!GetULArg(_threshold, av[optind + 9]))
             return false;
-        
+
         return true;
     }
 
@@ -181,7 +181,7 @@ namespace darwin {
                 << "  threshold\tInteger specifying the minimum certitude at which the filter will output a log."
                    "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
-        std::cout << "  -l\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n" 
+        std::cout << "  -l\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n"
                   << "    \tDefault is WARNING."
                   << "    \tNOTE: DEVELOPER mode does not create a daemon and sets log level to DEBUG."
                   << std::endl;
