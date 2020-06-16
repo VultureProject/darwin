@@ -39,7 +39,6 @@ private:
     
 
     std::shared_ptr<BufferThreadManager> _buffer_thread_manager;
-    std::string _redis_list_name;
 
     std::vector<std::pair<std::string, valueType>> _inputs;
     std::vector<std::shared_ptr<AConnector>> _outputs;

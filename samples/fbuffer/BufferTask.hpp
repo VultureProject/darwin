@@ -28,7 +28,6 @@ public:
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex,
-                     std::string redis_list_name,
                      std::shared_ptr<BufferThreadManager> vat,
                      std::vector<std::pair<std::string, valueType>> inputs,
                      std::vector<std::shared_ptr<AConnector>> connectors);
@@ -51,12 +50,9 @@ private:
 
 
 private:
-    std::string _redis_list_name;
-    std::string _entry;
-    boost::char_separator<char> _separator {" ();,:-~?!{}/[]"};
     std::string _string;
     std::shared_ptr<BufferThreadManager> _buffer_thread_manager = nullptr;
-    std::vector<std::pair<std::string, valueType>> _inputs;
+    std::vector<std::pair<std::string, valueType>> _inputs_format;
     std::vector<std::shared_ptr<AConnector>> _connectors;
     std::map<std::string, std::string> _input_line;
 };

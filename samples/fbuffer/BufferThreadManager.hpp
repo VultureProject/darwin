@@ -28,21 +28,11 @@ class BufferThread {
     /// Main function
     bool Main();
 
-    /// Write the alerts/logs in Redis
-    /// \return true on success, false otherwise.
-    //TODO legacy function bound to disappear
-    bool WriteRedis(const std::string& log_line);
-
     /// Get the logs from the Redis
     /// \param rangeLen the range of logs we want from the redis list
     /// \param logs the vector where we want to stock our logs
     /// \return true on success, false otherwise.
     bool REDISPopLogs(long long int len, std::vector<std::string> &logs) noexcept;
-
-    /// Remove the already processed logs in Redis
-    /// \param rangeLen the range of logs we want to tirm in redis
-    /// \return true on success, false otherwise.
-    bool REDISReinsertLogs(std::vector<std::string> &logs) noexcept;
 
     /// Query the Redis to get length of the list
     /// where we have our data
@@ -62,7 +52,7 @@ class BufferThread {
 
 class BufferThreadManager {
 public:
-    BufferThreadManager(int max_nb_thread, std::string &redis_internal);
+    BufferThreadManager(int max_nb_thread);
     ~BufferThreadManager();
 
 public:
@@ -77,15 +67,10 @@ public:
     bool Stop();
 
 private:
-    unsigned long _max_nb_threads; // TODO : Change for _nb_threads
+    unsigned long _nb_threads; // TODO : Change for _nb_threads
     std::vector<std::shared_ptr<BufferThread>> _threads;
 
 
 private:
     unsigned int _interval; // Interval in which the thread main function will be executed (in seconds)
-
-private:
-    const std::string _redis_internal; // redis' list which contain our data
-    bool _is_log_redis; //is there a channel and/or list to put alerts to ?
-    std::shared_ptr<std::mutex> _redis_mutex;
 };

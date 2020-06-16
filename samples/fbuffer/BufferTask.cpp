@@ -24,14 +24,12 @@ BufferTask::BufferTask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
                  std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                  std::mutex& cache_mutex,
-                 std::string redis_list_name,
                  std::shared_ptr<BufferThreadManager> vat,
                  std::vector<std::pair<std::string, valueType>> inputs,
                  std::vector<std::shared_ptr<AConnector>> connectors)
         : Session{"buffer", socket, manager, cache, cache_mutex},
-            _redis_list_name(std::move(redis_list_name)),
             _buffer_thread_manager(std::move(vat)),
-            _inputs(inputs),
+            _inputs_format(inputs),
             _connectors(connectors) {
 }
 
@@ -53,9 +51,9 @@ void BufferTask::operator()() {
     SetStartingTime();
     for (rapidjson::Value &value : array) {
         STAT_INPUT_INC;
-        if(ParseLine(value, this->_inputs[i])) {
+        if(ParseLine(value, this->_inputs_format[i])) {
             STAT_MATCH_INC;
-            this->_input_line[this->_inputs[i].first] = this->_string;
+            this->_input_line[this->_inputs_format[i].first] = this->_string;
             if (is_log) {
                 _logs += _string + "\n";
             }
@@ -67,7 +65,6 @@ void BufferTask::operator()() {
     DARWIN_LOG_DEBUG("BufferTask:: processed entry in " + std::to_string(GetDurationMs()) + "ms");
     std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
             R"(", "filter": ")" + GetFilterName() + "\", \"content\": \""+ "TOTOTOTO" + "\"}";
-    this->_entry = alert_log;
     this->AddEntries();
 }
 

@@ -20,77 +20,49 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Buffer:: Generator:: Loading classifier...");
 
-    std::string redis_alerts_list; //the list on which to add alerts when detected
-    bool start_detection_thread = true;  //whether to start the anomaly thread
-
-    if(not configuration.HasMember("redis_socket_path")) {
+    if (not configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("Buffer::Generator:: 'redis_socket_path' parameter missing, mandatory");
         return false;
     }
-
     if (not configuration["redis_socket_path"].IsString()) {
         DARWIN_LOG_CRITICAL("Buffer:: Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
-
     std::string redis_socket_path = configuration["redis_socket_path"].GetString();
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     redis.SetUnixConnection(redis_socket_path);
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
     if(not redis.FindAndConnect()) {
         DARWIN_LOG_CRITICAL("Buffer:: Generator:: Could not connect to a redis!");
         return false;
     }
-
-    if (configuration.HasMember("redis_list_name")){
-        if (not configuration["redis_list_name"].IsString()) {
-            DARWIN_LOG_CRITICAL("Buffer:: Generator:: 'redis_list_name' needs to be a string");
-            return false;
-        }
-        this->_redis_list_name = configuration["redis_list_name"].GetString();
-        DARWIN_LOG_INFO("Buffer:: Generator:: 'redis_list_name' set to " + this->_redis_list_name);
-    }
-
     DARWIN_LOG_INFO("Buffer:: Generator:: Redis configured successfuly");
 
-
-    std::string log_file_path(configuration["log_file_path"].GetString());
+// TODO this section will desapear in the final version
+    if (not configuration.HasMember("log_file_path")) {
+        DARWIN_LOG_CRITICAL("Buffer::Generator:: 'log_file_path' parameter missing, mandatory");
+        return false;
+    }
+    if (not configuration["log_file_path"].IsString()) {
+        DARWIN_LOG_CRITICAL("Buffer:: Generator:: 'log_file_path' needs to be a string");
+        return false;
+    }
+    std::string log_file_path = configuration["log_file_path"].GetString();
 
     if (not LoadConnectorsConfig(configuration)) {
         DARWIN_LOG_CRITICAL("Buffer::Generator:: Connectors config failed, filter will stop.");
         return false;
     }
 
-    // Open file and check permissions (and create file if not existing)
-
-    /* Only start the thread if
-    -> the thread is connected to master via unix socket (filter is on the master's machine)
-    -> or user forced it
-    */
-
-   // TODO : start a thread for each correctly formatted output
-    _buffer_thread_manager = std::make_shared<BufferThreadManager>(this->_outputs.size(), this->_redis_list_name);
+    _buffer_thread_manager = std::make_shared<BufferThreadManager>(this->_outputs.size());
     for (auto &output : this->_outputs) {
-        std::cout << "Un output" << std::endl;
         if (!_buffer_thread_manager->Start(output)) {
             DARWIN_LOG_CRITICAL("Buffer:: Generator:: Error when starting polling thread");
             return false;
         }
-        DARWIN_LOG_DEBUG("Buffer::Generator:: Thread Created successfully");
+        DARWIN_LOG_DEBUG("Buffer::Generator:: Thread '" + output->getRedisList() + "' Created successfully");
     }
-/* Former thread managment
-    if(start_detection_thread) {
-        _buffer_thread_manager = std::make_shared<BufferThreadManager>(_redis_list_name);
-        if (!_buffer_thread_manager->Start(detection_frequency)) {
-            DARWIN_LOG_CRITICAL("Buffer:: Generator:: Error when starting polling thread");
-            return false;
-        }
-    } else {
-        DARWIN_LOG_INFO("Buffer:: Generator:: detection thread is disabled (or no direct connection to redis master"
-         " was found) so detection will not start");
-    }
-*/
     return true;
 }
 
@@ -229,5 +201,5 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Buffer::CreateTask Starting creating a task");
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<BufferTask>(socket, manager, _cache, _cache_mutex, this->_redis_list_name, this->_buffer_thread_manager, this->_inputs, this->_outputs));
+            std::make_shared<BufferTask>(socket, manager, _cache, _cache_mutex, this->_buffer_thread_manager, this->_inputs, this->_outputs));
 }
