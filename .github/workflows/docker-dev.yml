@@ -8,9 +8,10 @@ on:
 env:
   FAUP_VERSION: 1.5
   BOOST_VERSION: 1.71.0
-  ARMADILLO_VERSION: 9.850.x
+  ARMADILLO_VERSION: 9.900.x
   MLPACK_VERSION: 3.2.0
   TF_VERSION: 1.13.0
+  YARA_VERSION: 3.11.0
   DOCKER_REPO: vultureproject
   DOCKER_USER: vultureworker
   IMAGE_NAME: darwin
@@ -36,7 +37,7 @@ jobs:
           registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
           image_tag: ${{ env.IMAGE_TAG }}
           dockerfile: docker/darwin
-          build_extra_args: --target darwin_builder --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }}
+          build_extra_args: --target darwin_builder --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }} --build-arg TF_VERSION=${{ env.YARA_VERSION }}
 
       - name: push image to docker hub
         run: |
