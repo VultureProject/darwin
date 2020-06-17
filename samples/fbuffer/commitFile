@@ -1,0 +1,37 @@
+WIP FBUFFER REFACTOR THREAD MANAGMENT
+
+Until now, BufferThreadManager.cpp/hpp were holding both 
+BufferThreadManager and BufferThread classes. Now, 
+BufferThreadManager inherits from AThreadManager and 
+BufferThread inherits from AThread.
+
+Files concerned:
+
+_ AThreadManager.cpp/hpp: (toolkit folder)
+New file created to hold AThreadManager class from which
+BufferThreadManager inherits. It contains everything a
+ThreadManager needs to handle several threads.
+
+_ AThread.cpp/hpp: (toolkit folder)
+New file created to hold AThread class from which BufferThread inherits.
+It contains everything a Thread needs to run properly.
+
+_ BufferThreadManager.cpp/hpp:
+The former BufferThreadManager and BufferThread classes are now splitted
+in two, the generic parts are in AThreadManager.cpp/hpp and 
+AThread.cpp/hpp and the specific parts are in BufferThread.cpp/hpp and
+BufferThreadManager.cpp/hpp.
+
+_ BufferThread.cpp/hpp:
+New file created to hold BufferThread class that inherits from AThread.
+It contains everything needed to allow async buffering between filters
+linked as outputs to fbuffer.
+
+_ Generator.cpp/hpp, BufferTask.cpp/hpp:
+Changed the includes and when needed the class names (functions, types)
+to fit the new classes.
+
+_ fbuffer.cmake:
+Added new files for compilation.
+
+My work is not tested, not documented, not finished yet.

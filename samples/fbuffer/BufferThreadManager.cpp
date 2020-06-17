@@ -5,177 +5,19 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include <string>
-#include <thread>
-#include <vector>
-
 #include "../../toolkit/RedisManager.hpp"
 #include "BufferThreadManager.hpp"
+#include "BufferThread.hpp"
 #include "Logger.hpp"
-#include "Stats.hpp"
-#include "Time.hpp"
-#include "protocol.h"
-#include "AlertManager.hpp"
 
-BufferThread::BufferThread(std::shared_ptr<AConnector> output) : 
-                _interval(output->getInterval()),
-                _thread(std::thread(&BufferThread::ThreadMain, this)),
-                _is_stop(false), 
-                _connector(output),
-                _redis_list(output->getRedisList()) {}
+BufferThreadManager::BufferThreadManager(int nb_threads) : AThreadManager(nb_threads) {}
 
-void BufferThread::ThreadMain() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ThreadManager::ThreadMain:: Begin");
-    std::mutex mtx;
-    std::unique_lock<std::mutex> lck(mtx);
-
-    while (!(this->_is_stop)) {
-        if (!Main()) {
-            DARWIN_LOG_DEBUG("ThreadManager::ThreadMain:: Error in main function, stopping the thread");
-            _is_stop = true;
-            break;
-        }
-        // Wait for notification or until timeout
-        cv.wait_for(lck, std::chrono::seconds(_interval));
-    }
+std::shared_ptr<AThread> BufferThreadManager::Start() {
+    auto ptr = std::make_shared<BufferThread>(_connector);
+    std::shared_ptr<AThread> res = std::dynamic_pointer_cast<AThread>(ptr);
+    return res;
 }
 
-bool BufferThread::Main() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Begin");
-
-    long long int len = REDISListLen();
-    DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: There are " + std::to_string(len) + " entries in " + this->_redis_list + " redis list.");
-    std::vector<std::string> logs;
-
-    if (len >= 0 && len < this->_connector->getRequiredLogLength()){
-        DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Not enough log in Redis, wait for more");
-        return true;
-    } else if (len<0 || !REDISPopLogs(len, logs)) {
-        DARWIN_LOG_ERROR("BufferThread::ThreadMain:: Error when querying Redis");
-        return false;
-    } else {
-//        _connector->sendData(logs);
-        DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Removed" + std::to_string(logs.size()) + " elements from redis");
-    }
-
-    for (auto &log : logs) { // TODO : bound to disappear, to be remplaced by sending data to filter in above else statement
-        DARWIN_RAISE_ALERT(log);
-    }
-
-    return true;
+void BufferThreadManager::setConnector(std::shared_ptr<AConnector> connector) {
+    this->_connector = connector;
 }
-
-bool BufferThread::Stop() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ThreadManager:: Stop thread");
-
-    std::lock_guard<std::mutex> lck(_mutex);
-    this->_is_stop = true;
-    //Notify the thread
-    cv.notify_all();
-    try {
-        if (_thread.joinable()) {
-            _thread.join();
-        }
-    } catch (const std::system_error &e) {
-        DARWIN_LOG_WARNING("ThreadManager:: Error when trying to stop the thread");
-        DARWIN_LOG_WARNING("ThreadManager:: Error message: " + e.code().message());
-        return false;
-    }
-    DARWIN_LOG_DEBUG("ThreadManager:: Thread stopped");
-    return true;
-}
-
-long long int BufferThread::REDISListLen() noexcept {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThread::REDISListLen:: Querying Redis for list size...");
-
-    long long int result;
-
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-
-    std::cout << "RedisListen on list: " << _redis_list << std::endl;
-    if(redis.Query(std::vector<std::string>{"SCARD", _redis_list}, result, true) != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("BufferThread::REDISListLen:: Not the expected Redis response");
-        return -1;
-    }
-    return result;
-}
-
-bool BufferThread::REDISPopLogs(long long int len, std::vector<std::string> &logs) noexcept {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThread::REDISPopLogs:: Querying Redis for logs...");
-
-    std::any result;
-    std::vector<std::any> result_vector;
-
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-
-    if(redis.Query(std::vector<std::string>{"SPOP", this->_redis_list, std::to_string(len)}, result, true) != REDIS_REPLY_ARRAY) {
-        DARWIN_LOG_ERROR("BufferThread::REDISPopLogs:: Not the expected Redis response");
-        return false;
-    }
-
-    DARWIN_LOG_DEBUG("BufferThread::REDISPopLogs:: Elements removed successfully");
-
-    try {
-        result_vector = std::any_cast<std::vector<std::any>>(result);
-    }
-    catch (const std::bad_any_cast&) {}
-
-    DARWIN_LOG_DEBUG("Got " + std::to_string(result_vector.size()) + " entries from Redis");
-
-    for(auto& object : result_vector) {
-        try {
-            logs.emplace_back(std::any_cast<std::string>(object));
-        }
-        catch(const std::bad_any_cast&) {}
-    }
-
-    return true;
-}
-
-BufferThreadManager::BufferThreadManager(int nb_threads) :
-        _nb_threads(nb_threads) {}
-
-bool BufferThreadManager::Start(std::shared_ptr<AConnector> output) {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ThreadManager:: Starting threads");
-
-    if (this->_threads.size() > this->_nb_threads) {
-        DARWIN_LOG_WARNING("ThreadManager:: The maximum number of threads already reached.");
-        return false;
-    }
-    try {
-        auto ptr = std::make_shared<BufferThread>(output);
-        this->_threads.push_back(ptr);
-    } catch (const std::system_error &e) {
-        DARWIN_LOG_WARNING("ThreadManager:: Error when starting the thread");
-        DARWIN_LOG_WARNING("ThreadManger:: Error message: " + e.code().message());
-        return false;
-    }
-    DARWIN_LOG_DEBUG("ThreadManager:: All threads started");
-    return true;
-}
-
-bool BufferThreadManager::Stop() {
-    bool ret = true;
-    for (auto thread : this->_threads) {
-        if (!thread->Stop())
-            ret = false;
-    }
-    return ret;
-}
-
-BufferThreadManager::~BufferThreadManager() {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThreadManager::~BufferThreadManager Preparing to shut down all the threads");
-    if (not this->Stop()) {
-        DARWIN_LOG_ERROR("BufferThreadManager::~BufferThreadManager At least one thread didn't stop correctly");
-    } else {
-        DARWIN_LOG_DEBUG("BufferThreadManager::~BufferThreadManager All threads stopped correctly");
-    }
-}
-    

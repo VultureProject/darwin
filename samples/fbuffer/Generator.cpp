@@ -56,8 +56,12 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     _buffer_thread_manager = std::make_shared<BufferThreadManager>(this->_outputs.size());
+    DARWIN_LOG_DEBUG("Buffer::Generator bufferThreadManager created");
     for (auto &output : this->_outputs) {
-        if (!_buffer_thread_manager->Start(output)) {
+        DARWIN_LOG_DEBUG("Buffer::Generator starting a thread");
+        _buffer_thread_manager->setConnector(output);
+        bool ret = _buffer_thread_manager->ThreadStart();
+        if (not ret) {
             DARWIN_LOG_CRITICAL("Buffer:: Generator:: Error when starting polling thread");
             return false;
         }
@@ -94,6 +98,8 @@ bool Generator::LoadConnectorsConfig(const rapidjson::Document &configuration) {
         DARWIN_LOG_CRITICAL("Buffer::Generator::LoadConnectorConfig 'input_format' or 'outputs' is not correctly configured.");
         return false;
     }
+
+    DARWIN_LOG_DEBUG("Buffer::Generator:: connectors config load complete");
 
     return true;
 }
