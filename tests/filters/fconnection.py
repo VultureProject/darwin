@@ -10,10 +10,10 @@ DEFAULT_REDIS_SOCKET = "/tmp/redis_connection.sock"
 DEFAULT_INIT_DATA_PATH = "/tmp/init_data_path_connection.txt"
 
 class Connection(Filter):
-    def __init__(self, redis_server=None):
+    def __init__(self, ):
         super().__init__(filter_name="connection")
         self.init_data_path = DEFAULT_INIT_DATA_PATH
-        self.redis = redis_server if redis_server else RedisServer(unix_socket=DEFAULT_REDIS_SOCKET)
+        self.redis = RedisServer(unix_socket=DEFAULT_REDIS_SOCKET)
 
     def configure(self):
         content = '{{\n' \

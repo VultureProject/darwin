@@ -61,7 +61,7 @@ bool EndTask::REDISAdd(const std::string& evt_id, const std::string& nb_result) 
     DARWIN_LOG_DEBUG("EndTask::REDISAdd:: Add to key 'darwin_<" +  evt_id + ">' the number :" + nb_result);
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    if(redis.Query(std::vector<std::string>{"SET", "darwin_" + evt_id, nb_result}) != REDIS_REPLY_STATUS) {
+    if(redis.Query(std::vector<std::string>{"SET", "darwin_" + evt_id, nb_result}, true) != REDIS_REPLY_STATUS) {
         DARWIN_LOG_ERROR("EndTask::REDISAdd:: Not the expected Redis response ");
         return false;
     }

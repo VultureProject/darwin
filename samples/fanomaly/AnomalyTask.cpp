@@ -27,7 +27,7 @@ void AnomalyTask::operator()() {
     DARWIN_LOGGER;
     SetStartingTime();
 
-    DARWIN_LOG_DEBUG("AnomalyTask:: body: " + JsonStringify(_body));
+    // DARWIN_LOG_DEBUG("AnomalyTask:: body: " + JsonStringify(_body));
 
     // Should not fail, as the Session body parser MUST check for validity !
     auto array = _body.GetArray();

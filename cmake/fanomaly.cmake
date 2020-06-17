@@ -4,16 +4,18 @@ set(ANOMALY_NAME darwin_anomaly)
 # FILTER DEPENDENCIES #
 #######################
 
-find_library(ARMADILLO_LIBRARY armadillo PATHS ${ARMADILLO_LIBRARY_DIRS})
-find_library(MLPACK_LIBRARY mlpack PATHS ${MLPACK_LIBRARY_DIRS})
+find_package(Armadillo 9.400.0 REQUIRED)
 
-if(NOT ARMADILLO_LIBRARY)
-message(WARNING "Did not find lib armadillo, will not be able to compile filters anomaly/tanomaly")
-endif()
+find_package(Mlpack 3.0.1 REQUIRED)
 
-if(NOT MLPACK_LIBRARY)
-message(WARNING "Did not find lib mlpack, will not be able to compile filters anomaly/tanomaly")
-endif()
+set(Boost_STATIC_LIBS ON)
+# MLPACK Boost dependencies
+find_package(Boost
+	COMPONENTS
+        program_options
+        unit_test_framework
+        serialization
+	REQUIRED)
 
 ###################
 #    EXECUTABLE   #
@@ -29,10 +31,11 @@ add_executable(
 target_link_libraries(
     ${ANOMALY_NAME}
     ${DARWIN_LIBRARIES}
-    lapack
-    blas
-    ${ARMADILLO_LIBRARY}
-    ${MLPACK_LIBRARY}
+    ${ARMADILLO_LIBRARIES}
+    ${MLPACK_LIBRARIES}
+    Boost::program_options
+    Boost::unit_test_framework
+    Boost::serialization
 )
 
 target_include_directories(${ANOMALY_NAME} PUBLIC ${ARMADILLO_INCLUDE_DIRS})

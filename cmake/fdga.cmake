@@ -4,8 +4,8 @@ set(DGA_NAME darwin_dga)
 # FILTER DEPENDENCIES #
 #######################
 
-link_directories(/usr/local/lib/tensorflow/)
-
+find_package(Tensorflow REQUIRED)
+find_package(Faup REQUIRED)
 
 ###################
 #    EXECUTABLE   #
@@ -21,12 +21,10 @@ add_executable(
 target_link_libraries(
     ${DGA_NAME}
     ${DARWIN_LIBRARIES}
-    libtensorflow_cc.so
-    libtensorflow_framework.so
-    libexecinfo.so
-    libfaupl.so
+    ${TENSORFLOW_LIBRARIES}
+    ${FAUP_LIBRARIES}
 )
 
-target_include_directories(${DGA_NAME} PUBLIC /usr/local/include/contrib/eigen/)
-target_include_directories(${DGA_NAME} PUBLIC /usr/local/include/contrib/absl/)
+target_include_directories(${DGA_NAME} PUBLIC ${TENSORFLOW_INCLUDE_DIRS})
+target_include_directories(${DGA_NAME} PUBLIC ${FAUP_INCLUDE_DIRS})
 target_include_directories(${DGA_NAME} PUBLIC samples/fdga/)

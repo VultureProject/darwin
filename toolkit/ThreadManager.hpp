@@ -26,7 +26,8 @@ namespace darwin {
             /// Start the thread
             ///
             /// \return true in success, else false
-            bool Start();
+            /// \param interval the number of seconds between 2 wake-ups (in seconds), defaults to 300
+            bool Start(unsigned int interval = 300);
 
             /// Stop the thread
             ///
@@ -49,7 +50,7 @@ namespace darwin {
             std::mutex _thread_mutex; // The mutex used to manage multiple acces to the _thread member
 
         protected:
-            int _interval = 300; // Interval in which the thread main function will be executed (in seconds)
+            unsigned int _interval; // Interval in which the thread main function will be executed (in seconds)
 
         };
     }

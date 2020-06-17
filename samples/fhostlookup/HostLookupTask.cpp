@@ -23,8 +23,10 @@ HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& sock
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
-                               tsl::hopscotch_map<std::string, int>& db)
-        : Session{"host_lookup", socket, manager, cache, cache_mutex}, _database{db} {
+                               tsl::hopscotch_map<std::string, int>& db,
+                               const std::string& feed_name)
+        : Session{"hostlookup", socket, manager, cache, cache_mutex}, _database{db},
+        _feed_name{feed_name} {
     _is_cache = _cache != nullptr;
 }
 
@@ -56,10 +58,10 @@ void HostLookupTask::operator()() {
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                         STAT_MATCH_INC;
-                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
+                        std::string alert_log = this->BuildAlert(_host, certitude);
                         DARWIN_RAISE_ALERT(alert_log);
                         if (is_log) {
+                            _logs += alert_log + "\n";
                         }
                     }
                     _certitudes.push_back(certitude);
@@ -72,8 +74,7 @@ void HostLookupTask::operator()() {
             certitude = DBLookup();
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 STAT_MATCH_INC;
-                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "host": ")" + _host + R"(", "certitude": )" + std::to_string(certitude) + "}";
+                std::string alert_log = this->BuildAlert(_host, certitude);
                 DARWIN_RAISE_ALERT(alert_log);
                 if (is_log){
                     _logs += alert_log + "\n";
@@ -94,13 +95,26 @@ void HostLookupTask::operator()() {
     }
 }
 
+const std::string HostLookupTask::BuildAlert(const std::string& host,
+                                             unsigned int certitude) {
+    std::string alert_log =
+        R"({"evt_id": ")" + Evt_idToString() +
+        R"(", "time": ")" + darwin::time_utils::GetTime() +
+        R"(", "filter": ")" + GetFilterName() +
+        R"(", "entry": ")" + host +
+        R"(", "feed": ")" + _feed_name +
+        R"(", "certitude": )" + std::to_string(certitude) + "}";
+        return alert_log;
+}
+
 unsigned int HostLookupTask::DBLookup() noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("HostLookupTask:: Looking up '" +  _host + "' in the database");
     unsigned int certitude = 0;
 
-    if(_database.find(_host) != _database.end()) {
-        certitude = 100;
+    auto host = _database.find(_host);
+    if(host != _database.end()) {
+        certitude = host->second;
     }
 
     DARWIN_LOG_DEBUG("Reputation is " + std::to_string(certitude));

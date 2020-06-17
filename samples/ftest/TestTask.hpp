@@ -24,7 +24,9 @@ public:
     explicit TestTask(boost::asio::local::stream_protocol::socket& socket,
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                            std::mutex& cache_mutex);
+                            std::mutex& cache_mutex,
+                            std::string& list,
+                            std::string& channel);
 
     ~TestTask() override = default;
 
@@ -38,10 +40,18 @@ protected:
     /// Return filter code
     long GetFilterCode() noexcept override;
 
+    /// Adds a line to a test list in redis
+    bool REDISAddList(const std::string& list, const std::string& line);
+
+    /// Publish a line to a test channel in redis
+    bool REDISPublishChannel(const std::string& channel, const std::string& line);
+
 private:
     /// Parse a line from the body.
     bool ParseLine(rapidjson::Value &line) final;
 
 private:
     std::string _line;
+    std::string _redis_list;
+    std::string _redis_channel;
 };

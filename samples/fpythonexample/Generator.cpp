@@ -19,7 +19,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
     DARWIN_LOG_DEBUG("PythonExample:: Generator:: Please insert your real configuration code here. "
                      "For now, we just import a dummy Python function");
 
-    DARWIN_LOG_DEBUG("PythonExample:: Generator:: Parsing configuration from \"" + configFile + "\"...");
+    DARWIN_LOG_DEBUG("PythonExample:: Generator:: Parsing configuration from '" + configFile + "'...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configFile, std::ifstream::in);
@@ -55,36 +55,36 @@ bool Generator::LoadConfigurationFile(const rapidjson::Document &configuration) 
     DARWIN_LOG_DEBUG("PythonExampleTask:: Generator:: Loading configuration file...");
 
     if (!configuration.HasMember("python_env_path")) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: \"python_env_path\"");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: 'python_env_path'");
         return false;
     }
 
     if (!configuration["python_env_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: \"python_env_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: 'python_env_path' needs to be a string");
         return false;
     }
 
     std::string python_env_path_str = configuration["python_env_path"].GetString();
 
     if (!configuration.HasMember("module")) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: \"module\"");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: 'module'");
         return false;
     }
 
     if (!configuration["module"].IsString()) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: \"module\" needs to be a string");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: 'module' needs to be a string");
         return false;
     }
 
     std::string module_str = configuration["module"].GetString();
 
     if (!configuration.HasMember("function")) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: \"function\"");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: Missing parameter: 'function'");
         return false;
     }
 
     if (!configuration["function"].IsString()) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: \"function\" needs to be a string");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: 'function' needs to be a string");
         return false;
     }
 
@@ -97,7 +97,7 @@ bool Generator::LoadConfigurationFile(const rapidjson::Document &configuration) 
     }
 
     if (!configuration["custom_python_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: \"custom_python_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("PythonExampleTask:: Generator:: 'custom_python_path' needs to be a string");
         return false;
     }
 

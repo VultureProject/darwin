@@ -21,18 +21,20 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     std::string redis_socket_path;
 
     if (!configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("Session:: Generator:: Missing parameter: \"redis_socket_path\"");
+        DARWIN_LOG_CRITICAL("Session:: Generator:: Missing parameter: 'redis_socket_path'");
         return false;
     }
 
     if (!configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Session:: Generator:: \"redis_socket_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("Session:: Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
 
     redis_socket_path = configuration["redis_socket_path"].GetString();
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    return redis.SetUnixPath(redis_socket_path);
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    return redis.FindAndConnect();
 }
 
 darwin::session_ptr_t

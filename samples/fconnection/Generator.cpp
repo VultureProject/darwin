@@ -24,12 +24,12 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     std::string init_data_path;
 
     if (!configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: \"redis_socket_path\"");
+        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: 'redis_socket_path'");
         return false;
     }
 
     if (!configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: \"redis_socket_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
 
@@ -37,7 +37,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     if (configuration.HasMember("init_data_path")) {
         if (!configuration["init_data_path"].IsString()) {
-            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: \"init_data_path\" needs to be a string");
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'init_data_path' needs to be a string");
             return false;
         }
         init_data_path = configuration["init_data_path"].GetString();
@@ -48,7 +48,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: No redis expire set");
     } else {
         if (!configuration["redis_expire"].IsUint()) {
-            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: \"redis_expire\" needs to be an unsigned int");
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_expire' needs to be an unsigned int");
             return false;
         }
 
@@ -66,7 +66,9 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
     std::vector<std::string> arguments;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    if(not redis.SetUnixPath(redis_socket_path)) {
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    if(not redis.FindAndConnect()) {
         DARWIN_LOG_ERROR("ConnectionSupervision::Generator::ConfigureRedis:: Could not configure Redis connection.");
         return false;
     }
@@ -74,7 +76,7 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
     if(init_data_path.empty()) return true;
 
     DARWIN_LOG_DEBUG("ConnectionSupervision:: ConfigRedis:: Loading initial "
-                     "data from \"" + init_data_path + "\" for redis...");
+                     "data from '" + init_data_path + "' for redis...");
 
     init_data_stream.open(init_data_path, std::ifstream::in);
 
@@ -93,9 +95,9 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
         {
             DARWIN_LOG_WARNING("ConnectionSupervision:: ParseLogs:: The data: "+ current_line +", isn't valid, ignored. "
                                                                                "Format expected : "
-                                                                               "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
-                                                                               "\"[ip_protocol udp or tcp]\")|"
-                                                                               "\"[ip_protocol icmp]\")]");
+                                                                               "[\\\"[ip4]\\\";\\\"[ip4]\\\";((\\\"[port]\\\";"
+                                                                               "\\\"[ip_protocol udp or tcp]\\\")|"
+                                                                               "\\\"[ip_protocol icmp]\\\")]");
             continue;
         }
 
@@ -110,9 +112,9 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
         }
         arguments.emplace_back("0");
 
-        if (redis.Query(arguments) == REDIS_REPLY_ERROR) {
+        if (redis.Query(arguments, true) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::ConfigRedis:: "
-                             "Error when trying to add line \"" + current_line + "\" from initial data for redis, line "
+                             "Error when trying to add line '" + current_line + "' from initial data for redis, line "
                                                                                  "not added");
         }
     }

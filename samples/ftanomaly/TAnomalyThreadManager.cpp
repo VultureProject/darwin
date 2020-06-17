@@ -33,8 +33,8 @@ bool AnomalyThreadManager::Main(){
         DARWIN_LOG_DEBUG("AnomalyThread::ThreadMain:: Not enough log in Redis, wait for more");
         return true;
     } else if (len<0 || !REDISPopLogs(len, logs)){
-        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis, stopping the thread");
-        return false;
+        DARWIN_LOG_ERROR("AnomalyThread::ThreadMain:: Error when querying Redis");
+        return true;
     } else{
         PreProcess(logs);
         if (_matrix.n_cols<10){
@@ -236,7 +236,7 @@ long long int AnomalyThreadManager::REDISListLen() noexcept {
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(redis.Query(std::vector<std::string>{"SCARD", _redis_internal}, result) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(std::vector<std::string>{"SCARD", _redis_internal}, result, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISListLen:: Not the expected Redis response");
         return -1;
     }
@@ -253,9 +253,9 @@ bool AnomalyThreadManager::REDISPopLogs(long long int len, std::vector<std::stri
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(redis.Query(std::vector<std::string>{"SPOP", _redis_internal, std::to_string(len)}, result) != REDIS_REPLY_ARRAY) {
+    if(redis.Query(std::vector<std::string>{"SPOP", _redis_internal, std::to_string(len)}, result, true) != REDIS_REPLY_ARRAY) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISPopLogs:: Not the expected Redis response");
-        return -1;
+        return false;
     }
 
     try {
@@ -289,8 +289,9 @@ bool AnomalyThreadManager::REDISReinsertLogs(std::vector<std::string> &logs) noe
         arguments.emplace_back(log);
     }
 
-    if(redis.Query(arguments) != REDIS_REPLY_INTEGER) {
+    if(redis.Query(arguments, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AnomalyThread::REDISReinsertLogs:: Not the expected Redis response");
+        return false;
     }
 
     DARWIN_LOG_DEBUG("AnomalyThread::REDISReinsertLogs:: Reinsertion done");

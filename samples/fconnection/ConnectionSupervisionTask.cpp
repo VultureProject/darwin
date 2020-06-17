@@ -100,9 +100,9 @@ bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
     {
         DARWIN_LOG_WARNING("ConnectionSupervisionTask:: ParseLine:: The data: "+ _connection +", isn't valid, ignored. "
                                                                                         "Format expected : "
-                                                                                        "[\"[ip4]\";\"[ip4]\";((\"[port]\";"
-                                                                                        "\"[ip_protocol udp or tcp]\")|"
-                                                                                        "\"[ip_protocol icmp]\")]");
+                                                                                        "[\\\"[ip4]\\\";\\\"[ip4]\\\";((\\\"[port]\\\";"
+                                                                                        "\\\"[ip_protocol udp or tcp]\\\")|"
+                                                                                        "\\\"[ip_protocol icmp]\\\")]");
         return false;
     }
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: ParseLine: Parsed element: " + _connection);
@@ -113,6 +113,7 @@ bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
 unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connection) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: Looking up '" +  connection  + "' in the Redis");
+    int redisReplyCode;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     long long int result;
@@ -121,8 +122,9 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     arguments.emplace_back("EXISTS");
     arguments.emplace_back(connection);
 
-    if(redis.Query(arguments, result) != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Didn't get the expected response from Redis when looking for connection '" + connection + "'.");
+    if(redis.Query(arguments, result, true) != REDIS_REPLY_INTEGER) {
+        DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Didn't get the expected response from Redis"
+                        " when looking for connection '" + connection + "'.");
         return DARWIN_ERROR_RETURN;
     }
 
@@ -130,10 +132,10 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
     unsigned int certitude = 0;
 
     if (not result) {
-        DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: No resultfound, setting certitude to 100");
+        DARWIN_LOG_DEBUG("ConnectionSupervisionTask::REDISLookup:: No result found, setting certitude to 100");
         certitude = 100;
 
-        // If connection not found in the Redis, we put it in
+        // If connection not found in Redis, add it
         arguments.clear();
         if(_redis_expire){
             arguments.emplace_back("SETEX");
@@ -145,7 +147,7 @@ unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connectio
         }
         arguments.emplace_back("0");
 
-        if(redis.Query(arguments) == REDIS_REPLY_ERROR) {
+        if(redis.Query(arguments, true) == REDIS_REPLY_ERROR) {
             DARWIN_LOG_ERROR("ConnectionSupervisionTask::REDISLookup:: Something went wrong "
                              "while adding a new connection to Redis");
             return DARWIN_ERROR_RETURN;
