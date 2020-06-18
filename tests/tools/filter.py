@@ -16,14 +16,14 @@ REDIS_CHANNEL_NAME = "darwin.tests"
 
 class Filter():
 
-    def __init__(self, path=None, config_file=None, filter_name="test", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, thresold=101, log_level="-z"):
+    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_thread=1, cache_size=0, thresold=101, log_level="DEVELOPER"):
         self.filter_name = filter_name
         self.socket = socket_path if socket_path else "/tmp/{}.sock".format(filter_name)
         self.config = config_file if config_file else "/tmp/{}.conf".format(filter_name)
         self.path = path if path else "{}darwin_{}".format(DEFAULT_FILTER_PATH, filter_name)
         self.monitor = monitoring_socket_path if monitoring_socket_path else "/tmp/{}_mon.sock".format(filter_name)
         self.pid = pid_file if pid_file else "/tmp/{}.pid".format(filter_name)
-        self.cmd = [self.path, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_threads), str(cache_size), str(thresold), log_level]
+        self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_thread), str(cache_size), str(thresold)]
         self.process = None
         self.error_code = 99 # For valgrind testing
         self.pubsub = None
