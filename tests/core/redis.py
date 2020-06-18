@@ -16,6 +16,7 @@ FTEST_CONF_TEMPLATE = """{{
     "redis_channel_name": "{2}"
 }}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME, REDIS_CHANNEL_NAME)
 
+
 def run():
     tests = [
         simple_master_server,
@@ -39,7 +40,7 @@ def simple_master_server():
 
     filter = Filter()
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         filter.send_single(REDIS_LIST_TRIGGER)
@@ -67,7 +68,7 @@ def master_replica():
 
     filter = Filter()
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     master.channel_subscribe(REDIS_CHANNEL_NAME)
 
@@ -101,7 +102,7 @@ def master_replica_master_temp_fail():
 
     filter = Filter()
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -157,7 +158,7 @@ def master_replica_transfer(function_name, healthcheck):
 
     filter = Filter()
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -215,7 +216,7 @@ def master_replica_failover(function_name, healthcheck):
 
     filter = Filter()
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -271,7 +272,7 @@ def multi_thread_master():
 
     filter = Filter(nb_threads=5)
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     thread_list = []
     def thread_brute(filter, count_log):

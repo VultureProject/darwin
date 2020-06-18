@@ -19,9 +19,10 @@
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Test:: Generator:: Loading Configuration...");
-
     std::string redis_socket_path;
 
+    if (configuration.HasMember("fail_config"))
+        return false;
     if(configuration.HasMember("redis_socket_path")) {
         if (configuration["redis_socket_path"].IsString()) {
             redis_socket_path = configuration["redis_socket_path"].GetString();

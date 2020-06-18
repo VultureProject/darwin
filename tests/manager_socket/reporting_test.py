@@ -7,7 +7,7 @@ from tools.redis_utils import RedisServer
 import os
 import stat
 
-from manager_socket.utils import requests, PATH_CONF_FLOGS, CONF_ONE, CONF_FLOGS, REQ_MONITOR, REQ_MONITOR_CUSTOM_STATS, REQ_MONITOR_ERROR
+from manager_socket.utils import requests, PATH_CONF_FTEST, CONF_ONE, CONF_FTEST, REQ_MONITOR, REQ_MONITOR_CUSTOM_STATS, REQ_MONITOR_ERROR
 from tools.darwin_utils import darwin_configure, darwin_remove_configuration, darwin_start, darwin_stop
 from tools.output import print_result
 
@@ -15,8 +15,8 @@ CONF_TEMPLATE = Template("""{
     "version": 2,
     "filters": [
         {
-            "name": "logs_1",
-            "exec_path": "${log_path}darwin_logs",
+            "name": "test_1",
+            "exec_path": "${log_path}darwin_test",
             "config_file": "${conf_path}",
             "output": "NONE",
             "next_filter": "",
@@ -37,7 +37,7 @@ DEFAULT_REDIS_SOCKET = "/tmp/darwin_test_redis.sock"
 DEFAULT_REDIS_CHANNEL = "darwin.tests"
 DEFAULT_REDIS_LIST = "darwin_tests"
 DEFAULT_STATS_FILE = "/tmp/darwin_stats_test.log"
-STAT_LOG_MATCH = '{"logs_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {"'
+STAT_LOG_MATCH = '{"test_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {"'
 
 
 def run():
@@ -59,15 +59,15 @@ def proc_stats_default():
 
     ret = False
 
-    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS, conf_redis="", conf_file="", proc_stats=""))
-    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST, conf_redis="", conf_file="", proc_stats=""))
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     process = darwin_start()
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
 
         try:
-            result = resp['logs_1']['proc_stats']
+            result = resp['test_1']['proc_stats']
             if [x in result for x in ['memory_percent', 'cpu_percent']] and len(result) == 2:
                 ret = True
             else:
@@ -80,7 +80,7 @@ def proc_stats_default():
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
     return ret
 
 
@@ -88,15 +88,15 @@ def proc_stats_other_defaults():
 
     ret = False
 
-    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS, conf_redis="", conf_file="", proc_stats='"proc_stats": ["name", "username", "memory_full_info"],'))
-    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST, conf_redis="", conf_file="", proc_stats='"proc_stats": ["name", "username", "memory_full_info"],'))
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     process = darwin_start()
 
     try:
         resp = json.loads(requests(REQ_MONITOR))
 
         try:
-            result = resp['logs_1']['proc_stats']
+            result = resp['test_1']['proc_stats']
             if [x in result for x in ['name', 'username', 'memory_full_info']] and len(result) == 3:
                 ret = True
             else:
@@ -109,7 +109,7 @@ def proc_stats_other_defaults():
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
     return ret
 
 
@@ -117,15 +117,15 @@ def proc_stats_custom():
 
     ret = False
 
-    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS, conf_redis="", conf_file="", proc_stats=""))
-    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST, conf_redis="", conf_file="", proc_stats=""))
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     process = darwin_start()
 
     try:
         resp = json.loads(requests(REQ_MONITOR_CUSTOM_STATS))
 
         try:
-            result = resp['logs_1']['proc_stats']
+            result = resp['test_1']['proc_stats']
             if [x in result for x in ['name', 'pid', 'memory_percent']] and len(result) == 3:
                 ret = True
             else:
@@ -138,22 +138,22 @@ def proc_stats_custom():
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
     return ret
 
 def proc_stats_wrong():
 
     ret = False
 
-    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS, conf_redis="", conf_file="", proc_stats=""))
-    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST, conf_redis="", conf_file="", proc_stats=""))
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     process = darwin_start()
 
     try:
         resp = json.loads(requests(REQ_MONITOR_ERROR))
 
         try:
-            result = resp['logs_1']['proc_stats']
+            result = resp['test_1']['proc_stats']
             if len(result) == 0:
                 ret = True
             else:
@@ -166,7 +166,7 @@ def proc_stats_wrong():
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
     return ret
 
 
@@ -193,9 +193,9 @@ def redis_reports():
             redis_conf = "\"redis\": {{{connection}, {method}}},".format(connection=connection['conf'], method=method['conf'])
             expected_result = method['partial_result'] if connection['partial_result'] == "" else connection['partial_result']
 
-            darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS,
+            darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST,
                 conf_redis=redis_conf, conf_file="", proc_stats=""))
-            darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+            darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
 
             redis_server = RedisServer(unix_socket=DEFAULT_REDIS_SOCKET, address="127.0.0.1", port=7890)
             redis_probe = redis_server.connect()
@@ -231,7 +231,7 @@ def redis_reports():
             del message
             darwin_stop(process)
             darwin_remove_configuration()
-            darwin_remove_configuration(path=PATH_CONF_FLOGS)
+            darwin_remove_configuration(path=PATH_CONF_FTEST)
             # Don't judge me...
             part += 1
             print("\x08\x08\x08\x08\x08\x08", end='', flush=True)
@@ -275,9 +275,9 @@ def file_reports():
             else:
                 expected_result = "nothing"
 
-            darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS,
+            darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST,
                 conf_redis="", conf_file=file_conf, proc_stats=""))
-            darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+            darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
 
             process = darwin_start()
 
@@ -310,7 +310,7 @@ def file_reports():
 
             darwin_stop(process)
             darwin_remove_configuration()
-            darwin_remove_configuration(path=PATH_CONF_FLOGS)
+            darwin_remove_configuration(path=PATH_CONF_FTEST)
             # Don't judge me...
             part += 1
             print("\x08\x08\x08\x08\x08", end='', flush=True)
@@ -333,9 +333,9 @@ def file_and_redis_simple_report():
     redis_conf = """"redis": {{"ip": "127.0.0.1", "port": 7890, "channel": "{}", "list": "{}"}},""".format(DEFAULT_REDIS_CHANNEL, DEFAULT_REDIS_LIST)
 
 
-    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FLOGS,
+    darwin_configure(CONF_TEMPLATE.substitute(log_path=DEFAULT_FILTER_PATH, conf_path=PATH_CONF_FTEST,
         conf_redis=redis_conf, conf_file=file_conf, proc_stats=""))
-    darwin_configure(CONF_FLOGS, path=PATH_CONF_FLOGS)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
 
     redis_server = RedisServer(address="127.0.0.1", port=7890)
     redis_probe = redis_server.connect()
@@ -374,6 +374,6 @@ def file_and_redis_simple_report():
 
     darwin_stop(process)
     darwin_remove_configuration()
-    darwin_remove_configuration(path=PATH_CONF_FLOGS)
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
 
     return ret
