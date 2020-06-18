@@ -187,9 +187,9 @@ def check_start_no_conf():
     return False
 
 def check_start_invalid_thread_num():
-    filter = Filter(filter_name="logs", nb_threads="HelloThere")
+    filter = Filter(filter_name="test", nb_threads="HelloThere")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
@@ -200,9 +200,9 @@ def check_start_invalid_thread_num():
     return True
 
 def check_start_invalid_cache_num():
-    filter = Filter(filter_name="logs", cache_size="General")
+    filter = Filter(filter_name="test", cache_size="General")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
@@ -213,9 +213,9 @@ def check_start_invalid_cache_num():
     return True
 
 def check_start_invalid_threshold_num():
-    filter = Filter(filter_name="logs", thresold="Kenobi")
+    filter = Filter(filter_name="test", thresold="Kenobi")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
@@ -227,9 +227,9 @@ def check_start_invalid_threshold_num():
 
 
 def check_start_outbound_thread_num():
-    filter = Filter(filter_name="logs", nb_threads="314159265358979323846264338327")
+    filter = Filter(filter_name="test", nb_threads="314159265358979323846264338327")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
@@ -240,9 +240,9 @@ def check_start_outbound_thread_num():
     return True
 
 def check_start_outbound_cache_num():
-    filter = Filter(filter_name="logs", cache_size="950288419716939937510582097494")
+    filter = Filter(filter_name="test", cache_size="950288419716939937510582097494")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
@@ -253,9 +253,9 @@ def check_start_outbound_cache_num():
     return True
 
 def check_start_outbound_threshold_num():
-    filter = Filter(filter_name="logs", thresold="459230781640628620899862803482")
+    filter = Filter(filter_name="test", thresold="459230781640628620899862803482")
 
-    filter.configure(FLOGS_CONFIG)
+    filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
     sleep(0.5)
     if filter.check_start():
