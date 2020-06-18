@@ -112,7 +112,7 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
         sess_<SHA256>       login, authenticated
     */
 
-   if(redis.Query(arguments, result) != REDIS_REPLY_ARRAY) {
+   if(redis.Query(arguments, result, true) != REDIS_REPLY_ARRAY) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: Something went wrong while querying Redis");
         return DARWIN_ERROR_RETURN;
     }

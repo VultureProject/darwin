@@ -12,7 +12,6 @@ else ()
 endif ()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
-message("${CMAKE_MODULE_PATH}")
 
 if (NOT DEFINED FILTER)
     set(
@@ -23,7 +22,6 @@ if (NOT DEFINED FILTER)
         CONNECTION
         TANOMALY
         ANOMALY
-        LOGS
         CONTENT_INSPECTION
     )
 else (NOT DEFINED FILTER)
@@ -44,24 +42,22 @@ set(
 )
 find_package(PkgConfig)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
-find_package(Boost)
 
-link_directories(
-    /usr/local/lib
-)
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost
+	COMPONENTS
+	  system
+	REQUIRED)
 
-pkg_check_modules(HIREDIS REQUIRED hiredis)
-link_directories(${HIREDIS_LIBRARY_DIRS})
-find_library(HIREDIS_LIBRARY hiredis PATHS ${HIREDIS_LIBRARY_DIRS})
-
-include_directories(${HIREDIS_INCLUDE_DIRS})
+find_package(Hiredis REQUIRED)
 
 set(
     DARWIN_LIBRARIES
-    pthread
-    boost_system
-    hiredis
+    Threads::Threads
+    Hiredis::Hiredis
+    ${Boost_LIBRARIES}
 )
 
 ###################
@@ -72,7 +68,8 @@ include_directories(
         toolkit
         samples/base
         samples/
-        /usr/local/include
+	${HIREDIS_INCLUDE_DIRS}
+	${Boost_INCLUDE_DIRS}
 )
 
 
@@ -112,38 +109,38 @@ set(
 
 message("Generating CMake files for the filters: ${FILTERS}")
 
-if(LOGS IN_LIST FILTERS)
-include(flogs)
-endif()
-
-if(CONNECTION IN_LIST FILTERS)
+if("CONNECTION" IN_LIST FILTERS)
 include(fconnection)
 endif()
 
-if(SESSION IN_LIST FILTERS)
+if("SESSION" IN_LIST FILTERS)
 include(fsession)
 endif()
 
-if(HOSTLOOKUP IN_LIST FILTERS)
+if("HOSTLOOKUP" IN_LIST FILTERS)
 include(fhostlookup)
 endif()
 
-if(DGA IN_LIST FILTERS)
+if("DGA" IN_LIST FILTERS)
 include(fdga)
 endif()
 
-if(TANOMALY IN_LIST FILTERS)
+if("TANOMALY" IN_LIST FILTERS)
 include(ftanomaly)
 endif()
 
-if(ANOMALY IN_LIST FILTERS)
+if("ANOMALY" IN_LIST FILTERS)
 include(fanomaly)
 endif()
 
-if(CONTENT_INSPECTION IN_LIST FILTERS)
+if("CONTENT_INSPECTION" IN_LIST FILTERS)
 include(finspection)
 endif()
 
 if("TEST" IN_LIST FILTERS)
 include(ftest)
+endif()
+
+if("SOFA" IN_LIST FILTERS)
+include(fsofa)
 endif()

@@ -22,37 +22,37 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     std::string model_path;
 
     if (!configuration.HasMember("token_map_path")) {
-        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: \"token_map_path\"");
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: 'token_map_path'");
         return false;
     }
 
     if (!configuration["token_map_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: \"token_map_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: 'token_map_path' needs to be a string");
         return false;
     }
 
     token_map_path = configuration["token_map_path"].GetString();
 
     if (!configuration.HasMember("model_path")) {
-        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: \"model_path\"");
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: Missing parameter: 'model_path'");
         return false;
     }
 
     if (!configuration["model_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: \"model_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: 'model_path' needs to be a string");
         return false;
     }
 
     model_path = configuration["model_path"].GetString();
 
     if (!configuration.HasMember("max_tokens")) {
-        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: \"max_tokens\" not provided. Setting default value: " +
+        DARWIN_LOG_CRITICAL("UserAgent:: Generator:: 'max_tokens' not provided. Setting default value: " +
                             std::to_string(DEFAULT_MAX_TOKENS));
 
         _max_tokens = DEFAULT_MAX_TOKENS;
     } else {
         if (!configuration["max_tokens"].IsUint()) {
-            DARWIN_LOG_CRITICAL("UserAgent:: Generator:: \"max_tokens\" needs to be an unsigned integer");
+            DARWIN_LOG_CRITICAL("UserAgent:: Generator:: 'max_tokens' needs to be an unsigned integer");
             return false;
         }
 
@@ -67,7 +67,7 @@ bool Generator::LoadTokenMap(const std::string &token_map_path) {
     std::string current_line;
     boost::char_separator<char> separator{","};
 
-    DARWIN_LOG_DEBUG("UserAgent:: LoadTokenMap:: Loading token file \"" + token_map_path + "\"...");
+    DARWIN_LOG_DEBUG("UserAgent:: LoadTokenMap:: Loading token file '" + token_map_path + "'...");
 
     std::ifstream token_map_stream;
     token_map_stream.open(token_map_path, std::ifstream::in);

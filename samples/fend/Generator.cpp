@@ -27,7 +27,7 @@ bool Generator::Configure(std::string const& configFile, const std::size_t cache
 bool Generator::SetUpClassifier(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("End:: Generator:: Setting up classifier...");
-    DARWIN_LOG_DEBUG("End:: Generator:: Parsing configuration from \"" + configuration_file_path + "\"...");
+    DARWIN_LOG_DEBUG("End:: Generator:: Parsing configuration from '" + configuration_file_path + "'...");
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
@@ -60,19 +60,21 @@ bool Generator::LoadClassifier(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("End:: Generator:: Loading classifier...");
 
     if (!configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("End:: Generator:: Missing parameter: \"redis_socket_path\"");
+        DARWIN_LOG_CRITICAL("End:: Generator:: Missing parameter: 'redis_socket_path'");
         return false;
     }
 
     if (!configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("End:: Generator:: \"redis_socket_path\" needs to be a string");
+        DARWIN_LOG_CRITICAL("End:: Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
 
     std::string redis_socket_path = configuration["redis_socket_path"].GetString();
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    return redis.SetUnixPath(redis_socket_path);
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    redis.SetUnixConnection(redis_socket_path);
+    return redis.FindAndConnect();
 }
 
 darwin::session_ptr_t

@@ -8,6 +8,15 @@ link_directories(
     ${LIBYARA_LIBRARY_DIRS}
 )
 
+find_package(Yara REQUIRED)
+
+# Search for static OpenSSL libs, then fall back to dynamic ones
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL QUIET)
+if(NOT OpenSSL_FOUND)
+    set(OPENSSL_USE_STATIC_LIBS FALSE)
+    find_package(OpenSSL)
+endif()
 
 ###################
 #    EXECUTABLE   #
@@ -34,8 +43,8 @@ add_executable(
 target_link_libraries(
     ${INSPECTION_NAME}
     ${DARWIN_LIBRARIES}
-    yara
+    Yara::Yara
+    OpenSSL::Crypto
 )
 
-target_include_directories(${INSPECTION_NAME} PUBLIC ${LIBYARA_INCLUDE_DIRS})
-target_include_directories(${INSPECTION_NAME} PUBLIC samples/flogs/)
+target_include_directories(${INSPECTION_NAME} PUBLIC samples/finspection/)

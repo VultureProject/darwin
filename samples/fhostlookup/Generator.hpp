@@ -30,6 +30,10 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    bool LoadTextFile(const std::string& filename);
+    bool LoadJsonFile(const std::string& filename);
+    bool LoadJsonDatabase(const rapidjson::Document& database);
+    bool LoadJsonEntry(const rapidjson::Value& entry);
 
 private:
     // This implementation is thread safe with multiple reader
@@ -37,4 +41,5 @@ private:
     // This is indicated by the repository doc.
     // It should mimic thread safety of std::unordered_map<>
     tsl::hopscotch_map<std::string, int> _database; //!< The "bad" hostname database
+    std::string _feed_name;
 };
