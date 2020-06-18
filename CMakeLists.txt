@@ -109,7 +109,7 @@ set(
 
 message("Generating CMake files for the filters: ${FILTERS}")
 
-if(CONNECTION IN_LIST FILTERS)
+if("CONNECTION" IN_LIST FILTERS)
 include(fconnection)
 endif()
 
