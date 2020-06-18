@@ -17,20 +17,6 @@ FTEST_CONF_TEMPLATE = """{{
 }}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME, REDIS_CHANNEL_NAME)
 
 
-class TestFilter(Filter):
-    def __init__(self, redis_server=None, nb_threads=1):
-        super().__init__(filter_name='test', nb_thread=nb_threads)
-        self.redis_server = redis_server
-
-    def log(self, log_line):
-        """
-        Send a single log line.
-        """
-        api = DarwinApi(socket_type="unix", socket_path=self.socket)
-        api.call([log_line], filter_code=0x74657374, response_type="no")
-        api.close()
-
-
 def run():
     tests = [
         simple_master_server,
