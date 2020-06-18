@@ -10,8 +10,12 @@ def darwin_start(darwin_manager_path=DEFAULT_MANAGER_PATH, config_path=DEFAULT_C
         darwin_manager_path,
         '-l',
         'DEBUG',
+        '-p',
+        'tmp',
+        '--no-suffix-directories',
         config_path
     ])
+
     sleep(3)
     return process
 
