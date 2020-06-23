@@ -25,23 +25,64 @@ alert_destinations = []
 
 
 class FileManager():
-	def __init__(self, filepath):
+	"""
+	A simple class to handle alert writes to a file
+
+	Attributes
+	----------
+	- filepath: str
+		the fullpath to the file
+
+	Methods
+	-------
+	- test_write():
+		test if the file can be written to/created
+	- test_read():
+		test if the file can be read
+	- add_alert(alert):
+		add an alert to the previously set file (defined with 'filepath')
+	"""
+
+
+	def __init__(self, filepath: str):
+		"""
+		Parameters
+		----------
+		- filepath: str
+			the fullpath to the file to use (or create) when writing alerts
+			file won't be overriden if existing, alerts will be appended
+			file will be created if not existing (subdirs won't be created though)
+		"""
+
 		self.filepath = filepath
 
-		#Raises exception in case of error
-		with open(self.filepath, 'a+') as file:
-			logger.debug("File Manager: successfuly opened file '{}'".format(self.filepath))
 
-	def __str__(self):
+	def __str__(self) -> str:
+		"""
+		Returns
+		-------
+		str:
+			the fullpath defined during __init__()
+		"""
+
 		return self.filepath
 
-	def test_write(self):
+
+	def test_write(self) -> bool:
+		"""
+		Test if the path provided exists, is a file, and can be written to
+
+		Returns
+		-------
+		True -> path exists, is a file and can be written to, or can at least be created in the directory
+		False -> otherwise
+		"""
+
 		if os.path.exists(self.filepath):
 			if os.path.isfile(self.filepath):
 				#Check if file can be written (but don't write anything to it)
 				return os.access(self.filepath, os.W_OK)
 			else:
-				#Path point ot a directory
 				return False
 
 		#File does not exist, only need to check if file can be created in directory
@@ -50,9 +91,46 @@ class FileManager():
 			directory = '.'
 		return os.access(directory, os.W_OK)
 
-	def add_alert(self, alert):
+
+	def test_read(self) -> bool:
+		"""
+		Test if the path provided exists, is a file, and can be read
+
+		Returns
+		-------
+		True -> path exists, is a file and can be read
+		False -> otherwise
+		"""
+
+		if os.path.exists(self.filepath):
+			if os.path.isfile(self.filepath):
+				#Check if file can be read
+				return os.access(self.filepath, os.R_OK)
+			else:
+				logger.error("path {} is a directory".format(self.filepath))
+		else:
+			logger.error("file {} doesn't exist".format(self.filepath))
+
+		return False
+
+
+	def add_alert(self, alert: str) -> bool:
+		"""
+		Add alert to the file
+
+		Parameters
+		----------
+		alert: str
+			the alert to add to the file (a newline will be added to the alert)
+
+		Returns
+		-------
+		True -> line was added to the file
+		False -> an error occured while writing to file
+		"""
+
 		try:
-			with open(self.filepath, 'a') as logfile:
+			with open(self.filepath, 'a+') as logfile:
 				logfile.write(json.dumps(alert) + '\n')
 			return True
 		except OSError as e:
@@ -61,47 +139,155 @@ class FileManager():
 
 
 class RedisManager:
+	"""
+	A class to handle Redis listening, reading and writing of source alerts, context and reconciled alerts
+
+	Attributes
+	----------
+	- redis: object
+		the Redis object containing connection information
+	- redis_list: str
+		the name of the list to use in Redis
+	- redis_channel: str
+		the name of the pubsub channel to use in Redis
+	- max_tries: number
+		the number of times to try and get context from Redis
+	- sec_between_retries: number
+		the number of seconds to wait between retries
+		also used between pollings when using only a redis_list, and during reconnection attempts when Redis disconnects
+
+	Methods
+	-------
+	- test_write()
+		test if redis is valid and is not a replica
+	- test_read()
+		test if redis is valid and can be read
+	- get_context(evt_id)
+		search for the context in Redis
+	- add_alert(alert)
+		add alert to list and/or channel in Redis
+	- monitor()
+		blocking function to start monitoring alerts in list and/or channel from Redis
+	- stop()
+		ask to stop monitoring
+	"""
+
+
 	def __init__(self, ip=None, port=0, unix_socket=None, redis_list=None, redis_channel=None, max_tries=1, sec_between_retries=1, update_alert_handler=None):
+		"""
+		Parameters
+		----------
+		- ip: str (default None)
+			the ip of the Redis host to connect to
+		- port: number (default 0)
+			the port of the Redis host to connect to
+		- unix_socket: str (default None)
+			the fullpath to the unix socket to connect to
+		- redis_list: str (default None)
+			the list to look at when monitoring alerts
+		- redis_channel: str (default None)
+			the channel to listen to when monitoring alerts
+		- max_tries: number (default 1)
+			the number of tries when fetching context from Redis
+		- sec_between_retries: number (default 1)
+			number of seconds between retries, used for:
+				- context fetching
+				- reconnection to Redis
+				- intervals between polling in list-only scenario
+		- update_alert_handler: function(alert: dict, context: dict)
+			parameter to define a custom function when putting context in alert
+			default behaviour is putting context in a key 'context' at the root of the alert
+		"""
+
 		self.redis_list = redis_list
 		self.redis_channel = redis_channel
 		self.max_tries = max_tries
 		self.sec_between_retries = sec_between_retries
-		self.shutdown_flag = Event()
+		self._shutdown_flag = Event()
 
 		if ip and port:
 			self.redis = redis.Redis(host=ip, port=port, health_check_interval=20, decode_responses=True)
 		elif unix_socket:
 			self.redis = redis.Redis(unix_socket_path=unix_socket, health_check_interval=20, decode_responses=True)
-		else:
-			raise RuntimeError("Redis Manager: No valid parameters for Redis server, got ip='{}', port={}, socket='{}'".format(ip, port, unix_socket))
 
 		if update_alert_handler is None:
 			self.update_alert_handler = self._update_alert_handler
 		else:
 			self.update_alert_handler = update_alert_handler
 
-		#Raises Exception in case of error
-		self.redis.ping()
 		logger.debug("Redis Manager: successfuly connected to Redis {}".format(self.redis))
 
-	def __str__(self):
-		return "{}, list '{}', channel '{}', max_retries '{}', sec_between_retries '{}'".format(self.redis, self.redis_list, self.redis_channel, self.max_tries, self.sec_between_retries)
+
+	def __str__(self) -> str:
+		"""
+		Returns
+		-------
+		str:
+			the redis object stringified, the list, the channel, max_tries, sec_between_retries
+		"""
+
+		return "{}, list '{}', channel '{}', max_tries '{}', sec_between_retries '{}'".format(self.redis, self.redis_list, self.redis_channel, self.max_tries, self.sec_between_retries)
 
 
-	def test_write(self):
+	def test_write(self) -> bool:
+		"""
+		Test if the Redis server can be written to (is not a replica)
+
+		Returns
+		-------
+		True -> the Redis server is valid, and can be written to
+		False -> an error occured while trying to connect or write to the Redis server (see logs for details)
+		"""
+
 		try:
 			self.redis.setex("test_key_value_write", 1, "value")
 		except redis.ReadOnlyError:
 			logger.error("Redis Manager: the redis server is a replica, cannot write")
 			return False
-		except redisError as e:
+		except RedisError as e:
 			logger.error("Redis Manager: write test failed -> {}".format(e))
 			return False
 
 		return True
 
 
-	def get_context(self, evt_id):
+	def test_read(self) -> bool:
+		"""
+		Test if the Redis server can be read
+
+		Returns
+		-------
+		True -> the Redis server is valid, and can be accessed
+		False -> an error occured while trying to connect or read from the Redis server (see logs for details)
+		"""
+
+		try:
+			self.redis.ping()
+		except RedisError as e:
+			logger.error("Redis Manager: read test failed -> {}".format(e))
+			return False
+
+		return True
+
+	def get_context(self, evt_id: str) -> dict:
+		"""
+		Tries to return the context from the Redis server
+		Searches the key defined by evt_id, if the key is not found, will try again for 'max_tries'
+		every 'sec_between_tries' second
+		If the returned context is a simple string, will put the string in a dict with the key 'msg'
+		example: context = "this is just a string" -> returns {"msg": "this is just a string"}
+
+		Parameters
+		----------
+		- evt_id: str
+			the key to search for in Redis, should represent the event_id given in an alert, but could be anything
+
+		Returns
+		-------
+		context -> a dict representing what was stored in Redis under the given key
+		None -> nothing was retrieved or an error occured during operation
+		"""
+
 		context = None
 		try:
 			context = self.redis.get(evt_id)
@@ -120,7 +306,23 @@ class RedisManager:
 		return context
 
 
-	def add_alert(self, alert):
+	def add_alert(self, alert) -> int:
+		"""
+		Add the alert to Redis using the means defined (list and/or channel) during __init__()
+
+		Parameters
+		----------
+		- alert: dict
+			the dict representing the alert to put in the list/channel
+
+		Returns
+		-------
+		number -> the number of successful writes
+			2 if list and channel were defined, and both succeded
+			1 if only list or channel were defined and succeeded, or an error occured on one of them if both were defined
+			0 if all means (be it list and/or channel) failed
+		"""
+
 		ret = 0
 		alert_string = json.dumps(alert)
 		if self.redis_channel:
@@ -143,10 +345,38 @@ class RedisManager:
 		return ret
 
 
-	def _update_alert_handler(self, alert, context):
+	def _update_alert_handler(self, alert: dict, context: dict):
+		"""
+		Adds the context in the alert under the "context" key
+
+		Parameters
+		----------
+		- alert: dict
+			the alert received
+		- context: dict
+			the context recovered
+		"""
+
 		alert["context"] = context
 
-	def _reconcile_alert(self, alert, retry=True):
+
+	def _reconcile_alert(self, alert: dict, retry=True):
+		"""
+		From the alert, recovers the 'evt_id', then queries for the context from the global 'context_sources'
+		Will try to get context from all the sources defined in the list, using get_context(), and will try 'max_tries'
+		times every 'sec_between_tries' seconds
+		If context is recovered successfuly, will call the update handler (either default or custom defined one)
+		to add context to the alert
+		Finally, will call add_alert() from every manager defined in the global alert_destinations list to add the alert here
+
+		Parameter
+		---------
+		- alert: dict
+			the alert recovered from the list/channel
+		- retry: bool (default True)
+			wether to honour 'max_tries' when context wasn't recovered successfuly from context_source(s)
+		"""
+
 		global context_sources
 		global alert_destinations
 		retries = 0
@@ -157,7 +387,9 @@ class RedisManager:
 			logger.warning("Redis Manager: got an alert without 'evt_id', ignoring")
 			return
 
-		while (retries < self.max_tries) and (context is None) and (not self.shutdown_flag.is_set()):
+		# Continue as long as context wasn't recoved, retries are still possible, and program isn't asked to stop
+		while (retries < self.max_tries) and (context is None) and (not self._shutdown_flag.is_set()):
+			# Search context in every context_source in turn (no delay involved here)
 			for context_source in context_sources:
 				context = context_source.get_context(evt_id)
 				if context is not None:
@@ -174,18 +406,29 @@ class RedisManager:
 		if context is not None:
 			self.update_alert_handler(alert, context)
 
+		# Add alert to destinations whether context was successfuly added to the alert or not
 		for destination in alert_destinations:
 			destination.add_alert(alert)
 
 
-	def _parse_alert(self, alert):
+	def _parse_alert(self, alert: str) -> dict:
+		"""
+		Helper function to parse alert from JSON to Python dict
+
+		Parameter
+		---------
+		- alert: str
+			the JOSN alert as a (decoded) string
+
+		Returns
+		-------
+		dict -> a dict representing the JSON alert
+		None -> if the string wasn't a valid JSON
+		"""
+
 		parsed_alert = None
 		try:
-			# parsed_alert = alert.decode()
 			parsed_alert = json.loads(alert)
-		except (UnicodeDecodeError, AttributeError) as e:
-			logger.error("Redis Manager: could not decode alert -> {}".format(e))
-			logger.debug("Redis Manager: alert = '{}'".format(alert))
 		except JSONDecodeError as e:
 			logger.error("Redis Manager: alert is not a valid JSON -> {}".format(e))
 			logger.debug("Redis Manager: alert = '{}'".format(alert))
@@ -194,6 +437,16 @@ class RedisManager:
 
 
 	def _pop_alerts(self, retry=True):
+		"""
+		Pop alerts from the configured list as long as shutdown is not asked and there are alerts in the Redis list
+		Will call _reconcile_alert() for each alert recovered
+
+		Parameters
+		----------
+		- retry: bool (default True)
+			wether to honour the 'max_tries' parameter, passed down during context query
+		"""
+
 		logger.debug("Redis Manager: popping alerts...")
 		try:
 			alert = self.redis.rpop(self.redis_list)
@@ -202,7 +455,8 @@ class RedisManager:
 			logger.debug("Redis Manager: redis is {}, list is {}".format(self.redis, self.redis_list))
 			return
 
-		while (alert is not None) and (not self.shutdown_flag.is_set()):
+		# Pop alerts from list as long as there are alerts, and program wasn't asked to stop
+		while (alert is not None) and (not self._shutdown_flag.is_set()):
 			logger.debug("Redis Manager: got alert -> {}, {}".format(alert, type(alert)))
 			parsed_alert = self._parse_alert(alert)
 			if parsed_alert is not None:
@@ -216,7 +470,18 @@ class RedisManager:
 				return
 		logger.debug("Redis Manager: finished popping")
 
+
 	def monitor(self):
+		"""
+		A blocking function to start active monitoring of alerts in Redis
+		If only a channel is set, will listen for incoming alerts in the channel, and will reconcile each alert taken from it
+		If a channel AND a list are set, will only trigger popping alerts from list as soon as a message in the channel is received
+			(messages from the channel are ignored and can be anything)
+		If only a list is set, will trigger popping of alerts in list every 'sec_between_tries' seconds
+		To stop monitoring, one should call the stop() function
+			as such, one should run this function in a separate thread, or assign the stop() function to a signal
+		"""
+
 		listener = None
 
 		logger.info("Redis Manager started")
@@ -234,7 +499,7 @@ class RedisManager:
 				#Check list before waiting in channel
 				self._pop_alerts(retry=False)
 
-		while not self.shutdown_flag.is_set():
+		while not self._shutdown_flag.is_set():
 			if listener:
 				try:
 					alert = listener.get_message(ignore_subscribe_messages=True, timeout=2)
@@ -257,7 +522,7 @@ class RedisManager:
 				self._pop_alerts()
 				# Sleep DELAY time, 2 seconds at a time to prevent long sleep when shutdown_flag is set
 				counter = 0
-				while not self.shutdown_flag.is_set() and counter < self.sec_between_retries:
+				while not self._shutdown_flag.is_set() and counter < self.sec_between_retries:
 					sleep(2)
 					counter += 2
 
@@ -265,8 +530,13 @@ class RedisManager:
 
 
 	def stop(self):
+		"""
+		Function to ask interruption when execution is in monitor()
+		Warning, returning from the monitor() function could take as long as 2 seconds
+		"""
+
 		logger.info("Redis Manager stopping")
-		self.shutdown_flag.set()
+		self._shutdown_flag.set()
 
 
 
@@ -405,18 +675,17 @@ def parse_conf(conf_file=""):
 		with open(conf_file, 'r') as f:
 			logger.debug("Loading config file")
 			configuration = json.load(f)
-	except Exception as e:
-		logger.critical("Unable to load configuration: {}".format(e))
-		raise e
-
-	try:
 		jsonschema.Draft7Validator(conf_schema).validate(configuration)
+	except IOError as e:
+		logger.error("Error while opening configuration file: {}".format(e))
+	except JSONDecodeError as e:
+		logger.error("Error while parsing json in configuration: {}".format(e))
 	except jsonschema.exceptions.ValidationError as e:
 		logger.error("Incorrect configuration format: {}".format(e.message))
-		raise e
+		configuration = None
 	except jsonschema.exceptions.SchemaError as e:
 		logger.error("Incorrect validation schema: {}".format(e.message))
-		raise e
+		configuration = None
 
 	return configuration
 
@@ -440,11 +709,11 @@ if __name__ == '__main__':
 
 	configure_logging(args.verbose, args.log_file)
 
-	try:
-		configuration = parse_conf(args.config_file)
-	except jsonschema.exceptions.ValidationError or jsonschema.exceptions.SchemaError:
-		logger.error("Could not load configuration file")
+	configuration = parse_conf(args.config_file)
+	if configuration is None:
+		logger.error("Could not load configuration")
 		sys.exit(1)
+
 
 	try:
 		alert_source = RedisManager(
@@ -496,6 +765,17 @@ if __name__ == '__main__':
 	if alert_source.redis_list is not None:
 		if not alert_source.test_write():
 			logger.error("Need write rights to 'alert_source' when a 'list' is specified")
+			sys.exit(1)
+	else:
+		if not alert_source.test_read():
+			logger.error("Could not read from the configured alert source")
+			logger.error("alert source is {}".format(alert_source))
+			sys.exit(1)
+
+	for context_source in context_sources:
+		if not context_source.test_read():
+			logger.error("Could not read from a configured context source")
+			logger.error("context source is {}".format(context_source))
 			sys.exit(1)
 
 	#Blocking loop to get alerts from Redis
