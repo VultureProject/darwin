@@ -13,7 +13,7 @@ import json
 import sys
 import os
 import redis
-from redis.exceptions import RedisError
+from redis.exceptions import RedisError, ReadOnlyError
 from json import JSONDecodeError
 from time import sleep
 from threading import Thread, Event
@@ -162,6 +162,8 @@ class RedisManager:
 		test if redis is valid and is not a replica
 	- test_read()
 		test if redis is valid and can be read
+	- discover_clustering()
+		function to discover if the current redis connection is a master, and if it's a replica change to master
 	- get_context(evt_id)
 		search for the context in Redis
 	- add_alert(alert)
@@ -194,6 +196,8 @@ class RedisManager:
 				- context fetching
 				- reconnection to Redis
 				- intervals between polling in list-only scenario
+		- _redis_fallbacks: list
+			list of replicas during Redis clustering
 		- update_alert_handler: function(alert: dict, context: dict)
 			parameter to define a custom function when putting context in alert
 			default behaviour is putting context in a key 'context' at the root of the alert
@@ -203,6 +207,7 @@ class RedisManager:
 		self.redis_channel = redis_channel
 		self.max_tries = max_tries
 		self.sec_between_retries = sec_between_retries
+		self._redis_fallbacks = []
 		self._shutdown_flag = Event()
 
 		if ip and port:
@@ -214,8 +219,6 @@ class RedisManager:
 			self.update_alert_handler = self._update_alert_handler
 		else:
 			self.update_alert_handler = update_alert_handler
-
-		logger.debug("Redis Manager: successfuly connected to Redis {}".format(self.redis))
 
 
 	def __str__(self) -> str:
@@ -268,6 +271,114 @@ class RedisManager:
 			return False
 
 		return True
+
+
+	def discover_clustering(self) -> bool:
+		"""
+		Uses current redis connection, and potential previously discovered fallbacks,
+		to search for the current master server in a cluster
+		If a valid master is found:
+		- the active redis connection is updated
+		- the list of potential fallbacks is updated with the connected replicas
+
+		Returns
+		-------
+		True -> if a new master is found
+		False -> otherwise
+		"""
+
+		logger.info("Redis Manager: discovering cluster...")
+		try:
+			info = self.redis.info()
+
+			role = info.get("role", None)
+			if not role:
+				logger.error("Redis Manager: could not get role from redis server")
+				logger.debug("Redis is {}".format(self.redis))
+				logger.debug("info() is {}".format(info))
+				return False
+
+			if role == "slave":
+				logger.debug("server is a replica")
+				redis_master = redis.Redis(
+									host=info.get("master_host", None),
+									port=info.get("master_port", 0),
+									health_check_interval=20,
+									decode_responses=True)
+				try:
+					logger.debug("trying server {}".format(redis_master))
+					info = redis_master.info()
+					# If program is here, command was successful so that should be a valid master
+					self.redis = redis_master
+					# Just connected to a redis master, so the current role is 'master'
+					role = "master"
+				except RedisError:
+					logger.warning("Redis Manager: error while trying to connect to presumed master, ignoring")
+
+			if role == "master":
+				logger.debug("server is a master")
+				logger.info("Redis Manager: connected to master redis {}".format(self.redis))
+				number_of_replicas = info.get("connected_slaves", 0)
+				logger.debug("number of replicas in cluster: {}".format(number_of_replicas))
+				self._redis_fallbacks = []
+				for index in range(0, number_of_replicas):
+					# Replicas connection info are in keys of the form 'slave#'
+					redis_replica = info.get("slave"+str(index), None)
+					if redis_replica:
+						self._redis_fallbacks.append(
+							redis.Redis(
+								host=redis_replica.get("ip", None),
+								port=redis_replica.get("port", 0),
+								health_check_interval=20,
+								decode_responses=True))
+						logger.debug("added a replica in the pool: {}".format(self._redis_fallbacks[-1]))
+
+				return True
+
+		except RedisError as e:
+			logger.error("Redis Manager: could not get infos from redis server -> {}".format(e))
+			logger.debug("Redis is {}".format(self.redis))
+
+		return False
+
+
+	def _reconnect_to_master(self) -> bool:
+		"""
+		Function used to try to find a new master during clustering, when a read only error occurs on Redis
+		This function uses current active connection and known fallbacks (if any) to try and find the current master
+		If a new master is found and a pubsub listener was defined, the listener is updated to point to the new server
+
+		Returns
+		-------
+		True -> a new active master was found
+		False -> otherwise
+		"""
+
+		logger.warning("Redis Manager: trying to reconnect to a Redis master...")
+
+		servers = self._redis_fallbacks
+		servers.append(self.redis)
+
+		for connection in servers:
+			logger.debug("Redis Manager: trying with {}".format(connection))
+			try:
+				info = connection.info()
+				# Should always contain the key 'role', but better safe than sorry
+				if info and info.get("role", None):
+					self.redis = connection
+					if self.discover_clustering():
+						logger.warning("Redis Manager: reconnected to a valid master")
+						if self.redis_channel:
+							# Have to replace current listener, but that's shitty, any other idea ?
+							self._listener = self.redis.pubsub()
+							self._listener.subscribe([self.redis_channel])
+						return True
+			except RedisError:
+				logger.debug("Redis instance {} did not reply, ignoring".format(connection))
+
+		logger.warning("Redis Manager: could not reconnect to a valid master")
+		return False
+
 
 	def get_context(self, evt_id: str) -> dict:
 		"""
@@ -330,6 +441,16 @@ class RedisManager:
 			try:
 				self.redis.publish(self.redis_channel, alert_string)
 				ret += 1
+			except ReadOnlyError:
+				logger.warning("Redis Manager: could not publish alert to server, the server doesn't allow write operations")
+				# If there are alternatives, and a new master is found amongst them
+				if self._reconnect_to_master():
+					try:
+						self.redis.publish(self.redis_channel, alert_string)
+						ret += 1
+					except RedisError:
+						logger.error("Redis Manager: error while publishing alert -> {}".format(e))
+						logger.debug("Redis Manager: redis -> {}, channel -> {}".format(self.redis, self.redis_channel))
 			except RedisError as e:
 				logger.error("Redis Manager: error while publishing alert -> {}".format(e))
 				logger.debug("Redis Manager: redis -> {}, channel -> {}".format(self.redis, self.redis_channel))
@@ -338,6 +459,15 @@ class RedisManager:
 			try:
 				self.redis.lpush(self.redis_list, alert_string)
 				ret += 1
+			except ReadOnlyError:
+				logger.warning("Redis Manager: could not write alert to server list, the server doesn't allow write operations")
+				if self._reconnect_to_master():
+					try:
+						self.redis.lpush(self.redis_list, alert_string)
+						ret += 1
+					except RedisError:
+						logger.error("Redis Manager: error while pushing to list -> {}".format(e))
+						logger.debug("Redis Manager: redis -> {}, list -> {}".format(self.redis, self.redis_list))
 			except RedisError as e:
 				logger.error("Redis Manager: error while pushing to list -> {}".format(e))
 				logger.debug("Redis Manager: redis -> {}, list -> {}".format(self.redis, self.redis_list))
@@ -374,7 +504,7 @@ class RedisManager:
 		- alert: dict
 			the alert recovered from the list/channel
 		- retry: bool (default True)
-			wether to honour 'max_tries' when context wasn't recovered successfuly from context_source(s)
+			whether to honour 'max_tries' when context wasn't recovered successfuly from context_source(s)
 		"""
 
 		global context_sources
@@ -444,12 +574,21 @@ class RedisManager:
 		Parameters
 		----------
 		- retry: bool (default True)
-			wether to honour the 'max_tries' parameter, passed down during context query
+			whether to honour the 'max_tries' parameter, passed down during context query
 		"""
 
 		logger.debug("Redis Manager: popping alerts...")
+		alert = None
 		try:
 			alert = self.redis.rpop(self.redis_list)
+		except ReadOnlyError:
+			logger.warning("Redis Manager: could not pop alert, the server doesn't allow writing")
+			if self._reconnect_to_master():
+				try:
+					alert = self.redis.rpop(self.redis_list)
+				except RedisError as e:
+					logger.error("Redis Manager: error while trying to get alert from redis -> {}".format(e))
+					logger.debug("Redis Manager: redis is {}, list is {}".format(self.redis, self.redis_list))
 		except RedisError as e:
 			logger.error("Redis Manager: error while trying to get alert from redis -> {}".format(e))
 			logger.debug("Redis Manager: redis is {}, list is {}".format(self.redis, self.redis_list))
@@ -464,6 +603,14 @@ class RedisManager:
 
 			try:
 				alert = self.redis.rpop(self.redis_list)
+			except ReadOnlyError:
+				logger.warning("Redis Manager: could not pop alert, the server doesn't allow writing")
+				if self._reconnect_to_master():
+					try:
+						alert = self.redis.rpop(self.redis_list)
+					except RedisError as e:
+						logger.error("Redis Manager: error while trying to get alert from redis -> {}".format(e))
+						logger.debug("Redis Manager: redis is {}, list is {}".format(self.redis, self.redis_list))
 			except RedisError as e:
 				logger.error("Redis Manager: error while trying to get alert from redis -> {}".format(e))
 				logger.debug("Redis Manager: redis is {}, list is {}".format(self.redis, self.redis_list))
@@ -482,14 +629,14 @@ class RedisManager:
 			as such, one should run this function in a separate thread, or assign the stop() function to a signal
 		"""
 
-		listener = None
+		self._listener = None
 
 		logger.info("Redis Manager started")
 		if self.redis_channel:
 			try:
 				logger.info("Redis Manager: listening to channel '{}'".format(self.redis_channel))
-				listener = self.redis.pubsub()
-				listener.subscribe([self.redis_channel])
+				self._listener = self.redis.pubsub()
+				self._listener.subscribe([self.redis_channel])
 			except RedisError as e:
 				logger.error("Redis Manager: Could not subscribe to redis channel: {}".format(e))
 				logger.debug("Redis Manager: redis -> {}, channel -> {}".format(self.redis, self.redis_channel))
@@ -500,12 +647,14 @@ class RedisManager:
 				self._pop_alerts(retry=False)
 
 		while not self._shutdown_flag.is_set():
-			if listener:
+			if self._listener:
 				try:
-					alert = listener.get_message(ignore_subscribe_messages=True, timeout=2)
+					alert = self._listener.get_message(ignore_subscribe_messages=True, timeout=2)
 				except redis.ConnectionError:
-					logger.warning("Redis Manager: disconnected from Redis, waiting {} seconds before retrying".format(self.sec_between_retries))
+					logger.warning("Redis Manager: disconnected from Redis, waiting {} second(s) before retrying".format(self.sec_between_retries))
 					sleep(self.sec_between_retries)
+					if self._reconnect_to_master():
+						logger.warning("Redis Manager: found new valid redis master, resuming")
 				# If we have no messages, alert is None
 				if alert:
 					logger.debug("Redis Manager: got '{}' from channel {}".format(alert, self.redis_channel))
@@ -697,7 +846,7 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGINT, sig_hdlr)
 	signal.signal(signal.SIGTERM, sig_hdlr)
 
-	# Argparse
+	# Argparse definitions
 	parser = argparse.ArgumentParser(
 		description="""This tools allows to monitor alerts generated by Darwin,
 		recover context data through an unique ID
@@ -705,58 +854,72 @@ if __name__ == '__main__':
 	parser.add_argument('config_file', type=str, help='The configuration file to use')
 	parser.add_argument('-v', '--verbose', action="count", default=0, help="activate verbose output ('v' is WARNING, 'vv' is INFO, 'vvv' is DEBUG)")
 	parser.add_argument('-l', '--log-file', metavar="logfile", type=str, help="path to file to write logs to (default is only stdout)")
+	parser.add_argument('-c', '--cluster', action="store_true", help="indicate that redis instances might be replicas, program should research masters")
 	args = parser.parse_args()
 
+	# Logging configuration
 	configure_logging(args.verbose, args.log_file)
 
+	# Configuration file parsing
 	configuration = parse_conf(args.config_file)
 	if configuration is None:
 		logger.error("Could not load configuration")
 		sys.exit(1)
 
+	### Manager instances loading ###
+	# Alert sources
+	alert_source = RedisManager(
+		configuration["alerts_source"]["redis"].get("ip", None),
+		configuration["alerts_source"]["redis"].get("port", 0),
+		configuration["alerts_source"]["redis"].get("unix", None),
+		configuration["alerts_source"]["redis"].get("list", None),
+		configuration["alerts_source"]["redis"].get("channel", None),
+		configuration["alerts_source"]["redis"].get("max_retries", 3),
+		configuration["alerts_source"]["redis"].get("seconds_between_retries", 1))
 
-	try:
-		alert_source = RedisManager(
-			configuration["alerts_source"]["redis"].get("ip", None),
-			configuration["alerts_source"]["redis"].get("port", 0),
-			configuration["alerts_source"]["redis"].get("unix", None),
-			configuration["alerts_source"]["redis"].get("list", None),
-			configuration["alerts_source"]["redis"].get("channel", None),
-			configuration["alerts_source"]["redis"].get("max_retries", 3),
-			configuration["alerts_source"]["redis"].get("seconds_between_retries", 1))
-	except Exception as e:
-		logger.error("Could not initialize alert source: {}".format(e))
+	if args.cluster and not alert_source.discover_clustering():
+		logger.error("alerts_source: clustering argument is given, but no valid master was found")
+		logger.debug("alert_source is {}".format(alert_source))
 		sys.exit(1)
 
-	try:
-		redis_context_source = RedisManager(
-			configuration["context_source"]["redis"].get("ip", None),
-			configuration["context_source"]["redis"].get("port", 0),
-			configuration["context_source"]["redis"].get("unix", None)
-		)
+	# Context source
+	redis_context_source = RedisManager(
+		configuration["context_source"]["redis"].get("ip", None),
+		configuration["context_source"]["redis"].get("port", 0),
+		configuration["context_source"]["redis"].get("unix", None)
+	)
+
+	if args.cluster and not redis_context_source.discover_clustering():
+		logger.error("context_source: redis clustering argument is given, but no valid master was found")
+		logger.debug("context_source is {}".format(redis_context_source))
+		sys.exit(1)
+	else:
 		context_sources.append(redis_context_source)
-	except Exception as e:
-		logger.error("Could not initialize context source: {}".format(e))
-		sys.exit(1)
 
-	try:
-		if configuration["alerts_destination"].get("redis", None):
-			redis_alert_dest = RedisManager(
-				configuration["alerts_destination"]["redis"].get("ip", None),
-				configuration["alerts_destination"]["redis"].get("port", 0),
-				configuration["alerts_destination"]["redis"].get("unix", None),
-				configuration["alerts_destination"]["redis"].get("list", None),
-				configuration["alerts_destination"]["redis"].get("channel", None))
+
+	# Alerts destination
+	if configuration["alerts_destination"].get("redis", None):
+		redis_alert_dest = RedisManager(
+			configuration["alerts_destination"]["redis"].get("ip", None),
+			configuration["alerts_destination"]["redis"].get("port", 0),
+			configuration["alerts_destination"]["redis"].get("unix", None),
+			configuration["alerts_destination"]["redis"].get("list", None),
+			configuration["alerts_destination"]["redis"].get("channel", None))
+
+		if args.cluster and not redis_alert_dest.discover_clustering():
+			logger.error("alerts_destination: redis clustering argument is given, but no valid master was found")
+			logger.debug("alert_destination is {}".format(redis_alert_dest))
+			sys.exit(1)
+		else:
 			alert_destinations.append(redis_alert_dest)
 
-		if configuration["alerts_destination"].get("file", None):
-			file_alert_dest = FileManager(
-				configuration["alerts_destination"]["file"].get("path", None))
-			alert_destinations.append(file_alert_dest)
-	except Exception as e:
-		logger.error("Could not initialize alert destination(s): {}".format(e))
-		sys.exit(1)
+	if configuration["alerts_destination"].get("file", None):
+		file_alert_dest = FileManager(
+			configuration["alerts_destination"]["file"].get("path", None))
+		alert_destinations.append(file_alert_dest)
 
+
+	# Manager validations
 	for alert_destination in alert_destinations:
 		if not alert_destination.test_write():
 			logger.error("Cannot write alerts to {}".format(alert_destination))
@@ -777,6 +940,7 @@ if __name__ == '__main__':
 			logger.error("Could not read from a configured context source")
 			logger.error("context source is {}".format(context_source))
 			sys.exit(1)
+
 
 	#Blocking loop to get alerts from Redis
 	logger.info("starting Monitor")
