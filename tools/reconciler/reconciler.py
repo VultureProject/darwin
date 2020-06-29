@@ -216,7 +216,7 @@ class RedisManager:
 			self.redis = redis.Redis(unix_socket_path=unix_socket, health_check_interval=20, decode_responses=True)
 
 		if update_alert_handler is None:
-			self.update_alert_handler = self._update_alert_handler
+			self.update_alert_handler = RedisManager._update_alert_handler
 		else:
 			self.update_alert_handler = update_alert_handler
 
@@ -475,7 +475,8 @@ class RedisManager:
 		return ret
 
 
-	def _update_alert_handler(self, alert: dict, context: dict):
+	@staticmethod
+	def _update_alert_handler(alert: dict, context: dict):
 		"""
 		Adds the context in the alert under the "context" key
 
