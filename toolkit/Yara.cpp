@@ -3,9 +3,9 @@
 
 
 namespace darwin {
-    
+
     namespace toolkit {
-        
+
         YaraEngine::YaraEngine(bool fastmode, int timeout): _fastmode {fastmode}, _timeout {timeout} {}
 
         YaraEngine::~YaraEngine() {
@@ -137,7 +137,7 @@ namespace darwin {
         void YaraEngine::AddRuleToMatch(YR_RULE *rule) {
             _rule_match_list.insert(rule);
         }
-    } // namespace toolkit  
+    } // namespace toolkit
 } // namespace darwin
 
 

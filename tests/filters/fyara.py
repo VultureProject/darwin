@@ -198,7 +198,7 @@ def input_with_several_rules(data, expected_certitudes=[0]):
             all of them
     }""")
     yara_filter.configure()
-    
+
     if not yara_filter.valgrind_start():
         logging.error("one_valid_rule_file: filter didn't start")
         return False

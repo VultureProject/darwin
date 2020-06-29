@@ -171,7 +171,7 @@ WORKDIR /home/darwin
 
 RUN mkdir filters || rm -rf filters/*\
  && cd filters \
- && cmake .. -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/ -DBUILD_TESTS=ON\
+ && cmake .. -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/\
  && make -j2
 RUN pip3 install -r manager/requirements.txt\
  && pip3 install -r tests/requirements.txt

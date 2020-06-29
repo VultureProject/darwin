@@ -34,30 +34,3 @@ target_link_libraries(
 )
 
 target_include_directories(${YARA_NAME} PUBLIC samples/fyara/)
-
-#############
-#   TESTS   #
-#############
-
-if(BUILD_TESTS)
-    add_executable(
-        tests_${YARA_NAME}
-
-        samples/base/Logger.cpp samples/base/Logger.cpp
-        toolkit/Yara.cpp toolkit/Yara.hpp
-
-        ${PROJECT_SOURCE_DIR}/tests/units/testsBase.cpp
-        ${PROJECT_SOURCE_DIR}/tests/units/testsToolkitYara.cpp
-    )
-
-    target_link_libraries(tests_${YARA_NAME} Catch2::Catch2)
-    target_link_libraries(
-        tests_${YARA_NAME}
-        ${DARWIN_LIBRARIES}
-        Yara::Yara
-        OpenSSL::Crypto)
-
-
-    enable_testing()
-    add_test(NAME yara COMMAND ./tests_${YARA_NAME})
-endif()
