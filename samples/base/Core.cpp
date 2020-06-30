@@ -101,7 +101,7 @@ namespace darwin {
         opt = -1;
         while((opt = getopt(ac, av, ":l:h")) != -1)
         {
-            DARWIN_LOG_DEBUG("OPT : " + opt);
+            DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
             DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
             switch(opt)
             {

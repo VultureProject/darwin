@@ -5,8 +5,10 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
+#include <sstream>
 #include "Logger.hpp"
 #include "AlertManager.hpp"
+#include "Time.hpp"
 
 namespace darwin {
 
@@ -123,6 +125,13 @@ namespace darwin {
             this->REDISAddLogs(str);
     }
 
+    void AlertManager::Alert(const std::string& entry,
+               const unsigned int certitude,
+               const std::string& evt_id,
+               const std::string& details) {
+        this->Alert(this->FormatLog(entry, certitude, evt_id, details));
+    }
+
     bool AlertManager::WriteLogs(const std::string& str) {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("AlertManager::WriteLogs:: Starting to write in log file: '"
@@ -171,5 +180,26 @@ namespace darwin {
 
     void AlertManager::Rotate() {
         this->_log_file->Open(true);
+    }
+
+    std::string AlertManager::FormatLog(const std::string& entry,
+                                        const unsigned int certitude,
+                                        const std::string& evt_id,
+                                        const std::string& details) const {
+        std::stringstream ss;
+
+        ss << "{\"alert_type\": \"darwin\",";
+        ss << "\"alert_subtype\": \"" << this->_filter_name << "\",";
+        ss << "\"alert_time\": \"" << darwin::time_utils::GetTime() << "\",";
+        ss << "\"level\": \"high\",";
+        ss << "\"rule_name\": \"" << this->_rule_name << "\",";
+        ss << "\"tags\": " << this->_tags << ",";
+        ss << "\"entry\": \"" << entry << "\",";
+        ss << "\"score\":"  << certitude << ",";
+        ss << "\"evt_id\": \"" << evt_id << "\",";
+        ss << "\"details\": ";
+        ss << details;
+        ss << "}";
+        return ss.str();
     }
 }
