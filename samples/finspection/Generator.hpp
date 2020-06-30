@@ -29,6 +29,7 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlterting(const std::string& tags) override final;
 
 private:
     Configurations _configurations;

@@ -88,12 +88,12 @@ void ContentInspectionTask::operator()() {
                 certitude = 100;
                 if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                     STAT_MATCH_INC;
-                    std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                             R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
-                             std::string(buffer.GetString()) +
-                             "}";
-                    DARWIN_RAISE_ALERT(alert_log);
+                    DARWIN_ALERT_MANAGER.Alert(buffer.GetString(), certitude, Evt_idToString());
                     if (is_log) {
+                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
+                                std::string(buffer.GetString()) +
+                                "}";
                         _logs += alert_log + "\n";
                     }
                 }
