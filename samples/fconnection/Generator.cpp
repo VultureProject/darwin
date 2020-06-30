@@ -5,16 +5,31 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include "Generator.hpp"
-#include "base/Logger.hpp"
-#include "ConnectionSupervisionTask.hpp"
-
 #include <regex>
 #include <string>
 #include <fstream>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/RedisManager.hpp"
+#include "Generator.hpp"
+#include "base/Logger.hpp"
+#include "ConnectionSupervisionTask.hpp"
+#include "AlertManager.hpp"
+
+bool Generator::ConfigureAlterting(const std::string& tags) {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("Connection:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("Connection:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;

@@ -16,6 +16,9 @@
 #include "../toolkit/rapidjson/document.h"
 
 #define DARWIN_FILTER_CONNECTION 0x636E7370
+#define DARWIN_FILTER_NAME "connection"
+#define DARWIN_ALERT_RULE_NAME "New Connection Detection"
+#define DARWIN_ALERT_TAGS "[]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
