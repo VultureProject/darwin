@@ -31,7 +31,7 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
-    bool ConfigureAlterting(const std::string& tags) override final;
+    virtual bool ConfigureAlterting(const std::string& tags) override final;
 
     bool LoadTextFile(const std::string& filename);
     bool LoadJsonFile(const std::string& filename);
