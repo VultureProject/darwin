@@ -66,7 +66,7 @@ void TestTask::operator()() {
                 }
             }
             else {
-                DARWIN_RAISE_ALERT(_line);
+                DARWIN_ALERT_MANAGER.Alert(_line, 100, Evt_idToString());
                 _certitudes.push_back(0);
             }
         }
@@ -78,7 +78,7 @@ void TestTask::operator()() {
 
 bool TestTask::REDISAddList(const std::string& list, const std::string& line) {
     DARWIN_LOGGER;
-    
+
     DARWIN_LOG_INFO("TestTask::REDISAddList:: adding '" + line + "' to list '" + list + "'");
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
@@ -92,7 +92,7 @@ bool TestTask::REDISAddList(const std::string& list, const std::string& line) {
 
 bool TestTask::REDISPublishChannel(const std::string& channel, const std::string& line) {
     DARWIN_LOGGER;
-    
+
     DARWIN_LOG_INFO("TestTask::REDISPublishChannel:: publishing '" + line + "' to channel '" + channel + "'");
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 

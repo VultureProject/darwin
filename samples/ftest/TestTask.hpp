@@ -14,6 +14,9 @@
 #include "Session.hpp"
 
 #define DARWIN_FILTER_TEST 0x74657374
+#define DARWIN_FILTER_NAME "test"
+#define DARWIN_ALERT_RULE_NAME "Test"
+#define DARWIN_ALERT_TAGS "[\"default_test_tag_0\",  \"default_test_tag_1\"]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
