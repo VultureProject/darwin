@@ -9,15 +9,14 @@
 
 #include <string>
 
-#include "lru_cache.hpp"
-#include "xxhash.h"
-#include "xxhash.hpp"
+#include "../toolkit/lru_cache.hpp"
+#include "../toolkit/xxhash.h"
+#include "../toolkit/xxhash.hpp"
 #include "../../toolkit/rapidjson/document.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"
 #include "../../toolkit/rapidjson/writer.h"
 #include "Encoders.h"
 
-#include "lru_cache.hpp"
 #include "Yara.hpp"
 #include "Session.hpp"
 

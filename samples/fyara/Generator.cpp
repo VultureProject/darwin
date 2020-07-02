@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 
-#include "lru_cache.hpp"
+#include "../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "YaraTask.hpp"
 #include "Generator.hpp"
