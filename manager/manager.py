@@ -100,8 +100,10 @@ logger.addHandler(file_handler)
 def sig_hdlr(sigin, frame):
     logger.info("Caught signal {}: exiting...".format(sigin))
     if server and server.running:
+        logger.debug("Stop Server")
         server.stop()
     elif services:
+        logger.debug("Stop Services")
         services.stop_all()
         exit(0)
     else:
@@ -128,10 +130,10 @@ if __name__ == '__main__':
     daemon_context.detach_process = False
     logger.debug("daemon DONE")
 
-    server = Server()
+    server = Server(prefix, suffix)
     logger.info("Configuring...")
     try:
-        load_conf(args.config_file)
+        load_conf(prefix, suffix, args.config_file)
     except ConfParseError as e:
         logger.critical(e)
         exit(1)

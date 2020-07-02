@@ -15,7 +15,7 @@ def requests(request):
     try:
         sock.connect(MANAGEMENT_SOCKET_PATH)
     except socket.error as msg:
-        logging.error(msg)
+        logging.error("manager_socket.utils.requests: Could not connect to {}: {}".format(MANAGEMENT_SOCKET_PATH, msg))
         return ""
     try:
         sock.sendall(bytes(request))
