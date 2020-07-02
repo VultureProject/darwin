@@ -23,6 +23,7 @@ if (NOT DEFINED FILTER)
         TANOMALY
         ANOMALY
         CONTENT_INSPECTION
+        YARA
     )
 else (NOT DEFINED FILTER)
     set(
@@ -143,4 +144,8 @@ endif()
 
 if("SOFA" IN_LIST FILTERS)
 include(fsofa)
+endif()
+
+if("YARA" IN_LIST FILTERS)
+include(fyara)
 endif()
