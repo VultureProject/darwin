@@ -9,7 +9,6 @@ __doc__ = 'Services / filters management'
 import logging
 import json
 import socket
-import settings
 from threading import Lock
 from copy import deepcopy
 from subprocess import Popen, call, TimeoutExpired

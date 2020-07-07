@@ -10,7 +10,6 @@ import logging
 import json
 from jsonschema import validators, Draft7Validator
 import psutil
-import settings
 
 
 logger = logging.getLogger()

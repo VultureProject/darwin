@@ -12,10 +12,7 @@ import argparse
 import signal
 import atexit
 import os
-import settings
 from sys import exit
-from daemon import DaemonContext
-from lockfile import FileLock
 from Services import Services
 from logging import FileHandler
 from Administration import Server
@@ -25,7 +22,7 @@ from config import load_conf, ConfParseError
 from config import filters as conf_filters
 from config import stats_reporting as conf_stats_report
 
-def make_setup(dirs, prefix, suffix):
+def create_dirs(dirs, prefix, suffix):
     """
         Create directories if they don't exist
         :param dirs: name of the directories to be created
@@ -66,7 +63,9 @@ if args.no_suffix_directories:
 else:
     suffix = '{}'.format(args.suffix_directories)
 
-make_setup(['log', 'run', 'sockets'], prefix, suffix)
+prefix = "/" + prefix.strip("/")
+suffix = "/" + suffix.strip("/")
+create_dirs(['log', 'run', 'sockets'], prefix, suffix)
 
 # Logger config
 loglevel = logging.WARNING
@@ -126,9 +125,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGHUP, rotate_logs)
 
     logger.info("Starting...")
-    daemon_context = DaemonContext(pidfile=FileLock('{}/run{}/manager.pid'.format(suffix, prefix)),)
-    daemon_context.detach_process = False
-    logger.debug("daemon DONE")
+    logger.info("prefix path is '{}'".format(prefix))
+    logger.info("suffix path is '{}'".format(suffix))
 
     server = Server(prefix, suffix)
     logger.info("Configuring...")

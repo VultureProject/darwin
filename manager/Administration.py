@@ -10,7 +10,6 @@ import socket
 import logging
 import redis
 import os
-import settings
 from JsonSocket import JsonSocket
 from time import sleep
 import json
