@@ -20,7 +20,7 @@
 bool Generator::ConfigureAlterting(const std::string& tags) {
     DARWIN_LOGGER;
 
-    DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_LOG_DEBUG("DGA:: ConfigureAlerting:: Configuring Alerting");
     DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
     DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
     if (tags.empty()) {
