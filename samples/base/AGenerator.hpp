@@ -71,7 +71,7 @@ private:
     ///
     /// \param configuration The rapidjson object containing the parsed configuration
     /// \param tags The string to receive the configured tags
-    /// \return true if custom tags were found, false otherwies
+    /// \return true if custom tags were found, false otherwise
     virtual bool ExtractCustomAlertingTags(const rapidjson::Document &configuration,
                                            std::string& tags);
 
