@@ -114,7 +114,7 @@ void AnomalyTask::GenerateAlerts(std::vector<std::string> ips, arma::uvec index_
         details += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
         details += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
         details += "}";
-        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], alerts(DISTANCE, i), Evt_idToString(), details);
+        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, Evt_idToString(), details);
     }
 }
 
