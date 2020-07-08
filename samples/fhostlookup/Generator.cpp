@@ -19,7 +19,7 @@
 #include "AlertManager.hpp"
 
 
-bool Generator::ConfigureAlterting(const std::string& tags) {
+bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
 
     DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: Configuring Alerting");

@@ -17,14 +17,14 @@
 #include "AlertManager.hpp"
 #include "tensorflow/core/framework/graph.pb.h"
 
-bool Generator::ConfigureAlterting(const std::string& tags) {
+bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
 
     DARWIN_LOG_DEBUG("DGA:: ConfigureAlerting:: Configuring Alerting");
     DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
     DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
     if (tags.empty()) {
-        DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_LOG_DEBUG("DGA:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
         DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
     } else {
         DARWIN_ALERT_MANAGER_SET_TAGS(tags);

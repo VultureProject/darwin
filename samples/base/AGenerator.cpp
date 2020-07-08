@@ -104,9 +104,9 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
 
     // Extract custom alerting tags
     if (this->ExtractCustomAlertingTags(configuration, alerting_tags)) {
-        if (not this->ConfigureAlterting(alerting_tags)) return false;
+        if (not this->ConfigureAlerting(alerting_tags)) return false;
     } else {
-        this->ConfigureAlterting("");
+        this->ConfigureAlerting("");
     }
 
     conf_file_stream.close();

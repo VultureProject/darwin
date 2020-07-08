@@ -45,7 +45,7 @@ protected:
     ///
     /// \param tags The custom tags set by the user. If empty, set default tags.
     /// \return true if everything went right, false otherwise.
-    virtual bool ConfigureAlterting(const std::string& tags) = 0;
+    virtual bool ConfigureAlerting(const std::string& tags) = 0;
 
 // Final methods and abstract attributes
 public:

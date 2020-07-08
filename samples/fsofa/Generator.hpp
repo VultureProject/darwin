@@ -34,7 +34,7 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document& configuration) override final;
-    virtual bool ConfigureAlterting(const std::string& tags) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
 
 private:
     wchar_t *_program_name = nullptr; // the Python environment path to load

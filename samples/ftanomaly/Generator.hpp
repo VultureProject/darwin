@@ -31,7 +31,7 @@ public:
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
-    virtual bool ConfigureAlterting(const std::string& tags) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
 
     std::string _redis_internal = REDIS_INTERNAL_LIST;
     std::shared_ptr<AnomalyThreadManager> _anomaly_thread_manager;
