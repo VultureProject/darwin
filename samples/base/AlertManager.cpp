@@ -188,15 +188,15 @@ namespace darwin {
                                         const std::string& details) const {
         std::stringstream ss;
 
-        ss << "{\"alert_type\": \"darwin\",";
-        ss << "\"alert_subtype\": \"" << this->_filter_name << "\",";
-        ss << "\"alert_time\": \"" << darwin::time_utils::GetTime() << "\",";
-        ss << "\"level\": \"high\",";
-        ss << "\"rule_name\": \"" << this->_rule_name << "\",";
-        ss << "\"tags\": " << this->_tags << ",";
-        ss << "\"entry\": \"" << entry << "\",";
-        ss << "\"score\":"  << certitude << ",";
-        ss << "\"evt_id\": \"" << evt_id << "\",";
+        ss << "{\"alert_type\": \"darwin\", ";
+        ss << "\"alert_subtype\": \"" << this->_filter_name << "\", ";
+        ss << "\"alert_time\": \"" << darwin::time_utils::GetTime() << "\", ";
+        ss << "\"level\": \"high\", ";
+        ss << "\"rule_name\": \"" << this->_rule_name << "\", ";
+        ss << "\"tags\": " << this->_tags << ", ";
+        ss << "\"entry\": \"" << entry << "\", ";
+        ss << "\"score\": "  << certitude << ", ";
+        ss << "\"evt_id\": \"" << evt_id << "\", ";
         ss << "\"details\": ";
         ss << details;
         ss << "}";

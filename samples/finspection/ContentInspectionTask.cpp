@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "../../toolkit/lru_cache.hpp"
-#include "../toolkit/rapidjson/document.h"
 #include "ContentInspectionTask.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
@@ -56,7 +55,7 @@ void ContentInspectionTask::operator()() {
         }
 
         if(pkt->payloadLen) {
-            rapidjson::Document yaraMeta;
+            YaraResults results;
 
             if(_configurations.yaraCnf->scanType == SCAN_STREAM &&
                pkt->flow && pkt->proto == IPPROTO_TCP && tcpStatus != -1) {
@@ -72,27 +71,29 @@ void ContentInspectionTask::operator()() {
                 pthread_mutex_lock(&(sb->mutex));
                 pthread_mutex_unlock(&(pkt->flow->mFlow));
 
-                yaraMeta = yaraScan(pkt->payload, pkt->payloadLen, sb);
+                results = yaraScan(pkt->payload, pkt->payloadLen, sb);
                 pthread_mutex_unlock(&(sb->mutex));
             }
             else if(_configurations.yaraCnf->scanType == SCAN_PACKET_ONLY ||
                     tcpStatus == -1){
-                yaraMeta = yaraScan(pkt->payload, pkt->payloadLen, NULL);
+                results = yaraScan(pkt->payload, pkt->payloadLen, NULL);
             }
 
-            if(yaraMeta.IsArray()) {
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                yaraMeta.Accept(writer);
+            if(not results.rules.empty()) {
+
+                std::string ruleListJson = ContentInspectionTask::GetJsonListFromSet(results.rules);
+                std::string tagListJson = ContentInspectionTask::GetJsonListFromSet(results.tags);
+                std::string details = "{\"rules\": " + ruleListJson + "}";
 
                 certitude = 100;
                 if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                     STAT_MATCH_INC;
-                    DARWIN_ALERT_MANAGER.Alert(buffer.GetString(), certitude, Evt_idToString());
+                    DARWIN_ALERT_MANAGER.SetTags(tagListJson);
+                    DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(), details);
                     if (is_log) {
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_match": )" +
-                                std::string(buffer.GetString()) +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_matches": )" +
+                                ruleListJson +
                                 "}";
                         _logs += alert_log + "\n";
                     }
@@ -160,4 +161,25 @@ bool ContentInspectionTask::ParseBody() {
     }
 
     return true;
+}
+
+
+std::string ContentInspectionTask::GetJsonListFromSet(std::set<std::string> &input) {
+    std::string result;
+    // Reserve some space for each entry (10 chars) + 2 for beginning and end of list
+    // This will be too much almost every time, but this doesn't matter as the string will be short-lived
+    // and the input won't contain more than a dozen fields
+    result.reserve(input.size() * 32 + 2);
+
+    result = "[";
+    bool first = true;
+    for(auto rule : input) {
+        if(not first)
+            result += ",";
+        result += "\"" + rule + "\"";
+        first = false;
+    }
+    result += "]";
+
+    return result;
 }

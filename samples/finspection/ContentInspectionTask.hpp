@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <set>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/rapidjson/stringbuffer.h"
@@ -61,6 +62,9 @@ private:
 
     /// Parse the body received.
     bool ParseBody() override;
+
+    /// Convert a std::set to string json list
+    std::string GetJsonListFromSet(std::set<std::string> &input);
 
     // Implemented but not used.
     bool ParseLine(rapidjson::Value& line __attribute__((unsused))) final {return true;}
