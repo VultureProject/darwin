@@ -341,8 +341,6 @@ namespace darwin {
         std::shared_ptr<ThreadData> RedisManager::GetThreadInfo() {
             thread_local static std::shared_ptr<ThreadData> threadData = nullptr;
             if(not threadData) {
-                DARWIN_LOGGER;
-                DARWIN_LOG_DEBUG("initialising thread data");
                 threadData = std::make_shared<ThreadData>();
                 std::lock_guard<std::mutex> lock(this->_threadSetMut);
                 this->_threadSet.insert(threadData);

@@ -92,8 +92,8 @@ void ContentInspectionTask::operator()() {
                     DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(), details);
                     if (is_log) {
                         std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + R"(, "yara_matches": )" +
-                                ruleListJson +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
+                                R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson +
                                 "}";
                         _logs += alert_log + "\n";
                     }
