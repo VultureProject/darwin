@@ -56,10 +56,14 @@ void YaraTask::operator()() {
 
                     if (certitude>=_threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
-                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) + "}\n";
-                        DARWIN_RAISE_ALERT(alert_log);
+
+                        DARWIN_ALERT_MANAGER.SetTags("[]");
+                        DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString());
+
                         if (is_log) {
+                            std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                                R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
+                                "}\n";
                             _logs += alert_log + '\n';
                         }
                     }
@@ -81,16 +85,19 @@ void YaraTask::operator()() {
 
             if (certitude >= _threshold){
                 STAT_MATCH_INC;
-                rapidjson::Document results = _yaraEngine->GetResults();
-                rapidjson::StringBuffer buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                results.Accept(writer);
+                darwin::toolkit::YaraResults results = _yaraEngine->GetResults();
 
-                std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
-                        R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
-                        R"(, "yara": )" + buffer.GetString() + "}\n";
-                DARWIN_RAISE_ALERT(alert_log);
+                std::string ruleListJson = YaraTask::GetJsonListFromSet(results.rules);
+                std::string tagListJson = YaraTask::GetJsonListFromSet(results.tags);
+                std::string details = "{\"rules\": " + ruleListJson + "}";
+
+                DARWIN_ALERT_MANAGER.SetTags(tagListJson);
+                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(),  details);
+
                 if (is_log) {
+                    std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
+                            R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson + "}\n";
                     _logs += alert_log + '\n';
                 }
             }
@@ -172,4 +179,24 @@ bool YaraTask::ParseLine(rapidjson::Value& line) {
 
     DARWIN_LOG_DEBUG("YaraTask:: ParseLine: line parse successful (got " + std::to_string(_chunk.size()) + " bytes)");
     return true;
+}
+
+std::string YaraTask::GetJsonListFromSet(std::set<std::string> &input) {
+    std::string result;
+    // Reserve some space for each entry (10 chars) + 2 for beginning and end of list
+    // This will be too much almost every time, but this doesn't matter as the string will be short-lived
+    // and the input won't contain more than a dozen fields
+    result.reserve(input.size() * 32 + 2);
+
+    result = "[";
+    bool first = true;
+    for(auto rule : input) {
+        if(not first)
+            result += ",";
+        result += "\"" + rule + "\"";
+        first = false;
+    }
+    result += "]";
+
+    return result;
 }
