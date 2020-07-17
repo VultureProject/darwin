@@ -41,10 +41,12 @@ namespace darwin {
         /// \param certitude The score associated to the entry
         /// \param evt_id The unique id of the event associated to the alert
         /// \param details A 1 level JSON containing details about the alert
+        /// \param tags A list containing the tags of the alert
         void Alert(const std::string& entry,
                    const unsigned int certitude,
                    const std::string& evt_id,
-                   const std::string& details = "{}");
+                   const std::string& details = "{}",
+                   const std::string& tags = "");
 
         /// Configures the AlertManager alerting canals.
         ///
@@ -74,7 +76,8 @@ namespace darwin {
         virtual std::string FormatLog(const std::string& entry,
                                       const unsigned int certitude,
                                       const std::string& evt_id,
-                                      const std::string& details = "{}") const;
+                                      const std::string& details = "{}",
+                                      const std::string& tags = "") const;
 
     private:
         /// \brief This is the constructor of AlertManager object.

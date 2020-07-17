@@ -57,7 +57,6 @@ void YaraTask::operator()() {
                     if (certitude>=_threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
 
-                        DARWIN_ALERT_MANAGER.SetTags("[]");
                         DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString());
 
                         if (is_log) {
@@ -91,8 +90,7 @@ void YaraTask::operator()() {
                 std::string tagListJson = YaraTask::GetJsonListFromSet(results.tags);
                 std::string details = "{\"rules\": " + ruleListJson + "}";
 
-                DARWIN_ALERT_MANAGER.SetTags(tagListJson);
-                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(),  details);
+                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(),  details, tagListJson);
 
                 if (is_log) {
                     std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +

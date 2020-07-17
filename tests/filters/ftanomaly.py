@@ -352,7 +352,7 @@ def alert_in_redis_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '213.211.198.58',
-            'score': 122,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '213.211.198.58',
@@ -371,7 +371,7 @@ def alert_in_redis_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '192.168.110.2',
-            'score': 349,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '192.168.110.2',
@@ -444,7 +444,7 @@ def alert_published_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '213.211.198.58',
-            'score': 122,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '213.211.198.58',
@@ -463,7 +463,7 @@ def alert_published_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '192.168.110.2',
-            'score': 349,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '192.168.110.2',
@@ -560,7 +560,7 @@ def alert_in_file_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '213.211.198.58',
-            'score': 122,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '213.211.198.58',
@@ -579,7 +579,7 @@ def alert_in_file_test():
             'rule_name': 'Abnormal Number of Unique Port Connexion',
             'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
             'entry': '192.168.110.2',
-            'score': 349,
+            'score': 100,
             'evt_id': '-',
             'details': {
                 'ip': '192.168.110.2',
