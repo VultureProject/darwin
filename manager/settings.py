@@ -1,2 +1,0 @@
-prefix = '/var'
-suffix = '/darwin'

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <set>
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/rapidjson/stringbuffer.h"
@@ -22,6 +23,9 @@
 #include "extract_impcap.hpp"
 
 #define DARWIN_FILTER_CONTENT_INSPECTION 0x79617261
+#define DARWIN_FILTER_NAME "inspection"
+#define DARWIN_ALERT_RULE_NAME "YARA Network Packet & Stream Inspection"
+#define DARWIN_ALERT_TAGS "[]"
 
 typedef struct Configurations_t {
     StreamsCnf *streamsCnf;
@@ -59,8 +63,11 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
+    /// Convert a std::set to string json list
+    std::string GetJsonListFromSet(std::set<std::string> &input);
+
     // Implemented but not used.
-    bool ParseLine(rapidjson::Value& line) final {}
+    bool ParseLine(rapidjson::Value& line __attribute__((unsused))) final {return true;}
 
 private:
     Configurations _configurations;

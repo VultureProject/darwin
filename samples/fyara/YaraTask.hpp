@@ -21,6 +21,9 @@
 #include "Session.hpp"
 
 #define DARWIN_FILTER_YARA_SCAN 0x79617261
+#define DARWIN_FILTER_NAME "yara"
+#define DARWIN_ALERT_RULE_NAME "Yara scanner"
+#define DARWIN_ALERT_TAGS "[]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -49,6 +52,9 @@ protected:
 private:
     /// Parse the body received.
     bool ParseLine(rapidjson::Value &line) final;
+
+    /// Convert a std::set to string json list
+    std::string GetJsonListFromSet(std::set<std::string> &input);
 
 private:
     std::string _chunk;

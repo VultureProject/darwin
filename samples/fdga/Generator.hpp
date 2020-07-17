@@ -30,6 +30,7 @@ public:
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
     bool LoadFaupOptions();
     bool LoadTokenMap(const std::string &token_map_path);
     bool LoadModel(const std::string &model_path);

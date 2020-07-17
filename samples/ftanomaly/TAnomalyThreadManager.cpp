@@ -92,17 +92,15 @@ void AnomalyThreadManager::Detection(){
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
         STAT_MATCH_INC;
-        std::string log_line(R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "filter": "tanomaly", )"
-                + R"("anomaly": {)"
-                + R"("ip": ")" + _ips[index_anomalies(i)] + "\","
+        std::string details(R"({"ip": ")" + _ips[index_anomalies(i)] + "\","
                 + R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ","
                 + R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ","
                 + R"("tcp_nb_host": )" + std::to_string(alerts(TCP_NB_HOST, i)) + ","
                 + R"("tcp_nb_port": )" + std::to_string(alerts(TCP_NB_PORT, i)) + ","
                 + R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ","
                 + R"("distance": )" + std::to_string(alerts(DISTANCE, i))
-                + "}}");
-        DARWIN_RAISE_ALERT(log_line);
+                + "}");
+        DARWIN_ALERT_MANAGER.Alert(_ips[index_anomalies(i)], 100, "-", details);
     }
     _matrix.reset();
 }

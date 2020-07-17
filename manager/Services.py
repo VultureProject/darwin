@@ -9,7 +9,6 @@ __doc__ = 'Services / filters management'
 import logging
 import json
 import socket
-import settings
 from threading import Lock
 from copy import deepcopy
 from subprocess import Popen, call, TimeoutExpired
@@ -52,6 +51,7 @@ class Services:
                         self.stop_one(filter, no_lock=True)
                         self.clean_one(filter, no_lock=True)
                     else:
+                        logger.debug("Linking UNIX sockets...")
                         filter['status'] = psutil.STATUS_RUNNING
                         call(['ln', '-s', filter['socket'], filter['socket_link']])
 
@@ -70,11 +70,15 @@ class Services:
         """
         Stop all the filters
         """
+        logger.debug("stop_all: before lock")
         with self._lock:
+            logger.debug("stop_all: after lock")
             for _, filter in self._filters.items():
                 try:
                     self.stop_one(filter, True)
+                    logger.debug("stop_all: after stop_one")
                     self.clean_one(filter, True)
+                    logger.debug("stop_all: after clean_one")
                 except Exception:
                     pass
 
@@ -316,7 +320,7 @@ class Services:
             filter['status'] = psutil.STATUS_RUNNING
             call(['ln', '-s', filter['socket'], filter['socket_link']])
 
-    def update(self, names):
+    def update(self, names, prefix, suffix):
         """
         Update the filters which name are contained in names
         configuration and process.
@@ -328,7 +332,7 @@ class Services:
         logger.debug("Update: Trying to open config file")
         try:
             #Reload conf, global variable 'conf_filters' will be updated
-            load_conf()
+            load_conf(prefix, suffix)
         except ConfParseError:
             error = "Update: wrong configuration format, unable to update"
             logger.error(error)

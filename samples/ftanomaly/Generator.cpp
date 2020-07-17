@@ -5,16 +5,31 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
+#include <fstream>
+#include <string>
+
+#include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "base/Core.hpp"
 #include "Generator.hpp"
 #include "TAnomalyTask.hpp"
 #include "TAnomalyThreadManager.hpp"
+#include "AlertManager.hpp"
 
-#include <fstream>
-#include <string>
+bool Generator::ConfigureAlerting(const std::string& tags) {
+    DARWIN_LOGGER;
 
-#include "../../toolkit/lru_cache.hpp"
+    DARWIN_LOG_DEBUG("TAnomaly:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("TAnomaly:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;

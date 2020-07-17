@@ -96,10 +96,26 @@ bool AnomalyTask::Detection(){
     STAT_MATCH_INC;
     _certitudes.push_back(100);
 
+    GenerateAlerts(_ips, index_anomalies, alerts);
     if(GetOutputType() == darwin::config::output_type::LOG){
         GenerateLogs(_ips, index_anomalies, alerts);
     }
     return true;
+}
+
+void AnomalyTask::GenerateAlerts(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts){
+    for(unsigned int i=0; i<index_anomalies.n_rows; i++){
+        std::string details;
+        details = R"({"ip": ")" + ips[index_anomalies(i)] + "\",";
+        details += R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ",";
+        details += R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ",";
+        details += R"("tcp_nb_host": )" + std::to_string(alerts(TCP_NB_HOST, i)) + ",";
+        details += R"("tcp_nb_port": )" + std::to_string(alerts(TCP_NB_PORT, i)) + ",";
+        details += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
+        details += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
+        details += "}";
+        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, Evt_idToString(), details);
+    }
 }
 
 void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts){
@@ -118,7 +134,6 @@ void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_an
         alert_log += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
         alert_log += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
         alert_log += "}}";
-        DARWIN_RAISE_ALERT(alert_log);
         _logs += alert_log + '\n';
     }
 };

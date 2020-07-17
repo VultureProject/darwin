@@ -10,7 +10,6 @@ import logging
 import json
 from jsonschema import validators, Draft7Validator
 import psutil
-import settings
 
 
 logger = logging.getLogger()
@@ -219,7 +218,7 @@ class ConfParseError(Exception):
     pass
 
 
-def load_conf(conf=""):
+def load_conf(prefix, suffix, conf=""):
     global config_file
     global stats_reporting
     global filters
@@ -259,9 +258,9 @@ def load_conf(conf=""):
         filters.update(configuration)
         logger.debug("Configurator: loaded v1 config successfully")
 
-    complete_filters_conf()
+    complete_filters_conf(prefix, suffix)
 
-def complete_filters_conf():
+def complete_filters_conf(prefix, suffix):
     for name, filter in filters.items():
         if name and not filter.get('name'):
             filter['name'] = name
