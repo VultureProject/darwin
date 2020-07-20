@@ -16,7 +16,23 @@
 #include "tsl/hopscotch_set.h"
 #include "../toolkit/rapidjson/document.h"
 #include "../toolkit/rapidjson/istreamwrapper.h"
+#include "AlertManager.hpp"
 
+
+bool Generator::ConfigureAlerting(const std::string& tags) {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME + this->_feed_name);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;

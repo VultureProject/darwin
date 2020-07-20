@@ -19,6 +19,9 @@
 #include "tensorflow/core/public/session.h"
 
 #define DARWIN_FILTER_DGA 0x64676164
+#define DARWIN_FILTER_NAME "dga"
+#define DARWIN_ALERT_RULE_NAME "Domain Generation Algorithm Detection"
+#define DARWIN_ALERT_TAGS "[\"attack.command_and_control\", \"attack.t1483\"]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.

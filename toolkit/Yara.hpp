@@ -14,6 +14,11 @@ namespace darwin {
 
     namespace toolkit {
 
+        typedef struct YaraResults_ {
+            std::set<std::string> rules;
+            std::set<std::string> tags;
+        } YaraResults;
+
         class YaraEngine {
         public:
             /// The YaraEngine constructor
@@ -37,10 +42,11 @@ namespace darwin {
             /// \warning the engine should be initialised with Init() first
             int ScanData(std::vector<unsigned char> &data, unsigned int &certitude);
 
-            /// Gets a rapidjson document with the results from the last scan
-            /// the results are formated directly as an array
-            /// \return the rapidjson document in the form [{"rule": "_rule_name_", "tags": ["_tag1_", "_tag2_", ...]}]
-            rapidjson::Document GetResults();
+            /// Gets a structure with the results from the last scan
+            /// the structure contains 2 sets:
+            /// - a rules object containing all the matching rules
+            /// - a tags object containing the aggregated tags from all the rules matching
+            YaraResults GetResults();
 
         private:
             /// A callback to get information from the yara library during the scan

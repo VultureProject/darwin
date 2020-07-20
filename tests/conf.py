@@ -1,7 +1,7 @@
 # DARWIN FILES
-MANAGEMENT_SOCKET_PATH = '/var/sockets/darwin/darwin.sock'
-FILTER_SOCKETS_DIR = "/var/sockets/darwin/"
-FILTER_PIDS_DIR = "/var/run/darwin/"
+MANAGEMENT_SOCKET_PATH = '/tmp/sockets/darwin.sock'
+FILTER_SOCKETS_DIR = "/tmp/sockets/"
+FILTER_PIDS_DIR = "/tmp/run/"
 DEFAULT_CONFIGURATION_PATH = '/tmp/darwin.conf'
 
 # ENV CONFIG

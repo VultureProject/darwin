@@ -32,4 +32,5 @@ public:
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
 };

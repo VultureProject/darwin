@@ -16,6 +16,9 @@
 #include "tsl/hopscotch_set.h"
 
 #define DARWIN_FILTER_HOSTLOOKUP 0x66726570
+#define DARWIN_FILTER_NAME "hostlookup"
+#define DARWIN_ALERT_RULE_NAME "Lookup: "
+#define DARWIN_ALERT_TAGS "[]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -53,6 +56,8 @@ private:
 
     /// Parse a line from the body.
     bool ParseLine(rapidjson::Value &line) final;
+
+    const std::string AlertDetails(std::string const& descrption = "");
 
 private:
     // This implementation of the hopscotch map allows multiple reader with no writer

@@ -18,6 +18,9 @@
 #include "FileManager.hpp"
 
 #define DARWIN_FILTER_SOFA 0x72676476
+#define DARWIN_FILTER_NAME "sofa"
+#define DARWIN_ALERT_RULE_NAME "Scan Outlier Finding and Analysis"
+#define DARWIN_ALERT_TAGS "[\"attack.t1200\"]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.

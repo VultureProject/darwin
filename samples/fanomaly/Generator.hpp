@@ -22,6 +22,7 @@ public:
 
 public:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
 
     virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,

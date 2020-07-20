@@ -27,8 +27,14 @@
 #ifndef YARA_UTILS_H
 #define YARA_UTILS_H
 
+#include <set>
+#include <string>
 #include "stream_buffer.hpp"
-#include "../../toolkit/rapidjson/document.h"
+
+typedef struct YaraResults_ {
+    std::set<std::string> rules;
+    std::set<std::string> tags;
+} YaraResults;
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,7 +100,7 @@ int yaraInitConfig(YaraCnf *);
 int yaraDeleteConfig(YaraCnf *);
 int yaraAddRuleFile(FILE *, const char *, const char *);
 int yaraCompileRules();
-rapidjson::Document yaraScan(uint8_t *, uint32_t, StreamBuffer *);
+YaraResults yaraScan(uint8_t *, uint32_t, StreamBuffer *);
 void yaraErrorCallback(int, const char *, int, const char *, void *);
 int yaraScanOrImportCallback(int, void *, void *);
 

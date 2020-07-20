@@ -85,32 +85,20 @@ namespace darwin {
             return 0;
         }
 
-        rapidjson::Document YaraEngine::GetResults() {
+        YaraResults YaraEngine::GetResults() {
+            YaraResults results;
+
             const char *yaraRuleTag;
-            rapidjson::Document rules;
-            rapidjson::Document::AllocatorType& alloc = rules.GetAllocator();
 
-            if(_rule_match_list.size() > 0) {
-                rules.SetArray();
+            for(auto rule : _rule_match_list) {
+                results.rules.insert(rule->identifier);
 
-                for(auto rule : _rule_match_list) {
-                    rapidjson::Value ruleJson(rapidjson::kObjectType);
-                    rapidjson::Value tags(rapidjson::kArrayType);
-                    ruleJson.AddMember("rule", rapidjson::StringRef(rule->identifier), alloc);
-
-                    yr_rule_tags_foreach(rule, yaraRuleTag) {
-                        tags.PushBack(rapidjson::StringRef(yaraRuleTag), alloc);
-                    }
-
-                    ruleJson.AddMember("tags", tags, alloc);
-                    rules.PushBack(ruleJson, alloc);
+                yr_rule_tags_foreach(rule, yaraRuleTag) {
+                    results.tags.insert(yaraRuleTag);
                 }
             }
-            else {
-                rules.SetNull();
-            }
 
-            return rules;
+            return results;
         }
 
         int YaraEngine::ScanOrImportCallback(int message, void *messageData, void *userData) {

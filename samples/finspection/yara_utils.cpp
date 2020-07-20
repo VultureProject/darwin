@@ -216,13 +216,12 @@ static inline int yaraScanStreamElem(YaraStreamElem *elem, int fastMode, int tim
     }
 }
 
-rapidjson::Document yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb) {
+YaraResults yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb) {
     DARWIN_LOGGER;
     YaraStreamElem *elem = (YaraStreamElem *)calloc(1, sizeof(YaraStreamElem));
     elem->ruleList = yaraCreateRuleList();
 
-    rapidjson::Document rules;
-    rapidjson::Document::AllocatorType& alloc = rules.GetAllocator();
+    YaraResults results;
 
     if(!sb) {
         DARWIN_LOG_DEBUG("initializing packet scan");
@@ -268,20 +267,14 @@ rapidjson::Document yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb
                     continue;
                 }
                 else {
-                    rules.SetArray();
-
-                    rapidjson::Value ruleJson(rapidjson::kObjectType);
-                    rapidjson::Value tags(rapidjson::kArrayType);
 
                     if(sb)  yaraAddRuleToList(sb->ruleList, rule);
-                    ruleJson.AddMember("rule", rapidjson::StringRef(rule->identifier), alloc);
+                    results.rules.insert(rule->identifier);
 
                     yr_rule_tags_foreach(rule, yaraRuleTag)
                     {
-                        tags.PushBack(rapidjson::StringRef(yaraRuleTag), alloc);
+                        results.tags.insert(yaraRuleTag);
                     }
-                    ruleJson.AddMember("tags", tags, alloc);
-                    rules.PushBack(ruleJson, alloc);
                 }
             }
         }
@@ -290,7 +283,7 @@ rapidjson::Document yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb
 
     yaraDeleteRuleList(elem->ruleList);
     free(elem);
-    return rules;
+    return results;
 }
 
 void yaraErrorCallback(int errorLevel, const char *fileName, int lineNumber, const char *message, void *userData) {
