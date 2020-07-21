@@ -165,7 +165,7 @@ void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){
     tsl::hopscotch_map<std::string, std::array<int, 5>> data;
     tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> cache_data;
 
-    for (std::string l: logs){
+    for (std::string l : logs) {
         // line of log : ip_src;ip_dst;port;(udp|tcp) or  ip_src;ip_dst;(icmp)
         // where udp, tcp and icmp are represented by the ip protocol number
         try{

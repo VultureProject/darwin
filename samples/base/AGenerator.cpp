@@ -28,6 +28,8 @@ bool AGenerator::Configure(std::string const& configFile, const std::size_t cach
     return true;
 }
 
+void AGenerator::ConfigureNetworkObject(boost::asio::io_context &context __attribute__((unused))) {}
+
 bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AGenerator:: Setting up classifier...");

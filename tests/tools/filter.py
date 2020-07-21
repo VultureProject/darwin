@@ -27,6 +27,7 @@ class Filter():
         self.process = None
         self.error_code = 99 # For valgrind testing
         self.pubsub = None
+        print("pid file:" + self.pid)
 
     def __del__(self):
         if self.process and self.process.poll() is None:

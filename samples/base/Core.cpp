@@ -45,6 +45,7 @@ namespace darwin {
 
             try {
                 Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
+                gen.ConfigureNetworkObject(server.GetIOContext());
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
                 DARWIN_LOG_DEBUG("Core::run:: Creating threads...");

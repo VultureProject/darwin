@@ -57,7 +57,9 @@ void HostLookupTask::operator()() {
 
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
-                        STAT_MATCH_INC;
+                        STAT_MATCH_INC;"description": "<threat_description>", 
+
+      
                         std::string alert_log = this->BuildAlert(_host, certitude);
                         DARWIN_RAISE_ALERT(alert_log);
                         if (is_log) {
