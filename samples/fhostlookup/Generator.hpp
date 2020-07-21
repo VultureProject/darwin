@@ -30,7 +30,7 @@ public:
                darwin::Manager& manager) noexcept override final;
 
 protected:
-    enum db_type {
+    enum class db_type {
         text = 0,
         json,
         rsyslog

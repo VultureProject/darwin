@@ -30,7 +30,7 @@ public:
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                             std::mutex& cache_mutex,
-                            tsl::hopscotch_map<std::string, int>& db,
+                            tsl::hopscotch_map<std::string, std::pair<std::string, int>>& db,
                             const std::string& feed_name);
 
     ~HostLookupTask() override = default;
@@ -49,8 +49,9 @@ private:
     /// Read a struct in_addr from the session and
     /// lookup in the bad host map to fill _result.
     ///
+    /// \param description The description to be "returned" by the lookup
     /// \return the certitude of host's bad reputation (100: BAD, 0:Good)
-    unsigned int DBLookup() noexcept;
+    unsigned int DBLookup(std::string& description) noexcept;
 
     const std::string BuildAlert(const std::string& host, unsigned int certitude);
 
@@ -61,7 +62,7 @@ private:
 
 private:
     // This implementation of the hopscotch map allows multiple reader with no writer
-    tsl::hopscotch_map<std::string, int>& _database ; //!< The "bad" hostname database
+    tsl::hopscotch_map<std::string, std::pair<std::string, int>>& _database ; //!< The "bad" hostname database
     const std::string& _feed_name;
     std::string _host;
 };
