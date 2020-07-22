@@ -42,18 +42,17 @@ class Services:
         """
         Start all the filters.
         """
-        with self._lock:
-            for _, filter in self._filters.items():
-                if self.start_one(filter, True):
-                    ret = Services._wait_process_ready(filter)
-                    if ret:
-                        logger.error("Error when starting filter {}: {}".format(filter['name'], ret))
-                        self.stop_one(filter, no_lock=True)
-                        self.clean_one(filter, no_lock=True)
-                    else:
-                        logger.debug("Linking UNIX sockets...")
-                        filter['status'] = psutil.STATUS_RUNNING
-                        call(['ln', '-s', filter['socket'], filter['socket_link']])
+        for _, filter in self._filters.items():
+            if self.start_one(filter, True):
+                ret = Services._wait_process_ready(filter)
+                if ret:
+                    logger.error("Error when starting filter {}: {}".format(filter['name'], ret))
+                    self.stop_one(filter, no_lock=True)
+                    self.clean_one(filter, no_lock=True)
+                else:
+                    logger.debug("Linking UNIX sockets...")
+                    filter['status'] = psutil.STATUS_RUNNING
+                    call(['ln', '-s', filter['socket'], filter['socket_link']])
 
     def rotate_logs_all(self):
         """
@@ -70,24 +69,14 @@ class Services:
         """
         Stop all the filters
         """
-        logger.debug("stop_all: before lock")
-        with self._lock:
-            logger.debug("stop_all: after lock")
-            for _, filter in self._filters.items():
-                try:
-                    self.stop_one(filter, True)
-                    logger.debug("stop_all: after stop_one")
-                    self.clean_one(filter, True)
-                    logger.debug("stop_all: after clean_one")
-                except Exception:
-                    pass
-
-    def restart_all(self):
-        """
-        Restart all the filters
-        """
-        self.stop_all()
-        self.start_all()
+        for _, filter in self._filters.items():
+            try:
+                self.stop_one(filter, True)
+                logger.debug("stop_all: after stop_one")
+                self.clean_one(filter, True)
+                logger.debug("stop_all: after clean_one")
+            except Exception:
+                pass
 
     @staticmethod
     def _build_cmd(filt):
