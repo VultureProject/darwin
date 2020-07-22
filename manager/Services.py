@@ -340,9 +340,16 @@ class Services:
 
         logger.info("Update: Configuration loaded")
 
+        if not names:
+            # Do a symetric diff of 2 sets, composed of the keys from current filters' dict and the dict loaded from conf
+            # and unpack values as a list
+            # This yields a list of the new and deleted filters (by name only) = a diff of configured filters
+            names = [*(set(self._filters.keys()) ^ set(conf_filters.keys()))]
+
         with self._lock:
             errors = []
             new = {}
+            logger.info("updating filters {}".format(names))
             for n in names:
                 try:
                     new[n] = conf_filters[n]
