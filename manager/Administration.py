@@ -88,6 +88,16 @@ class Server:
             try:
                 cli = JsonSocket(_cli)
                 cmd = cli.recv()
+            except json.JSONDecodeError as e:
+                logger.error("Error decoding message from admin: {}".format(e))
+                try:
+                    cli.send({
+                        'status': 'KO',
+                        'error': str(e)
+                    })
+                except Exception as e:
+                    logger.critical("Error while trying to reply to admin: {}".format(e))
+                continue
             except Exception as e:
                 logger.error("Error receiving data from admin: {0}".format(e))
                 continue
