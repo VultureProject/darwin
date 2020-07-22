@@ -93,7 +93,7 @@ class Server:
                 try:
                     cli.send({
                         'status': 'KO',
-                        'error': str(e)
+                        'errors': [str(e)]
                     })
                 except Exception as e:
                     logger.critical("Error while trying to reply to admin: {}".format(e))
