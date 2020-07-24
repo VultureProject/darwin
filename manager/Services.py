@@ -378,9 +378,14 @@ class Services:
 
             for n, c in new.items():
                 cmd = self._build_cmd(c)
-                p = Popen(cmd)
                 try:
+                    p = Popen(cmd)
                     p.wait(timeout=1)
+                except OSError as e:
+                    logger.error("cannot start filter: " + str(e))
+                    c['status'] = psutil.STATUS_DEAD
+                    errors.append({"filter": n, "error": "cannot start filter: {}".format(str(e))})
+                    continue
                 except TimeoutExpired:
                     if c['log_level'].lower() == "developer":
                         logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
@@ -388,6 +393,8 @@ class Services:
                         logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
                         p.kill()
                         p.wait()
+                    errors.append({"filter": n, "error": "Filter did not daemonize before timeout."})
+                    continue
                 ret = Services._wait_process_ready(c)
                 if ret:
                     logger.error("Unable to update filter {}: {}".format(n, ret))
