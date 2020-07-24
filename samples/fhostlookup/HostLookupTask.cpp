@@ -23,7 +23,7 @@ HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& sock
                                darwin::Manager& manager,
                                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
-                               tsl::hopscotch_map<std::string, int>& db,
+                               tsl::hopscotch_map<std::string, std::pair<std::string, int>>& db,
                                const std::string& feed_name)
         : Session{"hostlookup", socket, manager, cache, cache_mutex}, _database{db},
         _feed_name{feed_name} {
@@ -71,10 +71,11 @@ void HostLookupTask::operator()() {
                 }
             }
 
-            certitude = DBLookup();
+            std::string description;
+            certitude = DBLookup(description);
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 STAT_MATCH_INC;
-                DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails());
+                DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails(description));
                 if (is_log){
                     std::string alert_log = this->BuildAlert(_host, certitude);
                     _logs += alert_log + "\n";
@@ -118,14 +119,15 @@ const std::string HostLookupTask::BuildAlert(const std::string& host,
         return alert_log;
 }
 
-unsigned int HostLookupTask::DBLookup() noexcept {
+unsigned int HostLookupTask::DBLookup(std::string& description) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("HostLookupTask:: Looking up '" +  _host + "' in the database");
     unsigned int certitude = 0;
 
     auto host = _database.find(_host);
     if(host != _database.end()) {
-        certitude = host->second;
+        certitude = host->second.second;
+        description = host->second.first;
     }
 
     DARWIN_LOG_DEBUG("Reputation is " + std::to_string(certitude));
