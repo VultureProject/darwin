@@ -173,8 +173,9 @@ def check_file_output(filter: TestFilter, log: str, expected=True) -> bool:
         logging.error("Expected log file to be empty or non existing but got {}".parse(file_content))
         return False
     elif file_content and expected:
-        if log + '\n' in file_content:
-            return True
+        for a in file_content:
+            if log in a:
+                return True
         logging.error("Log not in log file")
         return False
 
@@ -191,8 +192,9 @@ def check_list_output(filter: TestFilter, log: str, expected=True) -> bool:
         return False
     elif alerts and expected:
         alerts = [i.decode() for i in alerts]
-        if log in alerts:
-            return True
+        for a in alerts:
+            if log in a:
+                return True
         logging.error("The given alert could not be found in the Redist alert list")
         return False
 
@@ -202,7 +204,7 @@ def check_channel_output(pubsub, log, expected=True) -> bool:
     if message and expected:
         if message["type"] == "message":
             alert = message["data"].decode()
-            if alert != log:
+            if log not in alert:
                 logging.error("Not the expected alert received in redis. Got {}".format(alert))
                 return False
             return True

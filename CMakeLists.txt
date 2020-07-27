@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 if (DEBUG)
     SET(CMAKE_CXX_FLAGS "-W -Wall -Wextra -g -ggdb3")
 else ()
-    SET(CMAKE_CXX_FLAGS "-W -Wall -Wextra")
+    SET(CMAKE_CXX_FLAGS "-W -Wall -Wextra -o2")
 endif ()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
@@ -22,8 +22,8 @@ if (NOT DEFINED FILTER)
         CONNECTION
         TANOMALY
         ANOMALY
-        LOGS
         CONTENT_INSPECTION
+        YARA
     )
 else (NOT DEFINED FILTER)
     set(
@@ -110,10 +110,6 @@ set(
 
 message("Generating CMake files for the filters: ${FILTERS}")
 
-if("LOGS" IN_LIST FILTERS)
-include(flogs)
-endif()
-
 if("CONNECTION" IN_LIST FILTERS)
 include(fconnection)
 endif()
@@ -148,4 +144,8 @@ endif()
 
 if("SOFA" IN_LIST FILTERS)
 include(fsofa)
+endif()
+
+if("YARA" IN_LIST FILTERS)
+include(fyara)
 endif()

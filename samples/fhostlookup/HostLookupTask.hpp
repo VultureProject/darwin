@@ -16,6 +16,9 @@
 #include "tsl/hopscotch_set.h"
 
 #define DARWIN_FILTER_HOSTLOOKUP 0x66726570
+#define DARWIN_FILTER_NAME "hostlookup"
+#define DARWIN_ALERT_RULE_NAME "Lookup: "
+#define DARWIN_ALERT_TAGS "[]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -27,7 +30,7 @@ public:
                             darwin::Manager& manager,
                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                             std::mutex& cache_mutex,
-                            tsl::hopscotch_map<std::string, int>& db,
+                            tsl::hopscotch_map<std::string, std::pair<std::string, int>>& db,
                             const std::string& feed_name);
 
     ~HostLookupTask() override = default;
@@ -46,17 +49,20 @@ private:
     /// Read a struct in_addr from the session and
     /// lookup in the bad host map to fill _result.
     ///
+    /// \param description The description to be "returned" by the lookup
     /// \return the certitude of host's bad reputation (100: BAD, 0:Good)
-    unsigned int DBLookup() noexcept;
+    unsigned int DBLookup(std::string& description) noexcept;
 
     const std::string BuildAlert(const std::string& host, unsigned int certitude);
 
     /// Parse a line from the body.
     bool ParseLine(rapidjson::Value &line) final;
 
+    const std::string AlertDetails(std::string const& descrption = "");
+
 private:
     // This implementation of the hopscotch map allows multiple reader with no writer
-    tsl::hopscotch_map<std::string, int>& _database ; //!< The "bad" hostname database
+    tsl::hopscotch_map<std::string, std::pair<std::string, int>>& _database ; //!< The "bad" hostname database
     const std::string& _feed_name;
     std::string _host;
 };

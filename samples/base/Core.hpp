@@ -72,6 +72,12 @@ namespace darwin {
         /// \return A const reference to the string containing the unique name given in the program arguments.
         const std::string& GetFilterName();
 
+        /// Set the log level
+        ///
+        /// \param level The level to set.
+        /// \return true on success, false otherwise.
+        bool SetLogLevel(std::string level);
+
     private:
         std::string _name;
         std::string _socketPath;

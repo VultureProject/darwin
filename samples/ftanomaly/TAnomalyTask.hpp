@@ -16,6 +16,10 @@
 #include "../../toolkit/lru_cache.hpp"
 
 #define DARWIN_FILTER_TANOMALY 0x544D4C59
+#define DARWIN_FILTER_NAME "anomaly"
+#define DARWIN_ALERT_RULE_NAME "Abnormal Number of Unique Port Connexion"
+#define DARWIN_ALERT_TAGS "[\"attack.discovery\", \"attack.t1046\", \"attack.command_and_control\", \"attack.defense_evasion\", \"attack.t1205\"]"
+
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.

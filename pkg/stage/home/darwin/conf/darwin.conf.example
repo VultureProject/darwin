@@ -1,21 +1,12 @@
 {
-    "logs_1": {
-        "exec_path": "/home/darwin/filters/darwin_logs",
-        "config_file": "/home/darwin/conf/flogs/flogs.conf.example",
-        "nb_thread": 5,
-        "log_level": "ERROR",
-        "cache_size": 0,
-        "output": "NONE",
-        "next_filter": ""
-    },
     "session_1": {
         "exec_path": "/home/darwin/filters/darwin_session",
         "config_file": "/home/darwin/conf/fsession/fsession.conf.example",
         "nb_thread": 5,
         "log_level": "ERROR",
         "cache_size": 0,
-        "output": "LOG",
-        "next_filter": "logs_1"
+        "output": "",
+        "next_filter": ""
     },
     "content_inspection_1": {
         "exec_path": "/home/darwin/filters/darwin_content_inspection",
@@ -23,8 +14,8 @@
         "nb_thread": 20,
         "log_level": "DEBUG",
         "cache_size": 0,
-        "output": "LOG",
-        "next_filter": "logs_1",
+        "output": "",
+        "next_filter": "",
         "threshold": 80
     },
     "dga_1": {
@@ -33,8 +24,8 @@
         "nb_thread": 5,
         "log_level": "DEBUG",
         "cache_size": 1000,
-        "output": "LOG",
-        "next_filter": "logs_1",
+        "output": "",
+        "next_filter": "",
         "threshold": 80
     },
     "tanomaly_1": {

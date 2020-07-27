@@ -28,6 +28,39 @@ bool AGenerator::Configure(std::string const& configFile, const std::size_t cach
     return true;
 }
 
+bool AGenerator::ExtractCustomAlertingTags(const rapidjson::Document &configuration,
+                                           std::string& tags) {
+    DARWIN_LOGGER;
+
+    if (not configuration.HasMember("alert_tags")) {
+        DARWIN_LOG_DEBUG("AGenerator:: No alert_tags found in configuration");
+        return false;
+    }
+    if (not configuration["alert_tags"].IsArray()) {
+        DARWIN_LOG_WARNING("AGenerator:: Given alert_tags is not an array. Using defaults.");
+        return false;
+    }
+    auto array = configuration["alert_tags"].GetArray();
+    tags = "[";
+    for (auto& tag : array) {
+        if (not tag.IsString()) {
+            DARWIN_LOG_WARNING("AGenerator:: One alert tag is not a string. Ignoring.");
+            continue;
+        }
+        if (tag.GetStringLength() < 1) {
+            DARWIN_LOG_WARNING("AGenerator:: One alert tag is an empty string. Ignoring.");
+            continue;
+        }
+        if (tags.length() > 1)
+            tags += ',';
+        tags += '"';
+        tags += tag.GetString();
+        tags += '"';
+    }
+    tags += "]";
+    return true;
+}
+
 bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AGenerator:: Setting up classifier...");
@@ -35,6 +68,7 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
 
     std::ifstream conf_file_stream;
     conf_file_stream.open(configuration_file_path, std::ifstream::in);
+    std::string alerting_tags;
 
     if (!conf_file_stream.is_open()) {
         DARWIN_LOG_ERROR("AGenerator:: Could not open the configuration file");
@@ -66,6 +100,13 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
     if (!this->LoadConfig(configuration)) {
         conf_file_stream.close();
         return false;
+    }
+
+    // Extract custom alerting tags
+    if (this->ExtractCustomAlertingTags(configuration, alerting_tags)) {
+        if (not this->ConfigureAlerting(alerting_tags)) return false;
+    } else {
+        this->ConfigureAlerting("");
     }
 
     conf_file_stream.close();

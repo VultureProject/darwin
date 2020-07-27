@@ -16,7 +16,23 @@
 #include "tsl/hopscotch_set.h"
 #include "../toolkit/rapidjson/document.h"
 #include "../toolkit/rapidjson/istreamwrapper.h"
+#include "AlertManager.hpp"
 
+
+bool Generator::ConfigureAlerting(const std::string& tags) {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME + this->_feed_name);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("Hostlookup:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
@@ -48,7 +64,9 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 
     // Load the DB according to the given type
     if (db_type == "json") {
-        return this->LoadJsonFile(db);
+        return this->LoadJsonFile(db, db_type::json);
+    } else if (db_type == "rsyslog") {
+        return this->LoadJsonFile(db, db_type::rsyslog);
     } else if (db_type == "text") {
         return this->LoadTextFile(db);
     } else {
@@ -74,7 +92,7 @@ bool Generator::LoadTextFile(const std::string& filename) {
             return false;
         }
         if (!buf.empty()){
-            _database.insert({buf,100});
+            _database.insert({buf,{"", 100}});
         }
     }
     file.close();
@@ -87,10 +105,11 @@ bool Generator::LoadTextFile(const std::string& filename) {
     return true;
 }
 
-bool Generator::LoadJsonFile(const std::string& filename) {
+bool Generator::LoadJsonFile(const std::string& filename, const db_type type) {
     DARWIN_LOGGER;
     std::ifstream file(filename.c_str());
     rapidjson::Document database;
+    bool ret = true;
 
     if (!file) {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Configure:: Cannot open host database");
@@ -99,20 +118,22 @@ bool Generator::LoadJsonFile(const std::string& filename) {
     DARWIN_LOG_DEBUG("HostlookupGenerator:: Parsing database...");
     rapidjson::IStreamWrapper isw(file);
     database.ParseStream(isw);
-    if (not this->LoadJsonDatabase(database)) {
+    if (not database.IsObject()) {
+        DARWIN_LOG_CRITICAL("HostlookupGenerator:: Database is not a JSON object");
         file.close();
         return false;
     }
+    if (type == db_type::json) {
+        ret = this->LoadJsonDatabase(database);
+    } else if (type == db_type::rsyslog) {
+        ret = this->LoadRsyslogDatabase(database);
+    }
     file.close();
-    return true;
+    return ret;
 }
 
 bool Generator::LoadJsonDatabase(const rapidjson::Document& database) {
     DARWIN_LOGGER;
-    if (not database.IsObject()) {
-        DARWIN_LOG_CRITICAL("HostlookupGenerator:: Database is not a JSON object");
-        return false;
-    }
     if (not database.HasMember("feed_name") or not database["feed_name"].IsString()) {
         DARWIN_LOG_CRITICAL("HostlookupGenerator:: No proper feed name provided in the database");
         return false;
@@ -142,11 +163,11 @@ bool Generator::LoadJsonEntry(const rapidjson::Value& entry) {
     int score = 100;
     std::string sentry;
     if (not entry.IsObject()) {
-        DARWIN_LOG_CRITICAL("HostlookupGenerator:: Database entry is not a JSON object. Ignoring.");
+        DARWIN_LOG_WARNING("HostlookupGenerator:: Database entry is not a JSON object. Ignoring.");
         return false;
     }
     if (not entry.HasMember("entry") or not entry["entry"].IsString()) {
-        DARWIN_LOG_CRITICAL("HostlookupGenerator:: Entry is not a string. Ignoring.");
+        DARWIN_LOG_WARNING("HostlookupGenerator:: Entry is not a string. Ignoring.");
         return false;
     }
     if (entry.HasMember("score") and entry["score"].IsInt()) {
@@ -156,7 +177,49 @@ bool Generator::LoadJsonEntry(const rapidjson::Value& entry) {
             score = 100;
         }
     }
-    this->_database[entry["entry"].GetString()] = score;
+    this->_database[entry["entry"].GetString()] = std::pair<std::string, int>("", score);
+    return true;
+}
+
+bool Generator::LoadRsyslogDatabase(const rapidjson::Document& database) {
+    DARWIN_LOGGER;
+
+    if (not database.HasMember("table") or not database["table"].IsArray()) {
+        DARWIN_LOG_CRITICAL("HostlookupGenerator:: No table provided in the database");
+        return false;
+    }
+    auto entries = database["table"].GetArray();
+    for (auto& entry : entries) {
+        this->LoadRsyslogEntry(entry);
+    }
+    if (this->_database.size() == 0) {
+        DARWIN_LOG_CRITICAL("HostlookupGenerator:: No usable entry in the database. Stopping.");
+        return false;
+    }
+    return true;
+}
+
+bool Generator::LoadRsyslogEntry(const rapidjson::Value& entry) {
+    if (not entry.IsObject()) {
+        return false;
+    }
+    if (not entry.HasMember("index") or not entry["index"].IsString()) {
+        return false;
+    }
+    if (not entry.HasMember("value")) {
+        return false;
+    }
+
+    if (entry["value"].IsString()) {
+        this->_database[entry["index"].GetString()] = std::pair<std::string, int>(entry["value"].GetString(), 100);
+    }
+    else if (entry["value"].IsInt()) {
+        this->_database[entry["index"].GetString()] = std::pair<std::string, int>("", entry["value"].GetInt());
+    }
+    else {
+        return false;
+    }
+
     return true;
 }
 

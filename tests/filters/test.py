@@ -1,10 +1,10 @@
 import filters.fdga as fdga
-import filters.flogs as flogs
 import filters.fsofa as fsofa
 import filters.fanomaly as fanomaly
-import filters.ftanomaly as ftanomaly 
+import filters.ftanomaly as ftanomaly
 import filters.fconnection as fconnection
 import filters.fhostlookup as fhostlookup
+import filters.fyara as fyara
 from tools.output import print_results
 
 
@@ -14,10 +14,10 @@ def run():
     ftanomaly.run()
     fdga.run()
     fconnection.run()
-    flogs.run()
     fhostlookup.run()
     fsofa.run()
     fanomaly.run()
+    fyara.run()
 
     print()
     print()

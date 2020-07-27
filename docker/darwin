@@ -103,6 +103,32 @@ RUN wget https://github.com/FloopCZ/tensorflow_cc/archive/v${TF_VERSION}.tar.gz 
  && cmake .. \
  && make install
 
+# YARA
+FROM ubuntu:18.04 AS yara_builder
+ARG YARA_VERSION
+
+WORKDIR /root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ ca-certificates\
+ libjansson-dev\
+ libmagic-dev\
+ libssl-dev\
+ libpcre3\
+ make\
+ g++\
+ wget\
+ autoconf\
+ automake\
+ libtool
+
+RUN wget https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz \
+ && mkdir yara \
+ && tar xvf v${YARA_VERSION}.tar.gz -C yara --strip-components 1 \
+ && cd yara\
+ && ./bootstrap.sh\
+ && ./configure\
+ && make -j2 install DESTDIR=`pwd`/install
+
 
 
 # DARWIN dev image
@@ -117,7 +143,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  libevent-dev\
  libmaxminddb-dev\
  libhiredis-dev\
- libyara-dev\
+ libssl-dev\
  liblapacke-dev\
  libopenblas-dev\
  cmake\
@@ -138,6 +164,7 @@ COPY --from=boost_builder /root/boost/install/ /usr/local/
 COPY --from=tensorflow_builder /usr/local/lib/tensorflow_cc /usr/local/lib/tensorflow_cc
 COPY --from=tensorflow_builder /usr/local/include/tensorflow /usr/local/include/tensorflow
 COPY --from=tensorflow_builder /usr/local/lib/cmake/TensorflowCC /usr/local/lib/cmake/TensorflowCC
+COPY --from=yara_builder /root/yara/install/ /
 
 COPY . /home/darwin
 WORKDIR /home/darwin
@@ -160,7 +187,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  libevent-2.1 \
  libmaxminddb0 \
  libhiredis0.13 \
- libyara3 \
  liblapacke \
  libopenblas-base \
  libgomp1 \
@@ -169,13 +195,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  python3-setuptools \
  python3-wheel \
  python3-psutil \
- python3-daemon \
  python3-redis \
  && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install jsonschema==3.2.0
 
-COPY --from=faup_builder /root/faup/install/ /
+COPY --from=faup_builder /root/faup/install/usr/local/lib/libfaup.so* /usr/local/lib/
+COPY --from=faup_builder /root/faup/install/usr/local/share/faup/ /usr/local/share/faup
+COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara.so* /usr/local/lib/
 COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
 COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
 COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf

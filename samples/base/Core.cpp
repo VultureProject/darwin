@@ -9,6 +9,9 @@
 #include <climits>
 #include <cstring>
 #include <exception>
+#include <iostream>
+#include <stdio.h>
+#include <ctype.h>
 
 #include "Generator.hpp"
 #include "Logger.hpp"
@@ -75,46 +78,78 @@ namespace darwin {
         return ret;
     }
 
+    bool Core::SetLogLevel(std::string level){
+        DARWIN_LOGGER;
+        if (level == "DEVELOPER"){
+            log.setLevel(logger::Debug);
+            DARWIN_LOG_DEBUG("Developer mode activated");
+            daemon = false;
+            return true;
+        }
+
+        return log.setLevel(level);
+    }
+
     bool Core::Configure(int ac, char** av) {
         DARWIN_LOGGER;
-        if (ac < 11) {
-            DARWIN_LOG_CRITICAL("Core:: Program Arguments:: Missing some parameters");
+
+        int opt;
+        std::string log_level;
+
+        // OPTIONS
+        log.setLevel(logger::Warning); // Log level by default
+        opt = -1;
+        while((opt = getopt(ac, av, ":l:h")) != -1)
+        {
+            DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
+            DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
+            switch(opt)
+            {
+                case 'l':
+                    log_level.assign(optarg);
+                    if(!Core::SetLogLevel(log_level)){
+                        DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown log-level given");
+                        Core::Usage();
+                        return false;
+                    }
+                    break;
+                case 'h':
+                    Core::Usage();
+                    return false;
+                    break;
+                case ':':
+                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing option argument");
+                    Core::Usage();
+                    return false;
+                case '?':
+                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown option");
+                    Core::Usage();
+                    return false;
+            }
+        }
+
+        // After options we need 10 mandatory arguments
+        if(ac-optind < 10){
+            DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing some parameters");
             Core::Usage();
             return false;
         }
-        log.setName(av[1]);
-        _name = av[1];
-        _socketPath = av[2];
-        _modConfigPath = av[3];
-        _monSocketPath = av[4];
-        _pidPath = av[5];
-        _output = av[6];
-        _nextFilterUnixSocketPath = av[7];
-        if (!GetULArg(_nbThread, av[8]))
+
+        // MANDATORY ARGUMENTS
+        log.setName(av[optind]);
+        _name = av[optind];
+        _socketPath = av[optind + 1];
+        _modConfigPath = av[optind + 2];
+        _monSocketPath = av[optind + 3];
+        _pidPath = av[optind + 4];
+        _output = av[optind + 5];
+        _nextFilterUnixSocketPath = av[optind + 6];
+        if (!GetULArg(_nbThread, av[optind + 7]))
             return false;
-        if (!GetULArg(_cacheSize, av[9]))
+        if (!GetULArg(_cacheSize, av[optind + 8]))
             return false;
-        if (!GetULArg(_threshold, av[10]))
+        if (!GetULArg(_threshold, av[optind + 9]))
             return false;
-        if (ac > 11) {
-            if (!strncmp("-d", av[11], 2)) {
-                log.setLevel(logger::Debug);
-            } else if (!strncmp("-i", av[11], 2)) {
-                log.setLevel(logger::Info);
-            } else if (!strncmp("-n", av[11], 2)) {
-                log.setLevel(logger::Notice);
-            } else if (!strncmp("-w", av[11], 2)) {
-                log.setLevel(logger::Warning);
-            } else if (!strncmp("-e", av[11], 2)) {
-                log.setLevel(logger::Error);
-            } else if (!strncmp("-c", av[11], 2)) {
-                log.setLevel(logger::Critical);
-            } else if (!strncmp("-z", av[11], 2)) {
-                log.setLevel(logger::Debug);
-                DARWIN_LOG_DEBUG("Developer mode activated");
-                daemon = false;
-            }
-        }
 
         return true;
     }
@@ -146,15 +181,11 @@ namespace darwin {
                 << "  threshold\tInteger specifying the minimum certitude at which the filter will output a log."
                    "If it's over 100, take the filter's default threshold\n";
         std::cout << "\nOPTIONS\n";
-        std::cout
-                << "  -z\tDeveloper mode, does not create a daemon, set log level to debug"
-                << std::endl;
-        std::cout << "  -d\tSet log level to debug" << std::endl;
-        std::cout << "  -i\tSet log level to info" << std::endl;
-        std::cout << "  -n\tSet log level to notice" << std::endl;
-        std::cout << "  -w\tSet log level to warning (DEFAULT)" << std::endl;
-        std::cout << "  -e\tSet log level to error" << std::endl;
-        std::cout << "  -c\tSet log level to critical" << std::endl;
+        std::cout << "  -l\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n"
+                  << "    \tDefault is WARNING."
+                  << "    \tNOTE: DEVELOPER mode does not create a daemon and sets log level to DEBUG."
+                  << std::endl;
+        std::cout << "  -h\tPrint help" << std::endl;
     }
 
     bool Core::WritePID() {

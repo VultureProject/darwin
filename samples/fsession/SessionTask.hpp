@@ -26,7 +26,9 @@ extern "C" {
 
 
 #define DARWIN_FILTER_SESSION 0x73657373
-
+#define DARWIN_FILTER_NAME "session"
+#define DARWIN_ALERT_RULE_NAME "Session"
+#define DARWIN_ALERT_TAGS "[]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.

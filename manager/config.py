@@ -11,6 +11,7 @@ import json
 from jsonschema import validators, Draft7Validator
 import psutil
 
+
 logger = logging.getLogger()
 
 # Create a validator able to set defaults defined in schemas
@@ -217,7 +218,7 @@ class ConfParseError(Exception):
     pass
 
 
-def load_conf(conf=""):
+def load_conf(prefix, suffix, conf=""):
     global config_file
     global stats_reporting
     global filters
@@ -257,27 +258,29 @@ def load_conf(conf=""):
         filters.update(configuration)
         logger.debug("Configurator: loaded v1 config successfully")
 
-    complete_filters_conf()
+    complete_filters_conf(prefix, suffix)
 
-def complete_filters_conf():
+def complete_filters_conf(prefix, suffix):
     for name, filter in filters.items():
         if name and not filter.get('name'):
             filter['name'] = name
         filter['status'] = psutil.STATUS_WAKING
         filter['failures'] = 0
         filter['extension'] = '.1'
-        filter['pid_file'] = '/var/run/darwin/{filter}{extension}.pid'.format(filter=filter['name'], extension=filter['extension'])
+        filter['pid_file'] = '{prefix}/run{suffix}/{filter}{extension}.pid'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
 
         if not filter['next_filter']:
             filter['next_filter_unix_socket'] = 'no'
         else:
-            filter['next_filter_unix_socket'] = '/var/sockets/darwin/{next_filter}.sock'.format(
+            filter['next_filter_unix_socket'] = '{prefix}/sockets{suffix}/{next_filter}.sock'.format(
+                prefix=prefix, suffix=suffix,
                 next_filter=filter['next_filter']
             )
 
-        filter['socket'] = '/var/sockets/darwin/{filter}{extension}.sock'.format(filter=filter['name'], extension=filter['extension'])
-        filter['socket_link'] = '/var/sockets/darwin/{filter}.sock'.format(filter=filter['name'])
+        filter['socket'] = '{prefix}/sockets{suffix}/{filter}{extension}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
+        filter['socket_link'] = '{prefix}/sockets{suffix}/{filter}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'])
 
-        filter['monitoring'] = '/var/sockets/darwin/{filter}_mon{extension}.sock'.format(
+        filter['monitoring'] = '{prefix}/sockets{suffix}/{filter}_mon{extension}.sock'.format(
+            prefix=prefix, suffix=suffix,
             filter=filter['name'], extension=filter['extension']
         )

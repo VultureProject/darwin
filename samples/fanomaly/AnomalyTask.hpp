@@ -19,6 +19,9 @@
 #include "../../toolkit/lru_cache.hpp"
 
 #define DARWIN_FILTER_ANOMALY 0x414D4C59
+#define DARWIN_FILTER_NAME "anomaly"
+#define DARWIN_ALERT_RULE_NAME "Abnormal Number of Unique Port Connexion"
+#define DARWIN_ALERT_TAGS "[\"attack.discovery\", \"attack.t1046\", \"attack.command_and_control\", \"attack.defense_evasion\", \"attack.t1205\"]"
 
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
@@ -44,11 +47,14 @@ private:
     /// Generate the logs from the anomalies found
     void GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts);
 
+    /// Generate the alerts from the anomalies found
+    void GenerateAlerts(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts);
+
     /// The anomaly detection function
     bool Detection();
 
     /// Parse a line from the json body.
-    bool ParseLine(rapidjson::Value &cluster);
+    virtual bool ParseLine(rapidjson::Value &cluster) override final;
 
 private:
     // Indices of values in matrix (see variable "_data" below)

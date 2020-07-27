@@ -17,22 +17,8 @@
 #include "protocol.h"
 #include "AlertManager.hpp"
 
-AnomalyThreadManager::AnomalyThreadManager(std::string& redis_internal,
-                                            std::shared_ptr<darwin::toolkit::FileManager> log_file,
-                                            std::string& redis_alerts_channel,
-                                            std::string& redis_alerts_list)
-        : _log_file{log_file},
-        _redis_internal(redis_internal),
-        _redis_alerts_channel(redis_alerts_channel),
-        _redis_alerts_list(redis_alerts_list){
-            if(not _redis_alerts_list.empty() or not _redis_alerts_channel.empty()) {
-                _is_log_redis = true;
-            }
-
-            if(_log_file != nullptr) {
-                _is_log_file = true;
-            }
-        }
+AnomalyThreadManager::AnomalyThreadManager(std::string& redis_internal)
+        :_redis_internal(redis_internal) {}
 
 bool AnomalyThreadManager::Main(){
     DARWIN_LOGGER;
@@ -106,46 +92,17 @@ void AnomalyThreadManager::Detection(){
 
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
         STAT_MATCH_INC;
-        std::string log_line(R"({"time": ")" + darwin::time_utils::GetTime() + R"(", "filter": "tanomaly", )"
-                + R"("anomaly": {)"
-                + R"("ip": ")" + _ips[index_anomalies(i)] + "\","
+        std::string details(R"({"ip": ")" + _ips[index_anomalies(i)] + "\","
                 + R"("udp_nb_host": )" + std::to_string(alerts(UDP_NB_HOST, i)) + ","
                 + R"("udp_nb_port": )" + std::to_string(alerts(UDP_NB_PORT, i)) + ","
                 + R"("tcp_nb_host": )" + std::to_string(alerts(TCP_NB_HOST, i)) + ","
                 + R"("tcp_nb_port": )" + std::to_string(alerts(TCP_NB_PORT, i)) + ","
                 + R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ","
                 + R"("distance": )" + std::to_string(alerts(DISTANCE, i))
-                + "}}");
-        DARWIN_RAISE_ALERT(log_line);
-        if(_is_log_redis) {
-            WriteRedis(log_line + '\n');
-        }
+                + "}");
+        DARWIN_ALERT_MANAGER.Alert(_ips[index_anomalies(i)], 100, "-", details);
     }
     _matrix.reset();
-}
-
-//TODO Legacy function, bound to disapear
-bool AnomalyThreadManager::WriteRedis(const std::string& log_line){
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Starting writing alerts in Redis...");
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-
-    if(not _redis_alerts_list.empty()) {
-        DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Writing to Redis list: " + _redis_alerts_list);
-        if(redis.Query(std::vector<std::string>{"LPUSH", _redis_alerts_list, log_line}, true) == REDIS_REPLY_ERROR) {
-            DARWIN_LOG_WARNING("AnomalyThreadManager::REDISAddLogs:: Failed to add log in Redis !");
-            return false;
-        }
-    }
-
-    if(not _redis_alerts_channel.empty()) {
-        DARWIN_LOG_DEBUG("AnomalyThread::WriteRedis:: Writing to Redis channel" + _redis_alerts_channel);
-        if(redis.Query(std::vector<std::string>{"PUBLISH", _redis_alerts_channel, log_line}, true) == REDIS_REPLY_ERROR) {
-            DARWIN_LOG_WARNING("AnomalyThreadManager::REDISAddLogs:: Failed to publish log in Redis !");
-            return false;
-        }
-    }
-    return true;
 }
 
 void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){

@@ -50,6 +50,13 @@ def run():
         json_db_no_entry_field,
         json_db_no_usable_entry_field,
         json_db_wrong_entry_type,
+        rsyslog_db_no_table,
+        rsyslog_db_empty_table,
+        rsyslog_db_no_value,
+        rsyslog_db_no_index,
+        rsyslog_db_wrong_index_type,
+        rsyslog_db_wrong_value_type,
+        rsyslog_db_no_viable_entry,
         exec_one_good,
         exec_one_bad,
         exec_one_bad_no_score,
@@ -60,6 +67,9 @@ def run():
         exec_multiple_bad,
         exec_one_bad_multiple_good,
         exec_multiple_bad_multiple_good,
+        exec_rsyslog_int_multiple_bad_multiple_good,
+        exec_rsyslog_str_multiple_bad_multiple_good,
+        exec_rsyslog_mix_multiple_bad_multiple_good,
         exec_text_multiple_bad_multiple_good,
         exec_no_db_type_multiple_bad_multiple_good,
     ]
@@ -286,6 +296,143 @@ def json_db_wrong_entry_type():
     return True
 
 
+def rsyslog_db_no_table():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_empty_table():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": []
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_no_value():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": [
+            {"index": "bad_host_1"},
+        ]
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_no_index():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": [
+            {"value": 84},
+        ]
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_wrong_index_type():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": [
+            {"index": 42, "value": 84},
+        ]
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_wrong_value_type():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": [
+            {"index": "bad_host_1", "value": []},
+        ]
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
+def rsyslog_db_no_viable_entry():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "version": 1,
+        "nomatch": "unk",
+        "type": "string",
+        "table": [
+            {"index": 42, "value": 84},
+            {"index": "bad_host_2", "value": []},
+            {"index": "bad_host_3", "value": 42.42},
+        ]
+    })
+    hostlookup_filter.configure(db_type="rsyslog")
+
+    # START FILTER
+    if hostlookup_filter.valgrind_start():
+        return False
+    return True
+
+
 def exec_one_good():
     return test(
         "exec_one_good",
@@ -464,6 +611,81 @@ def exec_multiple_bad_multiple_good():
             ["good_host_3"],
         ],
         [0, 42, 0, 84, 0]
+    )
+
+
+def exec_rsyslog_int_multiple_bad_multiple_good():
+    return test(
+        "exec_multiple_bad_multiple_good",
+        {
+            "version": 1,
+            "nomatch": "unk",
+            "type": "string",
+            "table": [
+                {"index": "bad_host_1", "value": 84},
+                {"index": "bad_host_2", "value": 42},
+                {"index": "bad_host_3", "value": 100},
+            ]
+        },
+        [
+            ["good_host_1"],
+            ["bad_host_2"],
+            ["good_host_2"],
+            ["bad_host_1"],
+            ["good_host_3"],
+        ],
+        [0, 42, 0, 84, 0],
+        db_type="rsyslog"
+    )
+
+
+def exec_rsyslog_str_multiple_bad_multiple_good():
+    return test(
+        "exec_multiple_bad_multiple_good",
+        {
+            "version": 1,
+            "nomatch": "unk",
+            "type": "string",
+            "table": [
+                {"index": "bad_host_1", "value": "host_1"},
+                {"index": "bad_host_2", "value": "host_2"},
+                {"index": "bad_host_3", "value": "host_3"},
+            ]
+        },
+        [
+            ["good_host_1"],
+            ["bad_host_2"],
+            ["good_host_2"],
+            ["bad_host_1"],
+            ["good_host_3"],
+        ],
+        [0, 100, 0, 100, 0],
+        db_type="rsyslog"
+    )
+
+
+def exec_rsyslog_mix_multiple_bad_multiple_good():
+    return test(
+        "exec_multiple_bad_multiple_good",
+        {
+            "version": 1,
+            "nomatch": "unk",
+            "type": "string",
+            "table": [
+                {"index": "bad_host_1", "value": 84},
+                {"index": "bad_host_2", "value": "host_2"},
+                {"index": "bad_host_3", "value": 100},
+            ]
+        },
+        [
+            ["good_host_1"],
+            ["bad_host_2"],
+            ["good_host_2"],
+            ["bad_host_1"],
+            ["good_host_3"],
+        ],
+        [0, 100, 0, 84, 0],
+        db_type="rsyslog"
     )
 
 
