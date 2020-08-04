@@ -49,11 +49,20 @@ namespace darwin {
             YaraResults GetResults();
 
         private:
+#if YR_MAJOR_VERSION == 3
             /// A callback to get information from the yara library during the scan
             /// \param message the type of message received
             /// \param messageData a pointer on the data returned, depending on _message_
             /// \param userData a pointer on previously configured data to return with the message
             static int ScanOrImportCallback(int message, void *messageData, void *userData);
+#elif YR_MAJOR_VERSION == 4
+            /// A callback to get information from the yara library during the scan
+            /// \param context unused necessary parameter for yara API v4
+            /// \param message the type of message received
+            /// \param messageData a pointer on the data returned, depending on _message_
+            /// \param userData a pointer on previously configured data to return with the message
+            static int ScanOrImportCallback(YR_SCAN_CONTEXT *context, int message, void *messageData, void *userData);
+#endif
 
             /// A simple function to add a rule to the list of matching rules
             /// \param rule a pointer on the rule to add
@@ -109,7 +118,12 @@ namespace darwin {
             std::shared_ptr<YaraEngine> GetEngine(bool fastmode = false, int timeout = 0);
 
         private:
+#if YR_MAJOR_VERSION == 3
             static void YaraErrorCallback(int errorLevel, const char *filename, int lineNumber, const char *message, void *userData);
+#elif YR_MAJOR_VERSION == 4
+            static void YaraErrorCallback(int errorLevel, const char *filename, int lineNumber, const YR_RULE *rule, const char *message, void *userData);
+#endif
+
 
         private:
             YR_COMPILER *_compiler = nullptr; //Yara compiler
