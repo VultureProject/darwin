@@ -101,8 +101,14 @@ int yaraDeleteConfig(YaraCnf *);
 int yaraAddRuleFile(FILE *, const char *, const char *);
 int yaraCompileRules();
 YaraResults yaraScan(uint8_t *, uint32_t, StreamBuffer *);
+
+#if YR_MAJOR_VERSION == 3
 void yaraErrorCallback(int, const char *, int, const char *, void *);
 int yaraScanOrImportCallback(int, void *, void *);
+#elif YR_MAJOR_VERSION == 4
+void yaraErrorCallback(int, const char *, int, const YR_RULE *, const char *, void *);
+int yaraScanOrImportCallback(YR_SCAN_CONTEXT *, int, void *, void *);
+#endif
 
 #ifdef __cplusplus
 };

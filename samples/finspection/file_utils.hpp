@@ -45,9 +45,7 @@ extern "C" {
 #include <pthread.h>
 #include <libgen.h>
 
-#ifdef __gnu_linux__
 #include <assert.h>
-#endif
 
 typedef struct FileStruct_ {
     char *directory;
