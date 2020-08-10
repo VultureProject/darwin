@@ -51,6 +51,7 @@ class Services:
                         self.stop_one(filter, no_lock=True)
                         self.clean_one(filter, no_lock=True)
                     else:
+                        logger.debug("Linking UNIX sockets...")
                         filter['status'] = psutil.STATUS_RUNNING
                         call(['ln', '-s', filter['socket'], filter['socket_link']])
 
@@ -69,11 +70,15 @@ class Services:
         """
         Stop all the filters
         """
+        logger.debug("stop_all: before lock")
         with self._lock:
+            logger.debug("stop_all: after lock")
             for _, filter in self._filters.items():
                 try:
                     self.stop_one(filter, True)
+                    logger.debug("stop_all: after stop_one")
                     self.clean_one(filter, True)
+                    logger.debug("stop_all: after clean_one")
                 except Exception:
                     pass
 
@@ -93,8 +98,20 @@ class Services:
         :return: The formatted command.
         """
 
-        cmd = [
-            filt['exec_path'],
+        cmd = [filt['exec_path']]
+
+        try:
+            if filt['log_level'] not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DEVELOPER"]:
+                logger.warning(
+                    'Invalid log level argument provided: "{log_level}". Ignoring'.format(filt['log_level'])
+                )
+            else:
+                cmd.append('-l')
+                cmd.append(filt['log_level'])
+        except KeyError:
+            pass
+
+        cmd += [
             filt['name'],
             filt['socket'],
             filt['config_file'],
@@ -106,28 +123,6 @@ class Services:
             str(filt['cache_size']),
             str(filt['threshold']),
         ]
-
-        try:
-            log_level = filt['log_level'].lower()
-
-            if log_level == "debug":
-                cmd.append('-d')
-            elif log_level == "info":
-                cmd.append('-i')
-            elif log_level == "warning":
-                cmd.append('-w')
-            elif log_level == "error":
-                cmd.append('-e')
-            elif log_level == "critical":
-                cmd.append('-c')
-            elif log_level == "developer":
-                cmd.append('-z')
-            else:
-                logger.warning(
-                    'Invalid log level argument provided: "{log_level}". Ignoring'.format(log_level)
-                )
-        except KeyError:
-            pass
 
         return cmd
 
@@ -325,7 +320,7 @@ class Services:
             filter['status'] = psutil.STATUS_RUNNING
             call(['ln', '-s', filter['socket'], filter['socket_link']])
 
-    def update(self, names):
+    def update(self, names, prefix, suffix):
         """
         Update the filters which name are contained in names
         configuration and process.
@@ -337,7 +332,7 @@ class Services:
         logger.debug("Update: Trying to open config file")
         try:
             #Reload conf, global variable 'conf_filters' will be updated
-            load_conf()
+            load_conf(prefix, suffix)
         except ConfParseError:
             error = "Update: wrong configuration format, unable to update"
             logger.error(error)
@@ -370,15 +365,18 @@ class Services:
                 except KeyError:
                     new[n]['failures'] = 0
 
-                new[n]['pid_file'] = '/var/run/darwin/{name}{extension}.pid'.format(
+                new[n]['pid_file'] = '{prefix}/run{suffix}/{name}{extension}.pid'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
-                new[n]['socket'] = '/var/sockets/darwin/{name}{extension}.sock'.format(
+                new[n]['socket'] = '{prefix}/sockets{suffix}/{name}{extension}.sock'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 
-                new[n]['monitoring'] = '/var/sockets/darwin/{name}_mon{extension}.sock'.format(
+                new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
+                    prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
 

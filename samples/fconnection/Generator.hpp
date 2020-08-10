@@ -28,6 +28,7 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
 
 private:
     bool ConfigRedis(const std::string &redis_socket_path,

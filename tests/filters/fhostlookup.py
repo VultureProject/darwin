@@ -11,15 +11,24 @@ class HostLookup(Filter):
         super().__init__(filter_name="hostlookup", thresold=80)
         self.database = "/tmp/database.txt".format(self.filter_name)
 
-    def configure(self):
-        content = '{{\n' \
+    def configure(self, db_type="json"):
+        if not db_type:
+            content = '{{\n' \
                   '"database": "{database}"\n' \
                   '}}'.format(database=self.database)
+        else:
+            content = '{{\n' \
+                      '"database": "{database}",\n' \
+                      '"db_type": "{db_type}"\n' \
+                      '}}'.format(database=self.database, db_type=db_type)
         super(HostLookup, self).configure(content)
 
     def init_data(self, data):
         with open(self.database, mode='w') as file:
-            file.write(json.dumps(data))
+            if type(data) == dict:
+                file.write(json.dumps(data))
+            else:
+                file.write(data)
 
     def clean_files(self):
         super(HostLookup, self).clean_files()
@@ -32,14 +41,15 @@ class HostLookup(Filter):
 
 def run():
     tests = [
-        db_no_feed_name,
-        db_wrong_feed_name_type,
-        db_no_data_field,
-        db_wrong_data_type,
-        db_empty_data,
-        db_no_entry_field,
-        db_no_usable_entry_field,
-        db_wrong_entry_type,
+        bad_db_type,
+        json_db_no_feed_name,
+        json_db_wrong_feed_name_type,
+        json_db_no_data_field,
+        json_db_wrong_data_type,
+        json_db_empty_data,
+        json_db_no_entry_field,
+        json_db_no_usable_entry_field,
+        json_db_wrong_entry_type,
         exec_one_good,
         exec_one_bad,
         exec_one_bad_no_score,
@@ -49,21 +59,23 @@ def run():
         exec_multiple_good,
         exec_multiple_bad,
         exec_one_bad_multiple_good,
-        exec_multiple_bad_multiple_good
+        exec_multiple_bad_multiple_good,
+        exec_text_multiple_bad_multiple_good,
+        exec_no_db_type_multiple_bad_multiple_good,
     ]
 
     for i in tests:
         print_result("hostlookup: " + i.__name__, i)
 
 
-def test(test_name, init_data, data, expected_certitudes):
+def test(test_name, init_data, data, expected_certitudes, db_type="json"):
     ret = True
 
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
     hostlookup_filter.init_data(init_data)
-    hostlookup_filter.configure()
+    hostlookup_filter.configure(db_type=db_type)
 
     # START FILTER
     if not hostlookup_filter.valgrind_start():
@@ -109,7 +121,26 @@ def test(test_name, init_data, data, expected_certitudes):
     return ret
 
 
-def db_no_feed_name():
+def bad_db_type():
+    # CONFIG
+    hostlookup_filter = HostLookup()
+    # All the trusted hosts
+    hostlookup_filter.init_data({
+        "data": [
+            {"entry": "bad_host_1", "score": 84},
+            {"entry": "bad_host_2", "score": 42},
+            {"entry": "bad_host_3", "score": 100},
+        ]
+    })
+    hostlookup_filter.configure(db_type="foobar")
+
+    # START FILTER
+    if not hostlookup_filter.valgrind_start():
+        return True
+    return False
+
+
+def json_db_no_feed_name():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -128,7 +159,7 @@ def db_no_feed_name():
     return False
 
 
-def db_wrong_feed_name_type():
+def json_db_wrong_feed_name_type():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -148,7 +179,7 @@ def db_wrong_feed_name_type():
     return False
 
 
-def db_no_data_field():
+def json_db_no_data_field():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -163,7 +194,7 @@ def db_no_data_field():
     return False
 
 
-def db_wrong_data_type():
+def json_db_wrong_data_type():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -179,7 +210,7 @@ def db_wrong_data_type():
     return False
 
 
-def db_empty_data():
+def json_db_empty_data():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -195,7 +226,7 @@ def db_empty_data():
     return False
 
 
-def db_no_entry_field():
+def json_db_no_entry_field():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -215,7 +246,7 @@ def db_no_entry_field():
     return True
 
 
-def db_no_usable_entry_field():
+def json_db_no_usable_entry_field():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -235,7 +266,7 @@ def db_no_usable_entry_field():
     return False
 
 
-def db_wrong_entry_type():
+def json_db_wrong_entry_type():
     # CONFIG
     hostlookup_filter = HostLookup()
     # All the trusted hosts
@@ -433,4 +464,42 @@ def exec_multiple_bad_multiple_good():
             ["good_host_3"],
         ],
         [0, 42, 0, 84, 0]
+    )
+
+
+def exec_text_multiple_bad_multiple_good():
+    return test(
+        "exec_multiple_bad_multiple_good",
+        """bad_host_1
+bad_host_2
+bad_host_3"""
+        ,
+        [
+            ["good_host_1"],
+            ["bad_host_2"],
+            ["good_host_2"],
+            ["bad_host_1"],
+            ["good_host_3"],
+        ],
+        [0, 100, 0, 100, 0],
+        db_type="text"
+    )
+
+
+def exec_no_db_type_multiple_bad_multiple_good():
+    return test(
+        "exec_multiple_bad_multiple_good",
+        """bad_host_1
+bad_host_2
+bad_host_3"""
+        ,
+        [
+            ["good_host_1"],
+            ["bad_host_2"],
+            ["good_host_2"],
+            ["bad_host_1"],
+            ["good_host_3"],
+        ],
+        [0, 100, 0, 100, 0],
+        db_type=None
     )

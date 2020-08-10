@@ -16,6 +16,7 @@ FTEST_CONF_TEMPLATE = """{{
     "redis_channel_name": "{2}"
 }}""".format(REDIS_SOCKET_PATH, REDIS_LIST_NAME, REDIS_CHANNEL_NAME)
 
+
 def run():
     tests = [
         simple_master_server,
@@ -37,9 +38,9 @@ def run():
 def simple_master_server():
     master = RedisServer(unix_socket=REDIS_SOCKET_PATH)
 
-    filter = Filter()
+    filter = Filter(filter_name='test')
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         filter.send_single(REDIS_LIST_TRIGGER)
@@ -65,9 +66,9 @@ def master_replica():
     master = RedisServer(address="127.0.0.1", port=1234)
     replica = RedisServer(address="127.0.0.1", port=1235, unix_socket=REDIS_SOCKET_PATH, master=master)
 
-    filter = Filter()
+    filter = Filter(filter_name='test')
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     master.channel_subscribe(REDIS_CHANNEL_NAME)
 
@@ -99,9 +100,9 @@ def master_replica_master_temp_fail():
     master = RedisServer(address="127.0.0.1", port=1234)
     replica = RedisServer(address="127.0.0.1", unix_socket=REDIS_SOCKET_PATH, master=master)
 
-    filter = Filter()
+    filter = Filter(filter_name='test')
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -155,9 +156,9 @@ def master_replica_transfer(function_name, healthcheck):
     master = RedisServer(address="127.0.0.1", port=1234)
     replica = RedisServer(address="127.0.0.1", port=1235, unix_socket=REDIS_SOCKET_PATH, master=master)
 
-    filter = Filter()
+    filter = Filter(filter_name='test')
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -213,9 +214,9 @@ def master_replica_failover(function_name, healthcheck):
     master = RedisServer(address="127.0.0.1", port=1234)
     replica = RedisServer(unix_socket=REDIS_SOCKET_PATH, master=master)
 
-    filter = Filter()
+    filter = Filter(filter_name='test')
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     try:
         # success
@@ -269,9 +270,9 @@ def master_replica_failover_with_healthcheck():
 def multi_thread_master():
     master = RedisServer(unix_socket=REDIS_SOCKET_PATH)
 
-    filter = Filter(nb_threads=5)
+    filter = Filter(filter_name='test', nb_threads=5)
     filter.configure(FTEST_CONF_TEMPLATE)
-    filter.start()
+    filter.valgrind_start()
 
     thread_list = []
     def thread_brute(filter, count_log):
@@ -309,7 +310,7 @@ def master_replica_discovery_rate_limiting():
     master = RedisServer(address="127.0.0.1", port=1234)
     replica = RedisServer(unix_socket=REDIS_SOCKET_PATH, master=master)
 
-    filter = Filter(nb_threads=5)
+    filter = Filter(filter_name='test', nb_threads=5)
     filter.configure(FTEST_CONF_TEMPLATE)
     filter.start()
 

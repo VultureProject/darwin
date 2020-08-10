@@ -14,14 +14,30 @@
 #include "TestTask.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
+#include "AlertManager.hpp"
 
+bool Generator::ConfigureAlerting(const std::string& tags) {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("Test:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("Test:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Test:: Generator:: Loading Configuration...");
-
     std::string redis_socket_path;
 
+    if (configuration.HasMember("fail_config"))
+        return false;
     if(configuration.HasMember("redis_socket_path")) {
         if (configuration["redis_socket_path"].IsString()) {
             redis_socket_path = configuration["redis_socket_path"].GetString();

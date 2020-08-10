@@ -1,0 +1,220 @@
+# FAUP
+FROM ubuntu:18.04 AS faup_builder
+ARG FAUP_VERSION
+
+WORKDIR /root
+RUN apt-get update && apt-get install -y\
+ wget\
+ cmake\
+ g++\
+ pkg-config
+RUN wget https://github.com/stricaud/faup/archive/v${FAUP_VERSION}.tar.gz \
+ && mkdir faup \
+ && tar xvf v${FAUP_VERSION}.tar.gz -C faup --strip-components 1 \
+ && mkdir faup/build || true \
+ && cd faup/build \
+ && cmake .. \
+ && make -j2 install DESTDIR=../install
+
+
+
+# BOOST
+FROM ubuntu:18.04 as boost_builder
+ARG BOOST_VERSION
+
+WORKDIR /root
+RUN apt-get update && apt-get install -y\
+ wget\
+ cmake\
+ g++\
+ pkg-config\
+ ca-certificates\
+ && rm -rf /var/lib/apt/lists/*
+RUN BOOST_UNDERSCORE_VERSION=`echo ${BOOST_VERSION} | tr . _` \
+ && wget https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_UNDERSCORE_VERSION}.tar.gz \
+ && mkdir boost \
+ && tar xvf boost_${BOOST_UNDERSCORE_VERSION}.tar.gz -C boost --strip-components 1 \
+ && cd boost \
+ && ./bootstrap.sh --with-libraries="math,program_options,serialization,system,test" --prefix=./install  \
+ && ./b2 install
+
+
+
+# MLPACK
+FROM ubuntu:18.04 AS mlpack_builder
+ARG ARMADILLO_VERSION
+ARG MLPACK_VERSION
+
+WORKDIR /root
+COPY --from=boost_builder /root/boost/install/ /usr/local/
+RUN apt-get update && apt-get install -y\
+ wget\
+ cmake\
+ g++\
+ git\
+ liblapacke-dev\
+ libopenblas-dev\
+ ca-certificates\
+ && rm -rf /var/lib/apt/lists/*
+RUN wget https://gitlab.com/conradsnicta/armadillo-code/-/archive/${ARMADILLO_VERSION}/armadillo-code-${ARMADILLO_VERSION}.tar.gz \
+ && mkdir armadillo-code \
+ && tar xvf armadillo-code-${ARMADILLO_VERSION}.tar.gz -C armadillo-code --strip-components 1
+RUN wget https://github.com/mlpack/mlpack/archive/${MLPACK_VERSION}.tar.gz \
+ && mkdir mlpack \
+ && tar xvf ${MLPACK_VERSION}.tar.gz -C mlpack --strip-components 1 \
+ && cd mlpack\
+ && mkdir build\
+ && cd build\
+ && cmake .. -DBUILD_TESTS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DFORCE_CXX11=ON -DUSE_OPENMP=ON -DBUILD_SHARED_LIBS=OFF -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/ -DCMAKE_INSTALL_PREFIX:PATH=../install\
+ && make -j2 install
+
+
+
+#TENSORFLOW
+FROM ubuntu:18.04 AS tensorflow_builder
+ARG TF_VERSION
+#disable optimisations done for "recent" processor architectures
+ENV CC_OPT_FLAGS="-march=native"
+
+RUN apt-get update && apt-get install -y \
+ build-essential \
+ curl \
+ git \
+ cmake \
+ unzip \
+ autoconf \
+ autogen \
+ libtool \
+ mlocate \
+ zlib1g-dev \
+ g++-7 \
+ python \
+ python3-numpy \
+ python3-dev \
+ python3-pip \
+ python3-wheel \
+ sudo \
+ wget && rm -rf /var/lib/apt/lists/*
+RUN wget https://github.com/FloopCZ/tensorflow_cc/archive/v${TF_VERSION}.tar.gz \
+ && mkdir tensorflow_cc \
+ && tar xvf v${TF_VERSION}.tar.gz -C tensorflow_cc --strip-components 1 \
+ && cd tensorflow_cc/tensorflow_cc \
+ && mkdir build && cd build \
+ && cmake .. \
+ && make install
+
+# YARA
+FROM ubuntu:18.04 AS yara_builder
+ARG YARA_VERSION
+
+WORKDIR /root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ ca-certificates\
+ libjansson-dev\
+ libmagic-dev\
+ libssl-dev\
+ libpcre3\
+ make\
+ g++\
+ wget\
+ autoconf\
+ automake\
+ libtool
+
+RUN wget https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz \
+ && mkdir yara \
+ && tar xvf v${YARA_VERSION}.tar.gz -C yara --strip-components 1 \
+ && cd yara\
+ && ./bootstrap.sh\
+ && ./configure\
+ && make -j2 install DESTDIR=`pwd`/install
+
+
+
+# DARWIN dev image
+FROM ubuntu:18.04 AS darwin_builder
+
+RUN mkdir -p var/sockets/darwin \
+ && mkdir -p /var/run/darwin \
+ && mkdir -p /var/log/darwin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ ca-certificates\
+ libevent-dev\
+ libmaxminddb-dev\
+ libhiredis-dev\
+ libssl-dev\
+ liblapacke-dev\
+ libopenblas-dev\
+ cmake\
+ pkg-config\
+ g++\
+ git\
+ redis\
+ python3-dev\
+ python3-pip\
+ python3-setuptools\
+ python3-wheel &&\
+ rm -rf /var/lib/apt/lists/*
+
+COPY --from=faup_builder /root/faup/install/ /
+COPY --from=mlpack_builder /root/mlpack/install/ /
+COPY --from=mlpack_builder /root/armadillo-code/ /root/armadillo-code/
+COPY --from=boost_builder /root/boost/install/ /usr/local/
+COPY --from=tensorflow_builder /usr/local/lib/tensorflow_cc /usr/local/lib/tensorflow_cc
+COPY --from=tensorflow_builder /usr/local/include/tensorflow /usr/local/include/tensorflow
+COPY --from=tensorflow_builder /usr/local/lib/cmake/TensorflowCC /usr/local/lib/cmake/TensorflowCC
+COPY --from=yara_builder /root/yara/install/ /
+
+COPY . /home/darwin
+WORKDIR /home/darwin
+
+RUN mkdir filters || rm -rf filters/*\
+ && cd filters \
+ && cmake .. -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/\
+ && make -j2
+RUN pip3 install -r manager/requirements.txt\
+ && pip3 install -r tests/requirements.txt
+
+
+
+FROM ubuntu:18.04 AS darwin
+RUN mkdir -p /var/sockets/darwin \
+ && mkdir -p /var/run/darwin \
+ && mkdir -p /var/log/darwin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ libevent-2.1 \
+ libmaxminddb0 \
+ libhiredis0.13 \
+ liblapacke \
+ libopenblas-base \
+ libgomp1 \
+ python3 \
+ python3-pip \
+ python3-setuptools \
+ python3-wheel \
+ python3-psutil \
+ python3-redis \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install jsonschema==3.2.0
+
+COPY --from=faup_builder /root/faup/install/usr/local/lib/libfaup.so* /usr/local/lib/
+COPY --from=faup_builder /root/faup/install/usr/local/share/faup/ /usr/local/share/faup
+COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara.so* /usr/local/lib/
+COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
+COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
+COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
+
+RUN find /home/darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
+
+WORKDIR /home/darwin
+ENV LOGLEVEL WARNING
+CMD sh -c "python3 ./manager/manager.py -l ${LOGLEVEL} /home/darwin/conf/darwin.conf"
+VOLUME ["/home/darwin/conf"]
+VOLUME ["/var/sockets/darwin"]
+VOLUME ["/var/log/darwin"]
+
+# define default final image
+FROM darwin

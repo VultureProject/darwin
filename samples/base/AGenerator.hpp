@@ -41,6 +41,13 @@ protected:
     /// \return True on success, false on failure.
     virtual bool LoadConfig(const rapidjson::Document &configuration) = 0;
 
+    /// Configure the Alerting with the informations provided by the filter.
+    /// It is used to configure the alert's filter_name, rule_name and tags.
+    ///
+    /// \param tags The custom tags set by the user. If empty, set default tags.
+    /// \return true if everything went right, false otherwise.
+    virtual bool ConfigureAlerting(const std::string& tags) = 0;
+
 // Final methods and abstract attributes
 public:
     /// Configure the generator from file and create cache.
@@ -59,6 +66,15 @@ private:
     /// \param configuration_file_path Path to the configuration path.
     /// \return True on success, false on failure.
     virtual bool ReadConfig(const std::string &configuration_file_path) final;
+
+    /// Extract the "alert_tags" optional string list from the conf and
+    /// store it in the `tags` parameter.
+    ///
+    /// \param configuration The rapidjson object containing the parsed configuration
+    /// \param tags The string to receive the configured tags
+    /// \return true if custom tags were found, false otherwise
+    virtual bool ExtractCustomAlertingTags(const rapidjson::Document &configuration,
+                                           std::string& tags);
 
 protected:
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; //!< The cache for already processed request

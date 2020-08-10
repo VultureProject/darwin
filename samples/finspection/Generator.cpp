@@ -12,6 +12,7 @@
 #include "../../toolkit/rapidjson/document.h"
 #include "base/Logger.hpp"
 #include "Generator.hpp"
+#include "AlertManager.hpp"
 
 Generator::Generator() {
     poolStorage = initPoolStorage();
@@ -27,6 +28,21 @@ Generator::Generator() {
     startMemoryManager(_memoryManager);
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ContentInspection:: Generator:: successfully initialised");
+}
+
+bool Generator::ConfigureAlerting(const std::string& tags) {
+    DARWIN_LOGGER;
+
+    DARWIN_LOG_DEBUG("ContentInspection:: ConfigureAlerting:: Configuring Alerting");
+    DARWIN_ALERT_MANAGER_SET_FILTER_NAME(DARWIN_FILTER_NAME);
+    DARWIN_ALERT_MANAGER_SET_RULE_NAME(DARWIN_ALERT_RULE_NAME);
+    if (tags.empty()) {
+        DARWIN_LOG_DEBUG("ContentInspection:: ConfigureAlerting:: No alert tags provided in the configuration. Using default.");
+        DARWIN_ALERT_MANAGER_SET_TAGS(DARWIN_ALERT_TAGS);
+    } else {
+        DARWIN_ALERT_MANAGER_SET_TAGS(tags);
+    }
+    return true;
 }
 
 bool Generator::LoadConfig(const rapidjson::Document &config) {
@@ -155,7 +171,6 @@ bool Generator::LoadConfig(const rapidjson::Document &config) {
 darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
-    DARWIN_LOGGER;
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<ContentInspectionTask>(socket, manager, _cache, _cache_mutex, _configurations));
 }

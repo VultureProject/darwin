@@ -5,12 +5,17 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
+#pragma once
+
 #include <string>
 #include "../../toolkit/FileManager.hpp"
 #include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/rapidjson/document.h"
 
-#define DARWIN_RAISE_ALERT(str) darwin::AlertManager::instance().Alert(str)
+#define DARWIN_ALERT_MANAGER darwin::AlertManager::instance()
+#define DARWIN_ALERT_MANAGER_SET_RULE_NAME(str) darwin::AlertManager::instance().SetRuleName(str)
+#define DARWIN_ALERT_MANAGER_SET_FILTER_NAME(str) darwin::AlertManager::instance().SetFilterName(str)
+#define DARWIN_ALERT_MANAGER_SET_TAGS(str) darwin::AlertManager::instance().SetTags(str)
 
 /// \namespace darwin
 namespace darwin {
@@ -30,14 +35,49 @@ namespace darwin {
         /// \param message The alert message.
         void Alert(const std::string& message);
 
+        /// Raise an alert with the given informations.
+        ///
+        /// \param entry The entry that trigered the alert
+        /// \param certitude The score associated to the entry
+        /// \param evt_id The unique id of the event associated to the alert
+        /// \param details A 1 level JSON containing details about the alert
+        /// \param tags A list containing the tags of the alert
+        void Alert(const std::string& entry,
+                   const unsigned int certitude,
+                   const std::string& evt_id,
+                   const std::string& details = "{}",
+                   const std::string& tags = "");
+
         /// Configures the AlertManager alerting canals.
         ///
         /// \param configuration The json object containig the whole filter configuration.
         /// \return True on success, false if no alerting canal was configured.
         bool Configure(const rapidjson::Document &configuration);
 
+        inline void SetRuleName(std::string const& rule_name) {
+            this->_rule_name = rule_name;
+        }
+
+        inline void SetFilterName(std::string const& filter_name) {
+            this->_filter_name = filter_name;
+        }
+
+        inline void SetTags(std::string const& tags) {
+            this->_tags = tags;
+        }
+
         /// Close and reopen the alert file to handle log rotate
         void Rotate();
+
+    protected:
+        /// \brief Create the alert JSON
+        /// \param detail A string containing the details json. Defaul is an empty JSON ("{}").
+        /// \return A string containing the alert JSON to log
+        virtual std::string FormatLog(const std::string& entry,
+                                      const unsigned int certitude,
+                                      const std::string& evt_id,
+                                      const std::string& details = "{}",
+                                      const std::string& tags = "") const;
 
     private:
         /// \brief This is the constructor of AlertManager object.
@@ -91,10 +131,13 @@ namespace darwin {
         /// \return True on success, false on error
         bool REDISAddLogs(const std::string& logs);
 
-    private:
+    protected:
         static constexpr unsigned int RETRY = 1;
         bool _log; // If the filter will stock the data in a log file
         bool _redis; // If the filter will stock the data in a REDIS
+        std::string _filter_name;
+        std::string _rule_name;
+        std::string _tags;
         std::string _log_file_path;
         std::string _redis_list_name;
         std::string _redis_channel_name;

@@ -25,7 +25,7 @@ HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& sock
                                std::mutex& cache_mutex,
                                tsl::hopscotch_map<std::string, int>& db,
                                const std::string& feed_name)
-        : Session{"host_lookup", socket, manager, cache, cache_mutex}, _database{db},
+        : Session{"hostlookup", socket, manager, cache, cache_mutex}, _database{db},
         _feed_name{feed_name} {
     _is_cache = _cache != nullptr;
 }
@@ -57,12 +57,11 @@ void HostLookupTask::operator()() {
 
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
-                        STAT_MATCH_INC;"description": "<threat_description>", 
-
-      
-                        std::string alert_log = this->BuildAlert(_host, certitude);
-                        DARWIN_RAISE_ALERT(alert_log);
+                        STAT_MATCH_INC;
+                        DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails());
                         if (is_log) {
+                            std::string alert_log = this->BuildAlert(_host, certitude);
+                            _logs += alert_log + "\n";
                         }
                     }
                     _certitudes.push_back(certitude);
@@ -75,8 +74,9 @@ void HostLookupTask::operator()() {
             certitude = DBLookup();
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 STAT_MATCH_INC;
-                std::string alert_log = this->BuildAlert(_host, certitude);
+                DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails());
                 if (is_log){
+                    std::string alert_log = this->BuildAlert(_host, certitude);
                     _logs += alert_log + "\n";
                 }
             }
@@ -93,6 +93,17 @@ void HostLookupTask::operator()() {
         DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
     }
+}
+
+const std::string HostLookupTask::AlertDetails(std::string const& description) {
+    std::stringstream ss;
+
+    ss << "{\"feed_name\": \"" << this->_feed_name << "\"";
+    if (not description.empty()) {
+        ss << ", \"description\": \"" << description << "\"";
+    }
+    ss << "}";
+    return ss.str();
 }
 
 const std::string HostLookupTask::BuildAlert(const std::string& host,

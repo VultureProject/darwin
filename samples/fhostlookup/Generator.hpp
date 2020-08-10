@@ -13,6 +13,7 @@
 
 #include "Session.hpp"
 #include "AGenerator.hpp"
+#include "HostLookupTask.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "../toolkit/Files.hpp"
@@ -30,8 +31,12 @@ public:
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
-    bool LoadDatabase(const rapidjson::Document& database);
-    bool LoadEntry(const rapidjson::Value& entry);
+    virtual bool ConfigureAlerting(const std::string& tags) override final;
+
+    bool LoadTextFile(const std::string& filename);
+    bool LoadJsonFile(const std::string& filename);
+    bool LoadJsonDatabase(const rapidjson::Document& database);
+    bool LoadJsonEntry(const rapidjson::Value& entry);
 
 private:
     // This implementation is thread safe with multiple reader

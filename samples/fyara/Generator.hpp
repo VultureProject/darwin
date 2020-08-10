@@ -1,7 +1,7 @@
 /// \file     Generator.hpp
-/// \authors  jjourdin
+/// \authors  tbertin
 /// \version  1.0
-/// \date     07/09/18
+/// \date     10/10/19
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
@@ -9,35 +9,32 @@
 
 #include <cstdint>
 #include <iostream>
-#include <fstream>
 #include <string>
 
 #include "Session.hpp"
 #include "AGenerator.hpp"
-#include "../../toolkit/FileManager.hpp"
-#include "../../toolkit/RedisManager.hpp"
+#include "AlertManager.hpp"
 #include "../../toolkit/rapidjson/document.h"
+#include "Yara.hpp"
 
-class Generator: public AGenerator {
+class Generator : public AGenerator {
 public:
     Generator() = default;
     ~Generator() = default;
 
 public:
-    virtual darwin::session_ptr_t
+    darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
                darwin::Manager& manager) noexcept override final;
 
-protected:
+private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
+    virtual bool ConfigureAlerting(const std::string &tags) override final;
 
 private:
-    bool ConfigRedis(std::string redis_socket_path);
-
-    bool _log; // If the filter will stock the data in a log file
-    bool _redis; // If the filter will stock the data in a REDIS
-    std::string _log_file_path;
-    std::string _redis_list_name;
-    std::string _redis_channel_name;
-    std::shared_ptr<darwin::toolkit::FileManager> _log_file = nullptr;
+    bool _fastmode;
+    int _timeout;
+    std::shared_ptr<darwin::toolkit::YaraCompiler> _yaraCompiler = nullptr;
+    // The cache for already processed request
+    std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
 };

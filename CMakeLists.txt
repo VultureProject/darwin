@@ -22,9 +22,9 @@ if (NOT DEFINED FILTER)
         CONNECTION
         TANOMALY
         ANOMALY
-        LOGS
         CONTENT_INSPECTION
         BUFFER
+        YARA
     )
 else (NOT DEFINED FILTER)
     set(
@@ -102,6 +102,7 @@ set(
         toolkit/Files.cpp toolkit/Files.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/FileManager.cpp toolkit/FileManager.hpp
+        toolkit/StringUtils.cpp toolkit/StringUtils.hpp
 )
 
 
@@ -110,10 +111,6 @@ set(
 ###########################
 
 message("Generating CMake files for the filters: ${FILTERS}")
-
-if("LOGS" IN_LIST FILTERS)
-include(flogs)
-endif()
 
 if("CONNECTION" IN_LIST FILTERS)
 include(fconnection)
@@ -153,4 +150,8 @@ endif()
 
 if("BUFFER" IN_LIST FILTERS)
 include(fbuffer)
+endif()
+
+if("YARA" IN_LIST FILTERS)
+include(fyara)
 endif()
