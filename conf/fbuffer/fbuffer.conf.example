@@ -1,66 +1,32 @@
 {
   "log_file_path": "/var/log/darwin/alerts.log",
   "redis_socket_path": "/var/sockets/redis/redis.sock",
+  "alert_redis_list_name": "tmp",
   "input_format": [
-    {
-      "name": "net_src_ip",
-      "type": "string"
-    },
-    {
-      "name": "nb_dst_port_udp",
-      "type": "int"
-    },
-    {
-      "name": "nb_host_udp",
-      "type": "int"
-    },
-    {
-      "name": "nb_dst_port_tcp",
-      "type": "int"
-    },
-    {
-      "name": "nb_host_tcp",
-      "type": "int"
-    },
-    {
-      "name": "nb_host_icmp",
-      "type": "int"
-    },
-    {
-      "name": "ip",
-      "type": "string"
-    },
-    {
-      "name": "hostname",
-      "type": "string"
-    },
-    {
-      "name": "os",
-      "type": "string"
-    },
-    {
-      "name": "proto",
-      "type": "string"
-    },
-    {
-      "name": "port",
-      "type": "string"
-    }
+    {"name": "net_src_ip", "type": "string"},
+    {"name": "net_dst_ip", "type": "string"},
+    {"name": "net_dst_port", "type": "string"},
+    {"name": "ip_proto", "type": "string"},
+    {"name": "ip", "type": "string"},
+    {"name": "hostname", "type": "string"},
+    {"name": "os", "type": "string"},
+    {"name": "proto", "type": "string"},
+    {"name": "port", "type": "string"}
   ],
   "outputs": [
     {
-      "filter_type": "fanomaly",
-      "filter_socket_path": "toto",
-      "interval": 20,
-      "redis_list_name": "darwin_buffer_anomaly",
-      "required_log_lines": 2
-    },
-    {
-      "filter_type": "fsofa",
-      "filter_socket_path": "tata",
-      "interval": 20,
-      "redis_list_name": "darwin_buffer_sofa",
-      "required_log_lines": 2
+      "filter_type": "fbuffer",
+      "filter_socket_path": "/tmp/buffer_2.sock",
+      "interval": 10,
+      "required_log_lines": 2,
+      "redis_lists": [{
+        "source": "source_1",
+        "name": "darwin_buffer_buffer"
+      },
+      {
+        "source": "source_2",
+        "name": "darwin_buffer_buffer_2"
+      }]
     }
   ]
 }

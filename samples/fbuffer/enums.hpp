@@ -18,5 +18,6 @@ typedef enum valueType_e {
 typedef enum outputType_e {
     ANOMALY = 0,
     SOFA,
+    BUFFER
 } outputType;
 

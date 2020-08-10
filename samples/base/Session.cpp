@@ -382,7 +382,7 @@ namespace darwin {
                             boost::bind(&Session::SendToFilterCallback, this,
                                         boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
-
+ 
         free(packet);
         return true;
     }

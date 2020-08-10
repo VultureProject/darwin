@@ -15,29 +15,36 @@
 #include "AThread.hpp"
 
 class BufferThread : public AThread {
+    /// This calss is inheritating from AThread (AThread.hpp)
+    /// Its purpose is to add to everything needed to handle a thread (implemented by AThread)
+    /// what is specific to Buffer Filter threads.
+    ///
+    ///\class BufferThread
+    
     public:
+    ///\brief Unique constructor, needs an AConnector to setup BufferThread fields and to send interval to AThread
+    ///
+    ///\param output The connector needed to perform output Filter related actions.
     BufferThread(std::shared_ptr<AConnector> output);
+
+    ///\brief virtual default destructor
     virtual ~BufferThread() override = default;
 
-    public:
-
     private:
-    /// Main function
+    ///\brief Entry point (called by AThread's ThreadMain function) every _interval seconds.
+    /// Must override AThread's Main function.
+    /// This function checks on Redis if there is enough logs on the associated _redis_list. (Given by Connector)
+    /// If needed, it tries to pick the logs in REDIS.
+    /// On success it sends them to the output Filter.
+    /// On failure, it reiserts the logs into REDIS.
+    ///
+    ///\return true on success, false otherwise.
     virtual bool Main() override final;
 
-    /// Get the logs from the Redis
-    /// \param rangeLen the range of logs we want from the redis list
-    /// \param logs the vector where we want to stock our logs
-    /// \return true on success, false otherwise.
-    bool REDISPopLogs(long long int len, std::vector<std::string> &logs) noexcept;
-
-    /// Query the Redis to get length of the list
-    /// where we have our data
-    /// \return true on success, false otherwise.
-    long long int REDISListLen() noexcept;
-
-
     private:
+    /// The connector to ensure link with the output Filter.
     std::shared_ptr<AConnector> _connector;
-    std::string _redis_list;
+
+    /// The Redis Lists on which to write and pickup datas for the ouptut Filter.
+    std::vector<std::pair<std::string, std::string>> _redis_lists;
 };

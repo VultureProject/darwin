@@ -20,7 +20,7 @@ bool AThreadManager::ThreadStart() {
         return false;
     }
     try {
-        auto th = this->Start();
+        std::shared_ptr<AThread> th = this->Start();
         this->_threads.push_back(th);
     } catch (const std::system_error &e) {
         DARWIN_LOG_WARNING("AThreadManager:: Error when starting the thread");
@@ -33,7 +33,7 @@ bool AThreadManager::ThreadStart() {
 
 bool AThreadManager::Stop() {
     bool ret = true;
-    for (auto thread : this->_threads) {
+    for (auto &thread : this->_threads) {
         if (!thread->Stop())
             ret = false;
     }
