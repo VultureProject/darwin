@@ -18,14 +18,14 @@ class AThread {
     /// Its purpose is to handle everything needed to run a thread.
     /// It is likely to be called by AThreadManager or ay subclass inheritating from it.
     /// ThreadMain is calling Main every _interval seconds.
-    /// Main MUST be override by children.
+    /// Main MUST be overrode by children.
     ///
     ///\class AThread
 
     public:
-    ///\brief Unique constructor, creates a thread and immediatly call ThreadMain.
+    ///\brief Unique constructor, creates a thread and immediately calls ThreadMain.
     ///
-    ///\param interval The interval in seconds between to calls of Main by ThreadMain
+    ///\param interval The interval in seconds between two calls of Main by ThreadMain
     AThread(int interval);
 
     ///\brief Default virtual destructor 
@@ -39,7 +39,7 @@ class AThread {
     ///\brief It is the entry point of the thread, it calls Main every _interval seconds and is called in the constructor.
     void ThreadMain();
 
-    ///\brief This function is called every _interval seconds, and MUST be override by children
+    ///\brief This function is called every _interval seconds, and MUST be overrode by children
     ///
     ///\return Override MUST return true on success and false otherwise
     virtual bool Main() = 0;
@@ -53,13 +53,13 @@ class AThread {
     std::thread _thread;
     
     /// A boolean to know if the thread is stopped (true) or not (false).
-    /// Set true by the construction
-    /// Set false by destructor and in case of error
+    /// Set true in constructor
+    /// Set false in destructor and in case an error occured
     std::atomic<bool> _is_stop;
 
     /// The condition variable for the thread
     std::condition_variable _cv;
 
-    /// The mutex used to manage multiple access to the _thread member
+    /// The mutex used to manage multiple accesses to the _thread member
     std::mutex _mutex;
 };

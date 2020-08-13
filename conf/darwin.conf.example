@@ -38,6 +38,16 @@
         "next_filter": "",
         "threshold": 80
     },
+    "anomaly_1": {
+        "exec_path": "/home/darwin/filters/darwin_anomaly",
+        "config_file": "/home/darwin/conf/fanomaly/fanomaly.conf.example",
+        "nb_thread": 5,
+        "log_level": "DEBUG",
+        "cache_size": 0,
+        "output": "NONE",
+        "next_filter": "",
+        "threshold": 80
+    },
     "buffer_1": {
         "exec_path": "/home/darwin/filters/darwin_buffer",
         "config_file": "/home/darwin/conf/fbuffer/fbuffer.conf.example",

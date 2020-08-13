@@ -19,7 +19,7 @@
 #include "OutputConfig.hpp"
 
 class Generator: public AGenerator {
-    /// This class his inheritating from AGenerator
+    /// This class his inheriting from AGenerator
     /// It reads and loads config for Filter Buffer
     /// It creates a BufferTask when input is received.
     ///
@@ -74,14 +74,14 @@ class Generator: public AGenerator {
     ///\brief This function calls LoadInputs and LoadOutputs
     ///
     ///\param configuration The rapidjson object containing the entire config
-    /// from which will be extract input and output configs.
+    /// from which will be extracted input and output configs.
     ///
     ///\return true on success, false otherwise.
     bool LoadConnectorsConfig(const rapidjson::Document &configuration);
 
-    ///\brief This function loads inputs config. Non well formatted input will be ignored.
+    ///\brief This function loads inputs config. Wrongly formatted input will be ignored.
     ///
-    ///\param inputs_array The rapidjson array containing all inputs infos
+    ///\param inputs_array The rapidjson array containing all inputs info
     ///
     ///\return true on success, false otherwise.
     bool LoadInputs(const rapidjson::Value &inputs_array);
@@ -94,14 +94,14 @@ class Generator: public AGenerator {
     darwin::valueType _TypeToEnum(std::string type);
 
 
-    ///\brief This function loads outputs config. Non well formatted outputs will be ignored.
+    ///\brief This function loads outputs config. Wrongly formatted outputs will be ignored.
     ///
     ///\param outputs_array The rapidjson array containing all outputs infos
     ///
     ///\return true on success, false otherwise.
     bool LoadOutputs(const rapidjson::Value &outputs_array);
 
-    ///\brief This function creates an AConnector from an OutputConfig and return a pointer to it
+    ///\brief This function creates an AConnector from an OutputConfig and returns a pointer to it
     ///
     ///\param context The io_context for buffer communication
     ///\param output_config The OutputConfig to create the AConnector from.

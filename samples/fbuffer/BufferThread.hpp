@@ -15,7 +15,7 @@
 #include "AThread.hpp"
 
 class BufferThread : public AThread {
-    /// This calss is inheritating from AThread (AThread.hpp)
+    /// This calss is inheriting from AThread (AThread.hpp)
     /// Its purpose is to add to everything needed to handle a thread (implemented by AThread)
     /// what is specific to Buffer Filter threads.
     ///
@@ -45,6 +45,6 @@ class BufferThread : public AThread {
     /// The connector to ensure link with the output Filter.
     std::shared_ptr<AConnector> _connector;
 
-    /// The Redis Lists on which to write and pickup datas for the ouptut Filter.
+    /// The Redis Lists on which to write and pickup data for the ouptut Filter.
     std::vector<std::pair<std::string, std::string>> _redis_lists;
 };

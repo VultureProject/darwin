@@ -16,7 +16,7 @@
 class AThreadManager {
     /// This abstract class is made to be inheritated by subclasses
     /// Its purpose is to handle everything needed to run multiple AThread instances (AThread.hpp).
-    /// Start MUST be override. It creates an AThread (or child) instance and return it as a pointer.
+    /// Start MUST be overrode. It creates an AThread (or child) instance and returns it as a pointer.
     /// It can handle AThreads, and any subclasses of it by overriding Start to create the correct type of AThread child.
     /// ThreadStart is calling Start if possible.
     ///
@@ -43,7 +43,7 @@ class AThreadManager {
     bool Stop();
 
     private:
-    ///\brief Starts a Thread. MUST be override by children to create the appropriate type of AThread children
+    ///\brief Starts a Thread. MUST be overrode by children to create the appropriate type of AThread children
     ///
     ///\return a shared_ptr on the newly created AThread child.
     virtual std::shared_ptr<AThread> Start() = 0;
