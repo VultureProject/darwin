@@ -9,16 +9,16 @@
   "outputs": [
     {
       "filter_type": "fanomaly",
-      "filter_socket_path": "/var/sockets/darwin/anomaly.sock",
-      "interval": 300,
-      "required_log_lines": 11,
+      "filter_socket_path": "/tmp/buffer_2.sock",
+      "interval": 10,
+      "required_log_lines": 2,
       "redis_lists": [{
         "source": "source_1",
-        "name": "darwin_buffer_anomaly_source_1"
+        "name": "darwin_buffer_buffer"
       },
       {
         "source": "source_2",
-        "name": "darwin_buffer_anomaly_source_2"
+        "name": "darwin_buffer_buffer_2"
       }]
     }
   ]

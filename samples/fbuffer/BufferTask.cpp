@@ -47,12 +47,14 @@ void BufferTask::operator()() {
         STAT_INPUT_INC;
         if (ParseLine(line)) {
             STAT_MATCH_INC;
+            this->_certitudes.push_back(0);
             if (is_log) {
                 _logs += _data + "\n";
             }
             this->AddEntries();
         } else {
             STAT_PARSE_ERROR_INC;
+            this->_certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }
 }
