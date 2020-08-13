@@ -12,7 +12,7 @@ from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 from filters.fanomaly import Anomaly
 
-REDIS_SOCKET = "/tmp/redis_buffer.sock"
+REDIS_SOCKET = "/var/sockets/redis/redis.sock"
 ALERT_FILE = "/tmp/test_fbuffer.txt"
 FILTER_CODE = 0x62756672
 DATA_TEST = "filters/data/anomalyData.txt"
@@ -42,31 +42,21 @@ class Buffer(Filter):
                       '],' \
                       '"outputs": [' \
                         '{{' \
-                          '"filter_type": "fbuffer",' \
-                          '"filter_socket_path": "/tmp/buffer_2.sock",' \
-                          '"interval": 10,' \
-                          '"required_log_lines": 3,' \
-                          '"redis_lists": [{{' \
-                            '"source": "source_1",' \
-                            '"name": "darwin_buffer_buffer"' \
-                          '}},' \
-                          '{{' \
-                            '"source": "source_2",' \
-                            '"name": "darwin_buffer_buffer_2"' \
-                          '}},' \
-                          '{{' \
-                            '"source": "",' \
-                            '"name": "darwin_buffer_buffer_3"' \
-                          '}}]' \
-                        '}},' \
-                        '{{' \
                           '"filter_type": "fanomaly",' \
-                          '"filter_socket_path": "/tmp/buffer_anomaly.sock",' \
+                          '"filter_socket_path": "/tmp/anomaly.sock",' \
                           '"interval": 10,' \
                           '"required_log_lines": 5,' \
                           '"redis_lists": [{{' \
                             '"source": "",' \
                             '"name": "darwin_buffer_anomaly"' \
+                          '}},' \
+                          '{{' \
+                            '"source": "source_2",' \
+                            '"name": "darwin_buffer_anomaly_2"' \
+                          '}},' \
+                          '{{' \
+                            '"source": "source_3",' \
+                            '"name": "darwin_buffer_anomaly_3"' \
                           '}}]' \
                         '}},' \
                         '{{' \
@@ -149,13 +139,13 @@ class Buffer(Filter):
 
 def run():
     tests = [
-        well_formatted_data_test, 
-        not_data_list_ignored_test, 
-        not_data_string_ignored_test, 
-        not_data_int_ignored_test, 
-        data_too_short_ignored_test, 
-        data_too_long_ignored_test, 
-        multiple_sources_test, 
+        well_formatted_data_test,
+        not_data_list_ignored_test,
+        not_data_string_ignored_test,
+        not_data_int_ignored_test,
+        data_too_short_ignored_test,
+        data_too_long_ignored_test,
+        multiple_sources_test,
         multiple_outputs_redis_test,
         multiple_inputs_redis_test,
         missing_data_in_conf,
@@ -226,14 +216,14 @@ def well_formatted_data_test():
     return redis_test(
         "well_formatted_data_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 2], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 1]  # Well formated
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 2], # Well formated
+            ["source_1", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 1]  # Well formated
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 2],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 1]
+                ["net_src_ip_value_1", "1", "2", "3"],
+                ["net_src_ip_value_2", "1", "2", "3"]
             ]
         )]
     )
@@ -242,13 +232,13 @@ def not_data_list_ignored_test():
     return redis_test(
         "not_list_data_ignored_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 3], # Well formated
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 3], # Well formated
             "source_1"
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 3]
+                ["net_src_ip_value_1", "1", "2", "3"]
             ]
         )]
     )
@@ -261,9 +251,9 @@ def not_data_string_ignored_test():
             ["source_1", 42, "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2"]
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 12]
+                ["net_src_ip_value__", "1", "2", "3"]
             ]
         )]
     )
@@ -272,13 +262,13 @@ def not_data_int_ignored_test():
     return redis_test(
         "not_string_data_ignored_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 7], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", "8"]
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 7], # Well formated
+            ["source_1", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", "8"]
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 7]
+                ["net_src_ip_value_1", "1", "2", "3"]
             ]
         )]
     )
@@ -287,13 +277,13 @@ def data_too_short_ignored_test():
     return redis_test(
         "data_too_short_ignored_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value"]
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
+            ["source_1", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value"]
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9]
+                ["net_src_ip_value_1", "1", "2", "3"]
             ]
         )]
     )
@@ -306,9 +296,9 @@ def data_too_long_ignored_test():
             ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 10, 12]
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9]
+                ["net_src_ip_value__", "1", "2", "3"]
             ]
         )]
     )
@@ -317,26 +307,26 @@ def multiple_sources_test():
     return redis_test(
         "multiple_sources_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
-            ["source_2", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 8]  # Well formated 
+            ["source_2", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
+            ["source_3", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 8]  # Well formated
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly_2",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9]
+                ["net_src_ip_value_1", "1", "2", "3"]
             ]
         ),
         (
-            "darwin_buffer_buffer_2",
+            "darwin_buffer_anomaly_3",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 8]
+                ["net_src_ip_value_2", "1", "2", "3"]
             ]
         ),
         (
-            "darwin_buffer_buffer_3",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 8]
+                ["net_src_ip_value_1", "1", "2", "3"],
+                ["net_src_ip_value_2", "1", "2", "3"]
             ]
         )]
     )
@@ -345,8 +335,8 @@ def multiple_outputs_redis_test():
     return redis_test(
         "multiple_outputs_test",
         [
-            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
-            ["source_2", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 8]  # Well formated 
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value_1", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
+            ["source_2", "net_src_ip_value_2", "1", "2", "3", "ip_value_2", "hostname_value", "os_value", "proto_value", "port_value_2", 8]  # Well formated
         ],
         [(
             "darwin_buffer_anomaly",
@@ -356,9 +346,10 @@ def multiple_outputs_redis_test():
             ]
         ),
         (
-            "darwin_buffer_buffer",
+            "darwin_buffer_sofa",
             [
-                ["net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9]
+                ["ip_value_1", "hostname_value", "os_value", "proto_value", "port_value_1"],
+                ["ip_value_2", "hostname_value", "os_value", "proto_value", "port_value_2"]
             ]
         )]
     )
@@ -367,90 +358,119 @@ def multiple_inputs_redis_test():
     return redis_test(
         "multiple_inputs_redis_test",
         [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 1],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 2],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_3", 3],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_4", 4],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_5", 5],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_6", 6],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_7", 7],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_8", 8],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 9],  # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 10], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 11], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 12], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 13], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 14], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 15], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 16], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 17], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 18], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 19], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 20]  # Well formated
+            ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 1],  # Well formated
+            ["source_1", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 2],  # Well formated
+            ["source_1", "net_src_ip_value_3", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_3", 3],  # Well formated
+            ["source_1", "net_src_ip_value_4", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_4", 4],  # Well formated
+            ["source_1", "net_src_ip_value_5", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_5", 5],  # Well formated
+            ["source_1", "net_src_ip_value_6", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_6", 6],  # Well formated
+            ["source_1", "net_src_ip_value_7", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_7", 7],  # Well formated
+            ["source_1", "net_src_ip_value_8", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_8", 8],  # Well formated
+            ["source_1", "net_src_ip_value_9", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 9],  # Well formated
+            ["source_1", "net_src_ip_value_10", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 10], # Well formated
+            ["source_1", "net_src_ip_value_11", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 11], # Well formated
+            ["source_1", "net_src_ip_value_12", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 12], # Well formated
+            ["source_1", "net_src_ip_value_13", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 13], # Well formated
+            ["source_1", "net_src_ip_value_14", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 14], # Well formated
+            ["source_1", "net_src_ip_value_15", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 15], # Well formated
+            ["source_1", "net_src_ip_value_16", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 16], # Well formated
+            ["source_1", "net_src_ip_value_17", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 17], # Well formated
+            ["source_1", "net_src_ip_value_18", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 18], # Well formated
+            ["source_1", "net_src_ip_value_19", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 19], # Well formated
+            ["source_1", "net_src_ip_value_20", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 20]  # Well formated
         ],
         [(
-            "darwin_buffer_buffer",
+            "darwin_buffer_anomaly",
             [
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 1], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 2], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_3", 3], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_4", 4], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_5", 5], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_6", 6], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_7", 7], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_8", 8], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 9], 
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 10],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 11],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 12],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 13],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 14],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 15],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 16],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 17],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 18],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 19],
-                ["net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 20],
+                ["net_src_ip_value_1", "1", "2", "3"],
+                ["net_src_ip_value_2", "1", "2", "3"],
+                ["net_src_ip_value_3", "1", "2", "3"],
+                ["net_src_ip_value_4", "1", "2", "3"],
+                ["net_src_ip_value_5", "1", "2", "3"],
+                ["net_src_ip_value_6", "1", "2", "3"],
+                ["net_src_ip_value_7", "1", "2", "3"],
+                ["net_src_ip_value_8", "1", "2", "3"],
+                ["net_src_ip_value_9", "1", "2", "3"],
+                ["net_src_ip_value_10", "1", "2", "3"],
+                ["net_src_ip_value_11", "1", "2", "3"],
+                ["net_src_ip_value_12", "1", "2", "3"],
+                ["net_src_ip_value_13", "1", "2", "3"],
+                ["net_src_ip_value_14", "1", "2", "3"],
+                ["net_src_ip_value_15", "1", "2", "3"],
+                ["net_src_ip_value_16", "1", "2", "3"],
+                ["net_src_ip_value_17", "1", "2", "3"],
+                ["net_src_ip_value_18", "1", "2", "3"],
+                ["net_src_ip_value_19", "1", "2", "3"],
+                ["net_src_ip_value_20", "1", "2", "3"],
             ]
         )],
         bulk=False
     )
 
-
 def thread_working_test():
     ret = True
 
+    config_buffer = '{{' \
+                        '"redis_socket_path": "{redis_socket}",' \
+                        '"input_format": [' \
+                            '{{"name": "net_src_ip", "type": "string"}},' \
+                            '{{"name": "net_dst_ip", "type": "string"}},' \
+                            '{{"name": "net_dst_port", "type": "string"}},' \
+                            '{{"name": "ip_proto", "type": "string"}}' \
+                        '],' \
+                        '"outputs": [' \
+                            '{{' \
+                                '"filter_type": "fanomaly",' \
+                                '"filter_socket_path": "/tmp/anomaly.sock",' \
+                                '"interval": 10,' \
+                                '"required_log_lines": 5,' \
+                                '"redis_lists": [{{' \
+                                    '"source": "",' \
+                                    '"name": "darwin_buffer_anomaly"' \
+                                '}}]' \
+                            '}}' \
+                        ']' \
+                    '}}'.format(redis_socket=REDIS_SOCKET)
+
+    config_test =   '{{' \
+                        '"redis_socket_path": "{redis_socket}",' \
+                        '"alert_redis_list_name": "{redis_alert}",' \
+                        '"log_file_path": "/var/log/darwin/alerts.log",' \
+                        '"alert_redis_channel_name": "darwin.alerts"' \
+                    '}}'.format(redis_socket=REDIS_SOCKET, redis_alert=REDIS_ALERT_LIST)
+
+
     # CONFIG
     buffer_filter = Buffer()
-    buffer_filter.configure()
+    buffer_filter.configure(config_buffer)
+
+    test_filter = Filter(filter_name="anomaly", socket_path="/tmp/anomaly.sock")
+    test_filter.configure(config_test)
+
 
     # START FILTER
     if not buffer_filter.valgrind_start():
+        return False
+
+    if not test_filter.start():
+        print("Anomaly did not start")
         return False
 
     # SEND TEST
     darwin_api = DarwinApi(socket_path=buffer_filter.socket,
                            socket_type="unix", )
 
+    data = buffer_filter.get_test_data()
+
     darwin_api.bulk_call(
-        [
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 1], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 2], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_3", 3], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_4", 4], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_5", 5], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_6", 6], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_7", 7], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_8", 8], # Well formated
-            ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_9", 9]  # Well formated
-        ],
+        data,
         response_type="back",
     )
 
     # We wait for the thread to activate
     sleep(15)
 
-    redis_data = buffer_filter.get_internal_redis_set_data("source_1")
+    redis_data = buffer_filter.get_internal_redis_set_data("darwin_buffer_anomaly")
 
     if redis_data != set() :
         logging.error("thread_working_test : Expected no data in Redis but got {}".format(redis_data))
@@ -548,7 +568,7 @@ def fanomaly_connector_and_send_test():
         return False
 
     if not test_filter.start():
-        print("Test did not start")
+        print("Anomaly did not start")
         return False
 
     # SEND TEST
@@ -580,7 +600,7 @@ def fanomaly_connector_and_send_test():
     if (expected_data not in redis_data[0]):
         logging.error("{}: Expected this data : {} but got {} in redis".format(test_name, expected_data, redis_data))
         ret = False
-    
+
     # CLEAN
     darwin_api.close()
 

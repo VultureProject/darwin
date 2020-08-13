@@ -38,7 +38,7 @@ bool BufferThread::Main() {
             continue;
         } else {
             if (not _connector->SendToFilter(logs)) {
-                DARWIN_LOG_ERROR("BufferThread::Main unable to send data to next filter, reinserting logs in redis ...");
+                DARWIN_LOG_INFO("BufferThread::Main unable to send data to next filter, reinserting logs in redis ...");
                 this->_connector->REDISReinsertLogs(logs, redis_list);
             } else {
                 DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Removed " + std::to_string(logs.size()) + " elements from redis");
