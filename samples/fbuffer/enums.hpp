@@ -7,17 +7,17 @@
 
 #pragma once
 
-typedef enum valueType_e {
-    STRING = 0,
-    INT,
-    DOUBLE,
-    FLOAT,
-    UNKNOWN
-} valueType;
-
-typedef enum outputType_e {
-    ANOMALY = 0,
-    SOFA,
-    BUFFER
-} outputType;
-
+namespace darwin
+{
+        typedef enum valueType_e {
+        STRING = 0,
+        INT,
+        UNKNOWN_VALUE_TYPE
+    } valueType;
+    
+    typedef enum outputType_e {
+        ANOMALY = 0,
+        SOFA,
+        UNKNOWN_OUTPUT
+    } outputType;
+} // namespace darwin

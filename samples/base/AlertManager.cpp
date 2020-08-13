@@ -156,7 +156,7 @@ namespace darwin {
         }
         return true;
     }
-
+#include <unistd.h>
     bool AlertManager::REDISAddLogs(const std::string& logs) {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("AlertManager::REDISAddLogs:: Add logs in Redis...");

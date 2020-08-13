@@ -28,7 +28,9 @@ bool AGenerator::Configure(std::string const& configFile, const std::size_t cach
     return true;
 }
 
-void AGenerator::ConfigureNetworkObject(boost::asio::io_context &context __attribute__((unused))) {}
+bool AGenerator::ConfigureNetworkObject(boost::asio::io_context &context __attribute__((unused))) {
+    return true;
+}
 
 bool AGenerator::ExtractCustomAlertingTags(const rapidjson::Document &configuration,
                                            std::string& tags) {

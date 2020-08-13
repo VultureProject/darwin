@@ -16,15 +16,14 @@ bool AThreadManager::ThreadStart() {
     DARWIN_LOG_DEBUG("AThreadManager:: Starting threads");
 
     if (this->_threads.size() > this->_nb_threads) {
-        DARWIN_LOG_WARNING("AThreadManager:: The maximum number of threads already reached.");
+        DARWIN_LOG_WARNING("AThreadManager:: Could not start a new thread, maximum number reached.");
         return false;
     }
     try {
         std::shared_ptr<AThread> th = this->Start();
         this->_threads.push_back(th);
     } catch (const std::system_error &e) {
-        DARWIN_LOG_WARNING("AThreadManager:: Error when starting the thread");
-        DARWIN_LOG_WARNING("ThreadManger:: Error message: " + e.code().message());
+        DARWIN_LOG_WARNING("AThreadManager:: Error when starting the thread: " + e.code().message());
         return false;
     }
     DARWIN_LOG_DEBUG("AThreadManager:: All threads started");

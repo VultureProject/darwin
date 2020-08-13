@@ -16,52 +16,54 @@
 #include "Generator.hpp"
 #include "Connectors.hpp"
 
-bool Generator::ConfigureAlerting(const std::string& tags) {
+bool Generator::ConfigureAlerting(const std::string& tags __attribute__((unused))) {
     return true;
 }
 
-void Generator::ConfigureNetworkObject(boost::asio::io_context &context) {
+bool Generator::ConfigureNetworkObject(boost::asio::io_context &context) {
     DARWIN_LOGGER;
+
     for (auto &output : this->_output_configs) {
-        std::shared_ptr<AConnector> newOutput = _createOutput(context, output);
+        std::shared_ptr<AConnector> newOutput = _CreateOutput(context, output);
         if (newOutput == nullptr) {
             DARWIN_LOG_WARNING("Buffer::Generator::ConfigureNetworkObject Unable to create the Output. Output " + 
                                     output._filter_type + " ignored.");   
             continue;
         }
-        _outputs.push_back(newOutput);
+        this->_outputs.push_back(newOutput);
     }
     this->_output_configs.clear();
 
     if (this->_outputs.empty()) {
         DARWIN_LOG_ERROR("Buffer::Generator::ConfigureNetworkObject no outputs available for filter buffer.");
+        return false;
     }
 
     this->_buffer_thread_manager = std::make_shared<BufferThreadManager>(this->_outputs.size());
     DARWIN_LOG_DEBUG("Buffer::Generator bufferThreadManager created");
     for (auto &output : this->_outputs) {
         DARWIN_LOG_DEBUG("Buffer::Generator starting a thread");
-        this->_buffer_thread_manager->setConnector(output);
+        this->_buffer_thread_manager->SetConnector(output);
         bool ret = this->_buffer_thread_manager->ThreadStart();
         if (not ret) {
-            DARWIN_LOG_CRITICAL("Buffer:: Generator:: Error when starting polling thread");
-            return;
+            DARWIN_LOG_CRITICAL("Buffer::Generator:: Error when starting polling thread");
+            return false;
         }
         DARWIN_LOG_DEBUG("Buffer::Generator:: Thread created successfully");
     }
-
+    return true;
 }
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Buffer:: Generator:: Loading classifier...");
+    DARWIN_LOG_DEBUG("Buffer::Generator:: Loading classifier...");
 
     if (not configuration.HasMember("redis_socket_path")) {
         DARWIN_LOG_CRITICAL("Buffer::Generator:: 'redis_socket_path' parameter missing, mandatory");
         return false;
     }
     if (not configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Buffer:: Generator:: 'redis_socket_path' needs to be a string");
+        DARWIN_LOG_CRITICAL("Buffer::Generator:: 'redis_socket_path' needs to be a string");
         return false;
     }
     std::string redis_socket_path = configuration["redis_socket_path"].GetString();
@@ -70,21 +72,10 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     redis.SetUnixConnection(redis_socket_path);
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
     if(not redis.FindAndConnect()) {
-        DARWIN_LOG_CRITICAL("Buffer:: Generator:: Could not connect to a redis!");
+        DARWIN_LOG_CRITICAL("Buffer::Generator:: Could not connect to a redis!");
         return false;
     }
-    DARWIN_LOG_INFO("Buffer:: Generator:: Redis configured successfuly");
-
-// TODO this section will desapear in the final version
-    if (not configuration.HasMember("log_file_path")) {
-        DARWIN_LOG_CRITICAL("Buffer::Generator:: 'log_file_path' parameter missing, mandatory");
-        return false;
-    }
-    if (not configuration["log_file_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Buffer:: Generator:: 'log_file_path' needs to be a string");
-        return false;
-    }
-    std::string log_file_path = configuration["log_file_path"].GetString();
+    DARWIN_LOG_INFO("Buffer::Generator:: Redis configured successfuly");
 
     if (not LoadConnectorsConfig(configuration)) {
         DARWIN_LOG_CRITICAL("Buffer::Generator:: Connectors config failed, filter will stop.");
@@ -99,7 +90,7 @@ bool Generator::LoadConnectorsConfig(const rapidjson::Document &configuration) {
     DARWIN_LOG_DEBUG("Buffer::Generator:: Loading connectors config...");
 
     if (not configuration.HasMember("input_format")) {
-        DARWIN_LOG_CRITICAL("Buffer::Generator::LoadConnectorConfig 'input_format' parameter missing, mandatory (can be empty if needed)");
+        DARWIN_LOG_CRITICAL("Buffer::Generator::LoadConnectorConfig 'input_format' parameter missing, mandatory (can't be empty)");
         return false;
     }
     if (not configuration["input_format"].IsArray()) {
@@ -109,7 +100,7 @@ bool Generator::LoadConnectorsConfig(const rapidjson::Document &configuration) {
     const rapidjson::Value &inputs = configuration["input_format"];
 
     if(not configuration.HasMember("outputs")) {
-        DARWIN_LOG_CRITICAL("Buffer::Generator::LoadConnectorConfig 'outputs' parameter missing, mandatory (can be empty if needed)");
+        DARWIN_LOG_CRITICAL("Buffer::Generator::LoadConnectorConfig 'outputs' parameter missing, mandatory (can't be empty)");
         return false;
     }
     if (not configuration["outputs"].IsArray()) {
@@ -138,8 +129,8 @@ bool Generator::LoadInputs(const rapidjson::Value &array) {
             DARWIN_LOG_WARNING("Buffer::Generator::LoadInputs 'type' field missing or is not a string in input_format. " + std::string(array[i]["name"].GetString()) + " ignored.");
             continue;
         } else {
-            std::pair<std::string, valueType> input(array[i]["name"].GetString(), _typeToEnum(array[i]["type"].GetString()));
-            if (input.second == UNKNOWN) {
+            std::pair<std::string, darwin::valueType> input(array[i]["name"].GetString(), _TypeToEnum(array[i]["type"].GetString()));
+            if (input.second == darwin::UNKNOWN_VALUE_TYPE) {
                 DARWIN_LOG_WARNING("Buffer::Generator::LoadInputs 'type' value is not recognized. " + std::string(array[i]["name"].GetString()) + " ignored.");
                 continue;
             }
@@ -153,19 +144,15 @@ bool Generator::LoadInputs(const rapidjson::Value &array) {
     return true;
 }
 
-valueType Generator::_typeToEnum(std::string type) {
+darwin::valueType Generator::_TypeToEnum(std::string type) {
     if (type == "string")
-        return STRING;
+        return darwin::STRING;
     if (type == "int")
-        return INT;
-    if (type == "double")
-        return DOUBLE;
-    if (type == "float")
-        return FLOAT;
-    return UNKNOWN;
+        return darwin::INT;
+    return darwin::UNKNOWN_VALUE_TYPE;
 }
 
-std::shared_ptr<AConnector> Generator::_createOutput(boost::asio::io_context &context, OutputConfig &output_config) {
+std::shared_ptr<AConnector> Generator::_CreateOutput(boost::asio::io_context &context, OutputConfig &output_config) {
     DARWIN_LOGGER;
     std::string filter_type = output_config._filter_type;
     std::string filter_socket_path = output_config._filter_socket_path;
@@ -179,11 +166,8 @@ std::shared_ptr<AConnector> Generator::_createOutput(boost::asio::io_context &co
     } else if (filter_type == "fsofa") {
         std::shared_ptr<fSofaConnector> output = std::make_shared<fSofaConnector>(context, filter_socket_path, interval, redis_lists, nb_log_lines);
         return std::static_pointer_cast<AConnector>(output);
-    } else if (filter_type == "fbuffer") {
-        std::shared_ptr<fBufferConnector> output = std::make_shared<fBufferConnector>(context, filter_socket_path, interval, redis_lists, nb_log_lines);
-        return std::static_pointer_cast<AConnector>(output);
     }
-    DARWIN_LOG_WARNING("Buffer::Generator::_createOutput " + filter_type + " is not recognized as a valid filter.");
+    DARWIN_LOG_WARNING("Buffer::Generator::_CreateOutput " + filter_type + " is not recognized as a valid filter.");
     return nullptr;
 }
 
@@ -229,7 +213,6 @@ bool Generator::LoadOutputs(const rapidjson::Value &array) {
         unsigned int required_log_lines = array[i]["required_log_lines"].GetUint64();
         OutputConfig tmp(filter_type, filter_socket_path, interval, redis_lists, required_log_lines);
         this->_output_configs.emplace_back(tmp);
-        redis_lists.clear();
     }
     if (_output_configs.empty()) {
         DARWIN_LOG_CRITICAL("Buffer::Generator::LoadOutputs No outputs available. The filter is about to Stop");

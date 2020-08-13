@@ -1,31 +1,24 @@
 {
-  "log_file_path": "/var/log/darwin/alerts.log",
   "redis_socket_path": "/var/sockets/redis/redis.sock",
-  "alert_redis_list_name": "tmp",
   "input_format": [
     {"name": "net_src_ip", "type": "string"},
     {"name": "net_dst_ip", "type": "string"},
     {"name": "net_dst_port", "type": "string"},
-    {"name": "ip_proto", "type": "string"},
-    {"name": "ip", "type": "string"},
-    {"name": "hostname", "type": "string"},
-    {"name": "os", "type": "string"},
-    {"name": "proto", "type": "string"},
-    {"name": "port", "type": "string"}
+    {"name": "ip_proto", "type": "string"}
   ],
   "outputs": [
     {
-      "filter_type": "fbuffer",
-      "filter_socket_path": "/tmp/buffer_2.sock",
-      "interval": 10,
-      "required_log_lines": 2,
+      "filter_type": "fanomaly",
+      "filter_socket_path": "/var/sockets/darwin/anomaly.sock",
+      "interval": 300,
+      "required_log_lines": 11,
       "redis_lists": [{
         "source": "source_1",
-        "name": "darwin_buffer_buffer"
+        "name": "darwin_buffer_anomaly_source_1"
       },
       {
         "source": "source_2",
-        "name": "darwin_buffer_buffer_2"
+        "name": "darwin_buffer_anomaly_source_2"
       }]
     }
   ]

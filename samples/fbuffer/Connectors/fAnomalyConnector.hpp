@@ -7,11 +7,6 @@
 
 #pragma once
 
-#include <mlpack/core.hpp>
-#include <mlpack/methods/pca/pca.hpp>
-#include <mlpack/methods/dbscan/dbscan.hpp>
-#include <mlpack/methods/neighbor_search/neighbor_search.hpp>
-
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "AConnector.hpp"
@@ -47,24 +42,25 @@ class fAnomalyConnector final : public AConnector {
     virtual ~fAnomalyConnector() override final = default;
 
     public:
-    ///\brief This functions sends datas to the REDIS storage. It override default pure virtual one as each filter doesn't need the same datas.
+    ///\brief This function sends data to the REDIS storage. It overrides default pure virtual one as each filter doesn't need the same data.
     ///
-    /// It should fill _entry with the datas to send as REDISAddEntry is picking in it.
+    /// It should fill _entry with the data to send as REDISAddEntry is picking from it.
     ///
-    ///\param input_line is a map representing all the entry received by the BufferTask.
+    ///\param input_line is a map representing all the entries received by the BufferTask.
     ///
     ///\return true on success, false otherwise.
-    virtual bool sendToRedis(std::map<std::string, std::string> &input_line) override final;
+    virtual bool ParseInputForRedis(std::map<std::string, std::string> &input_line) override final;
 
     private:
-    ///\brief this virtual function override AConnector's one to perform specific modifications to data.
+    ///\brief this virtual function overrides AConnector's one to perform specific modifications to data.
+    /// It pre-processes logs in order to send Anomaly what it needs.
     /// 
     ///\param logs The logs to jsonify
     ///
     ///\return a string representing logs under a json form.
     virtual bool FormatDataToSendToFilter(std::vector<std::string> &logs, std::string &formatted) override final;
 
-    /// Pre-process data and stock it in a matrix,
+    /// Pre-process data and store it in a matrix,
     /// before the algorithm process
     tsl::hopscotch_map<std::string, std::array<int, 5>> PreProcess(const std::vector<std::string> &logs);
 
@@ -73,8 +69,4 @@ class fAnomalyConnector final : public AConnector {
                         tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_port,
                         tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_ip,
                         tsl::hopscotch_map<std::string, std::array<int, 5>>& data);
-
-    // ips linked to pre-processed data :   [  ip1,   ip2   ]
-    std::vector<std::string> _ips;
-
 };

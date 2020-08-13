@@ -38,7 +38,7 @@ namespace darwin {
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
             Generator gen{};
-            if (!gen.Configure(_modConfigPath, _cacheSize)) {
+            if (not gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
                 raise(SIGTERM);
                 t.join();
@@ -48,7 +48,8 @@ namespace darwin {
 
             try {
                 Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
-                gen.ConfigureNetworkObject(server.GetIOContext());
+                if (not gen.ConfigureNetworkObject(server.GetIOContext()))
+                    return 1;
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
                 DARWIN_LOG_DEBUG("Core::run:: Creating threads...");

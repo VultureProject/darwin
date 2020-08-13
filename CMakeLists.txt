@@ -103,6 +103,7 @@ set(
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/FileManager.cpp toolkit/FileManager.hpp
         toolkit/StringUtils.cpp toolkit/StringUtils.hpp
+        toolkit/Uuid.cpp toolkit/Uuid.hpp
 )
 
 

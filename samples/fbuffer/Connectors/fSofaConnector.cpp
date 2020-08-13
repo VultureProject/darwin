@@ -10,23 +10,23 @@
 #include "fSofaConnector.hpp"
 
 fSofaConnector::fSofaConnector(boost::asio::io_context &context, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int minLogLen) : 
-                    AConnector(context, SOFA, filter_socket_path, interval, redis_lists, minLogLen) {}
+                    AConnector(context, darwin::SOFA, filter_socket_path, interval, redis_lists, minLogLen) {}
 
-bool fSofaConnector::sendToRedis(std::map<std::string, std::string> &input_line) {
-    _input_line = input_line;
-    _entry.clear();
+bool fSofaConnector::ParseInputForRedis(std::map<std::string, std::string> &input_line) {
+    this->_input_line = input_line;
+    this->_entry.clear();
 
-    std::string source = this->getSource(input_line);
+    std::string source = this->GetSource();
 
-    if (not this->parseData("ip", STRING))
+    if (not this->ParseData("ip"))
         return false;
-    if (not this->parseData("hostname", STRING))
+    if (not this->ParseData("hostname"))
         return false;
-    if (not this->parseData("os", STRING))
+    if (not this->ParseData("os"))
         return false;
-    if (not this->parseData("proto", STRING))
+    if (not this->ParseData("proto"))
         return false;
-    if (not this->parseData("port", STRING))
+    if (not this->ParseData("port"))
         return false;
 
     for (const auto &redis_config : this->_redis_lists) {

@@ -18,7 +18,6 @@ add_executable(
     samples/fbuffer/Connectors/AConnector.cpp samples/fbuffer/Connectors/AConnector.hpp
     samples/fbuffer/Connectors/fAnomalyConnector.cpp samples/fbuffer/Connectors/fAnomalyConnector.hpp
     samples/fbuffer/Connectors/fSofaConnector.cpp samples/fbuffer/Connectors/fSofaConnector.hpp
-    samples/fbuffer/Connectors/fBufferConnector.cpp samples/fbuffer/Connectors/fBufferConnector.hpp
     samples/fbuffer/OutputConfig.cpp samples/fbuffer/OutputConfig.hpp
     toolkit/AThreadManager.cpp toolkit/AThreadManager.hpp
     toolkit/AThread.cpp toolkit/AThread.hpp

@@ -58,7 +58,7 @@ class AThread {
     std::atomic<bool> _is_stop;
 
     /// The condition variable for the thread
-    std::condition_variable cv;
+    std::condition_variable _cv;
 
     /// The mutex used to manage multiple access to the _thread member
     std::mutex _mutex;

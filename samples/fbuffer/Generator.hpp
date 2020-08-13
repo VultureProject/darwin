@@ -50,7 +50,7 @@ class Generator: public AGenerator {
     ///\brief Creates the Connectors depending on the _output_configs vector.
     ///
     ///\param context The IO context transfered to AConnector constructor
-    virtual void ConfigureNetworkObject(boost::asio::io_context &context) override final;
+    virtual bool ConfigureNetworkObject(boost::asio::io_context &context) override final;
 
     ///\brief This function takes a json object containing all the different pairs
     /// source name + redis list name and makes a vector of pairs from that
@@ -91,7 +91,7 @@ class Generator: public AGenerator {
     ///\param type The string type
     ///
     ///\return The enum type
-    valueType _typeToEnum(std::string type);
+    darwin::valueType _TypeToEnum(std::string type);
 
 
     ///\brief This function loads outputs config. Non well formatted outputs will be ignored.
@@ -107,13 +107,13 @@ class Generator: public AGenerator {
     ///\param output_config The OutputConfig to create the AConnector from.
     ///
     ///\return A newly created shared ptr on the newly created AConnector
-    std::shared_ptr<AConnector> _createOutput(boost::asio::io_context &context, OutputConfig &output_config);
+    std::shared_ptr<AConnector> _CreateOutput(boost::asio::io_context &context, OutputConfig &output_config);
 
     /// The bufferTreadManager created in ConfigureNetworkObject. It handles all the threads needed.
     std::shared_ptr<BufferThreadManager> _buffer_thread_manager;
 
     /// The vector of inputs names and types
-    std::vector<std::pair<std::string, valueType>> _inputs;
+    std::vector<std::pair<std::string, darwin::valueType>> _inputs;
 
     /// The vector of OutputConfigs
     std::vector<OutputConfig> _output_configs;

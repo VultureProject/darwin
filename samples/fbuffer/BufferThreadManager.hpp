@@ -40,7 +40,7 @@ class BufferThreadManager : public AThreadManager {
     ///\brief Sets _connector field.
     ///
     ///\param connector The connector to set in the field
-    void setConnector(std::shared_ptr<AConnector> connector);
+    void SetConnector(std::shared_ptr<AConnector> connector);
 
     private:
     /// The connector used to create a new Thread (as Start does not takes any parameter)

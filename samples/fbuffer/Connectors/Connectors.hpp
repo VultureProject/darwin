@@ -13,4 +13,3 @@
 // Subclasses
 #include "fAnomalyConnector.hpp"
 #include "fSofaConnector.hpp"
-#include "fBufferConnector.hpp"

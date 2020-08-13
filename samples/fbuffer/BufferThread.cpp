@@ -15,9 +15,9 @@
 #include "AlertManager.hpp"
 
 BufferThread::BufferThread(std::shared_ptr<AConnector> output) :
-                AThread(output->getInterval()),
+                AThread(output->GetInterval()),
                 _connector(output),
-                _redis_lists(output->getRedisList()) {}
+                _redis_lists(output->GetRedisLists()) {}
 
 
 bool BufferThread::Main() {
@@ -27,17 +27,17 @@ bool BufferThread::Main() {
     for (auto &redis_config : this->_redis_lists) {
         std::string redis_list = redis_config.second;
         long long int len = this->_connector->REDISListLen(redis_list);
-        DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: There are " + std::to_string(len) + " entries in " + redis_list + " redis list.");
+        DARWIN_LOG_DEBUG("BufferThread::Main:: There are " + std::to_string(len) + " entries in " + redis_list + " redis list.");
         std::vector<std::string> logs;
 
-        if (len >= 0 && len < this->_connector->getRequiredLogLength()){
-            DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Not enough log in Redis, wait for more");
+        if (len >= 0 && len < this->_connector->GetRequiredLogLength()){
+            DARWIN_LOG_DEBUG("BufferThread::Main:: Not enough log in Redis, wait for more");
             continue;
         } else if (len<0 || !this->_connector->REDISPopLogs(len, logs, redis_list)) {
-            DARWIN_LOG_ERROR("BufferThread::ThreadMain:: Error when querying Redis");
+            DARWIN_LOG_ERROR("BufferThread::Main:: Error when querying Redis on list: " + redis_list + " for source: " + redis_config.first);
             continue;
         } else {
-            if (not _connector->sendToFilter(logs)) {
+            if (not _connector->SendToFilter(logs)) {
                 DARWIN_LOG_ERROR("BufferThread::Main unable to send data to next filter, reinserting logs in redis ...");
                 this->_connector->REDISReinsertLogs(logs, redis_list);
             } else {

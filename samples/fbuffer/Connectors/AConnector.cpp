@@ -10,43 +10,42 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-
+#include "../../../toolkit/Uuid.hpp"
 #include "../../../toolkit/RedisManager.hpp"
 #include "AConnector.hpp"
 #include "protocol.h"
 #include "BufferTask.hpp"
 
-AConnector::AConnector(boost::asio::io_context &context, outputType filter_type, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int required_log_lines) :
+AConnector::AConnector(boost::asio::io_context &context, darwin::outputType filter_type, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int required_log_lines) :
                         _filter_type(std::move(filter_type)),
-                        _connected(false), 
                         _filter_socket_path(std::move(filter_socket_path)),
                         _filter_socket(context),
                         _interval(interval),
                         _redis_lists(redis_lists),
                         _required_log_lines(required_log_lines) {}
 
-unsigned int AConnector::getInterval() const {
+unsigned int AConnector::GetInterval() const {
     return this->_interval;
 }
 
-unsigned int AConnector::getRequiredLogLength() const {
+unsigned int AConnector::GetRequiredLogLength() const {
     return this->_required_log_lines;
 }
 
-std::vector<std::pair<std::string, std::string>> AConnector::getRedisList() const {
+std::vector<std::pair<std::string, std::string>> AConnector::GetRedisLists() const {
     return this->_redis_lists;
 }
 
-bool AConnector::parseData(std::string fieldname, valueType type) {
+bool AConnector::ParseData(std::string fieldname) {
     DARWIN_LOGGER;
-    if (_input_line.find(fieldname) == _input_line.end()) {
-        DARWIN_LOG_ERROR("AConnector::parseData '" + fieldname + "' is missing in the input line. Output ignored.");
+    if (this->_input_line.find(fieldname) == this->_input_line.end()) {
+        DARWIN_LOG_ERROR("AConnector::ParseData '" + fieldname + "' is missing in the input line. Output ignored.");
         return false;
     }
     if (not this->_entry.empty()) {
         this->_entry += ";";
     }
-    this->_entry += _input_line[fieldname];
+    this->_entry += this->_input_line[fieldname];
     return true;
 }
  
@@ -119,20 +118,23 @@ bool AConnector::REDISPopLogs(long long int len, std::vector<std::string> &logs,
         return false;
     }
 
-    DARWIN_LOG_DEBUG("Aconnector::REDISPopLogs:: Elements removed successfully");
-
     try {
         result_vector = std::any_cast<std::vector<std::any>>(result);
     }
-    catch (const std::bad_any_cast&) {}
+    catch (const std::bad_any_cast&) {
+        DARWIN_LOG_ERROR("AConnector:REDISPopLogs:: Impossible to cast redis response into a vector.");
+        return false;
+    }
 
-    DARWIN_LOG_DEBUG("Got " + std::to_string(result_vector.size()) + " entries from Redis");
+    DARWIN_LOG_DEBUG("AConnector::REDISPopLogs:: Got " + std::to_string(result_vector.size()) + " entries from Redis");
 
     for(auto& object : result_vector) {
         try {
             logs.emplace_back(std::any_cast<std::string>(object));
         }
-        catch(const std::bad_any_cast&) {}
+        catch(const std::bad_any_cast&) {
+            DARWIN_LOG_WARNING("AConnector::REDISPopLogs:: Impossible to cast one element of the redis response into a string, log ignored.");
+        }
     }
 
     return true;
@@ -150,32 +152,30 @@ bool AConnector::FormatDataToSendToFilter(std::vector<std::string> &logs, std::s
     return true;
 }
 
-bool AConnector::sendToFilter(std::vector<std::string> &logs) {
+bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AConnector::sendToFilter Sending logs to connected filter");
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter Sending logs to connected filter");
 
-    // Connect to socket if needed
-    if (not this->_connected) {
-        DARWIN_LOG_DEBUG("AConnector::sendToFilter:: Trying to connect to: " +
-                         this->_filter_socket_path);
-        try {
-            this->_filter_socket.connect(
-                boost::asio::local::stream_protocol::endpoint(
-                            this->_filter_socket_path.c_str()));
-            this->_connected = true;            
-        } catch (std::exception const& e) {
-            DARWIN_LOG_ERROR(std::string("AConnector::SendToFilter:: "
-                                         "Unable to connect to output filter: ") +
-                             e.what());
-            return false;
-        }
-    }
-
-    // Prepare packet
+    // Format data
     std::string data;
     if (not FormatDataToSendToFilter(logs, data))
         return false;
 
+    // Connect to socket
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Trying to connect to: " +
+                     this->_filter_socket_path);
+    try {
+        this->_filter_socket.connect(
+            boost::asio::local::stream_protocol::endpoint(
+                        this->_filter_socket_path.c_str()));
+    } catch (std::exception const& e) {
+        DARWIN_LOG_ERROR(std::string("AConnector::SendToFilter:: "
+                                     "Unable to connect to output filter: ") +
+                         e.what());
+        return false;
+    }
+
+    // Prepare packet
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: " + data);
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data size: " + std::to_string(data.size()));
     /*
@@ -197,6 +197,7 @@ bool AConnector::sendToFilter(std::vector<std::string> &logs) {
     packet = (darwin_filter_packet_t *)malloc(packet_size);
     if (!packet) {
         DARWIN_LOG_CRITICAL("AConnector:: SendToFilter:: Could not create a Darwin packet");
+        _filter_socket.close();
         return false;
     }
     /*
@@ -215,14 +216,14 @@ bool AConnector::sendToFilter(std::vector<std::string> &logs) {
     packet->filter_code = GetFilterCode();
     packet->body_size = data.size();
     
-    memset(packet->evt_id, 0, 16); // Null event ID to fit with the protocol but not needed in this case.
+    std::vector<char> uuid = darwin::uuid::GenUuid();
+    memcpy(packet->evt_id, uuid.data(), 16);
     DARWIN_LOG_DEBUG("AConnector::SendToFilter Sending header + data");
     boost::system::error_code ec;
     boost::asio::write(this->_filter_socket,
                         boost::asio::buffer(packet, packet_size), ec);
     free(packet);
     _filter_socket.close();
-    _connected = false;
     if (ec) {
         DARWIN_LOG_ERROR("BufferFilter::AConnector::SendToFilter 'Unable to write to output filter: " + ec.message());
         return false;
@@ -234,11 +235,11 @@ long AConnector::GetFilterCode() noexcept {
     return DARWIN_FILTER_BUFFER;
 }
 
-std::string AConnector::getSource(std::map<std::string, std::string> &input_line) {
+std::string AConnector::GetSource() {
     DARWIN_LOGGER;
-    if (_input_line.find("source") == _input_line.end()) {
-        DARWIN_LOG_ERROR("AConnector::getSource 'source' is missing in the input line. Output ignored.");
+    if (this->_input_line.find("source") == this->_input_line.end()) {
+        DARWIN_LOG_ERROR("AConnector::GetSource 'source' is missing in the input line. Output ignored.");
         return std::string();
     }
-    return _input_line["source"];
+    return this->_input_line["source"];
 }

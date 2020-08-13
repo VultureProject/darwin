@@ -9,7 +9,7 @@
 
 #include "StringUtils.hpp"
 
-std::vector<std::string> SplitString(const std::string& source, char delim) {
+std::vector<std::string> darwin::strings::SplitString(const std::string& source, char delim) {
     std::vector<std::string> res;
 
     std::istringstream stream(source);

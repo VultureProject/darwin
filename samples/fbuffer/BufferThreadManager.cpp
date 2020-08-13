@@ -18,6 +18,6 @@ std::shared_ptr<AThread> BufferThreadManager::Start() {
     return res;
 }
 
-void BufferThreadManager::setConnector(std::shared_ptr<AConnector> connector) {
+void BufferThreadManager::SetConnector(std::shared_ptr<AConnector> connector) {
     this->_connector = connector;
 }

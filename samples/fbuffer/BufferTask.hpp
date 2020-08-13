@@ -39,7 +39,7 @@ class BufferTask final : public darwin::Session {
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex,
-                     std::vector<std::pair<std::string, valueType>> &inputs,
+                     std::vector<std::pair<std::string, darwin::valueType>> &inputs,
                      std::vector<std::shared_ptr<AConnector>> &connectors);
 
     ///\brief Virtual final default constructor    
@@ -71,9 +71,9 @@ class BufferTask final : public darwin::Session {
     ///\param input_type The expected type of the data.
     ///
     ///\return true on success, false otherwise.
-    bool ParseData(rapidjson::Value &data, valueType input_type);
+    bool ParseData(rapidjson::Value &data, darwin::valueType input_type);
 
-    ///\brief this function add the Parsed line (_input_line) into the correct REDIS storages by callind sendToRedis method for each Connector in _connectors.
+    ///\brief this function add the Parsed line (_input_line) into the correct REDIS storages by calling ParseInputForRedis method for each Connector in _connectors.
     ///
     ///\return true on success, false otherwise.
     bool AddEntries();
@@ -84,7 +84,7 @@ class BufferTask final : public darwin::Session {
     std::string _data;
 
     /// It needs to be a vector of pair and not a map to keep the order correct. It holds all the names and types of the inputs.
-    std::vector<std::pair<std::string, valueType>> _inputs_format;
+    std::vector<std::pair<std::string, darwin::valueType>> _inputs_format;
 
     /// This vector holds all the Connectors set in the config file. 
     std::vector<std::shared_ptr<AConnector>> _connectors;

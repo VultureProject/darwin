@@ -33,12 +33,12 @@ class fSofaConnector final : public AConnector {
     virtual ~fSofaConnector() override final = default;
 
     public:
-    ///\brief This functions sends datas to the REDIS storage. It override default pure virtual one as each filter doesn't need the same datas.
+    ///\brief This function sends data to the REDIS storage. It overrides default pure virtual one as each filter doesn't need the same data.
     ///
-    /// It should fill _entry with the datas to send as REDISAddEntry is picking in it.
+    /// It should fill _entry with the data to send as REDISAddEntry is picking from it.
     ///
-    ///\param input_line is a map representing all the entry received by the BufferTask.
+    ///\param input_line is a map representing all the entries received by the BufferTask.
     ///
     ///\return true on success, false otherwise.
-    virtual bool sendToRedis(std::map<std::string, std::string> &input_line) override final;
+    virtual bool ParseInputForRedis(std::map<std::string, std::string> &input_line) override final;
 };
