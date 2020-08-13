@@ -30,19 +30,28 @@ public:
                darwin::Manager& manager) noexcept override final;
 
 protected:
+    enum class db_type {
+        text = 0,
+        json,
+        rsyslog
+    };
+
+protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
     virtual bool ConfigureAlerting(const std::string& tags) override final;
 
     bool LoadTextFile(const std::string& filename);
-    bool LoadJsonFile(const std::string& filename);
+    bool LoadJsonFile(const std::string& filename, const db_type type);
     bool LoadJsonDatabase(const rapidjson::Document& database);
     bool LoadJsonEntry(const rapidjson::Value& entry);
+    bool LoadRsyslogDatabase(const rapidjson::Document& database);
+    bool LoadRsyslogEntry(const rapidjson::Value& entry);
 
 private:
     // This implementation is thread safe with multiple reader
     // with no writer.
     // This is indicated by the repository doc.
     // It should mimic thread safety of std::unordered_map<>
-    tsl::hopscotch_map<std::string, int> _database; //!< The "bad" hostname database
+    tsl::hopscotch_map<std::string, std::pair<std::string, int>> _database; //!< The "bad" hostname database
     std::string _feed_name;
 };

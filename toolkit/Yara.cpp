@@ -101,6 +101,7 @@ namespace darwin {
             return results;
         }
 
+#if YR_MAJOR_VERSION == 3
         int YaraEngine::ScanOrImportCallback(int message, void *messageData, void *userData) {
             DARWIN_LOGGER;
             YR_RULE *rule;
@@ -125,6 +126,36 @@ namespace darwin {
 
             return CALLBACK_CONTINUE;
         }
+#elif YR_MAJOR_VERSION == 4
+        int YaraEngine::ScanOrImportCallback(
+                __attribute__((unused)) YR_SCAN_CONTEXT *context,
+                int message,
+                void *messageData,
+                void *userData) {
+            DARWIN_LOGGER;
+            YR_RULE *rule;
+
+            YaraEngine *engine = (YaraEngine *)userData;
+
+            switch(message) {
+                case CALLBACK_MSG_RULE_MATCHING:
+                    rule = (YR_RULE *)messageData;
+                    engine->AddRuleToMatch(rule);
+                    DARWIN_LOG_INFO("Toolkit::YaraEngine::ScanOrImportCallback:: rule match");
+                    break;
+                case CALLBACK_MSG_RULE_NOT_MATCHING:
+                    break;
+                case CALLBACK_MSG_SCAN_FINISHED:
+                    break;
+                case CALLBACK_MSG_IMPORT_MODULE:
+                    break;
+                case CALLBACK_MSG_MODULE_IMPORTED:
+                    break;
+            }
+
+            return CALLBACK_CONTINUE;
+        }
+#endif
 
         void YaraEngine::AddRuleToMatch(YR_RULE *rule) {
             _rule_match_list.insert(rule);
@@ -248,6 +279,7 @@ namespace darwin {
             return engine;
         }
 
+#if YR_MAJOR_VERSION == 3
         void YaraCompiler::YaraErrorCallback(int errorLevel, const char *filename, int lineNumber, const char *message, void *userData) {
             DARWIN_LOGGER;
             char errStr[2048];
@@ -275,5 +307,39 @@ namespace darwin {
 
             return;
         }
+#elif YR_MAJOR_VERSION == 4
+        void YaraCompiler::YaraErrorCallback(
+                int errorLevel,
+                const char *filename,
+                int lineNumber,
+                __attribute__((unused)) const YR_RULE *rule,
+                const char *message, void *userData) {
+            DARWIN_LOGGER;
+            char errStr[2048];
+            YaraCompiler *compiler = (YaraCompiler *)userData;
+            if(filename) {
+                std::snprintf(errStr, 2048, "Toolkit::YaraCompiler::YaraErrorCallback: on file '%s' (line %d) -> %s", filename, lineNumber, message);
+                if(errorLevel == YARA_ERROR_LEVEL_WARNING) {
+                    DARWIN_LOG_WARNING(errStr);
+                }
+                else {
+                    DARWIN_LOG_ERROR(errStr);
+                    compiler->_status = Status::ERROR;
+                }
+            }
+            else {
+                std::snprintf(errStr, 2048, "Toolkit::YaraCompiler::YaraErrorCallback: %s", message);
+                if(errorLevel == YARA_ERROR_LEVEL_WARNING) {
+                    DARWIN_LOG_WARNING(errStr);
+                }
+                else {
+                    DARWIN_LOG_ERROR(errStr);
+                    compiler->_status = Status::ERROR;
+                }
+            }
+
+            return;
+        }
+#endif
     }
 }

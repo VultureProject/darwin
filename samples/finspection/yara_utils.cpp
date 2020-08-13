@@ -286,6 +286,7 @@ YaraResults yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb) {
     return results;
 }
 
+#if YR_MAJOR_VERSION == 3
 void yaraErrorCallback(int errorLevel, const char *fileName, int lineNumber, const char *message, void *userData) {
     DARWIN_LOGGER;
     char errStr[2048];
@@ -333,3 +334,62 @@ int yaraScanOrImportCallback(int message, void *messageData, void *userData) {
 
     return CALLBACK_CONTINUE;
 }
+#elif YR_MAJOR_VERSION == 4
+void yaraErrorCallback(
+        int errorLevel,
+        const char *fileName,
+        int lineNumber,
+        __attribute__((unused)) const YR_RULE *rule,
+        const char *message,
+        void *userData) {
+    DARWIN_LOGGER;
+    char errStr[2048];
+    if(fileName) {
+        std::snprintf(errStr, 2048, "YARA ERROR[%d]: on file '%s' (line %d) -> %s", errorLevel, fileName, lineNumber, message);
+        DARWIN_LOG_ERROR(errStr);
+    }
+    else {
+        std::snprintf(errStr, 2048, "YARA ERROR[%d]: %s", errorLevel, message);
+        DARWIN_LOG_ERROR(errStr);
+    }
+
+    return;
+}
+
+int yaraScanOrImportCallback(
+        __attribute__((unused)) YR_SCAN_CONTEXT *context,
+        int message,
+        void *messageData,
+        void *userData) {
+    DARWIN_LOGGER;
+    YR_RULE *rule;
+    YR_MODULE_IMPORT *import;
+    YaraStreamElem *elem = (YaraStreamElem *)userData;
+
+    if(elem) elem->status |= YSE_FINISHED;
+
+    switch(message) {
+        case CALLBACK_MSG_RULE_MATCHING:
+            rule = (YR_RULE *)messageData;
+            if(elem) {
+                elem->status |= YSE_RULE_MATCHED;
+                if(!yaraIsRuleInList(elem->ruleList, rule))  yaraAddRuleToList(elem->ruleList, rule);
+            }
+            DARWIN_LOG_INFO("yara rule match");
+            break;
+        case CALLBACK_MSG_RULE_NOT_MATCHING:
+            if(elem)    elem->status |= YSE_RULE_NOMATCH;
+            break;
+        case CALLBACK_MSG_SCAN_FINISHED:
+            break;
+        case CALLBACK_MSG_IMPORT_MODULE:
+            import = (YR_MODULE_IMPORT *)messageData;
+            DARWIN_LOG_DEBUG("YARA IMPORT: importing module");
+            break;
+        case CALLBACK_MSG_MODULE_IMPORTED:
+            DARWIN_LOG_DEBUG("YARA IMPORT: module imported");
+    }
+
+    return CALLBACK_CONTINUE;
+}
+#endif

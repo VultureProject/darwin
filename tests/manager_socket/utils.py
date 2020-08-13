@@ -193,6 +193,135 @@ CONF_THREE_V2 = """{{
     }}
 }}
 """.format(DEFAULT_FILTER_PATH, PATH_CONF_FTEST)
+CONF_THREE_V2_ALT = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "test_1",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_2",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_4",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FTEST)
+CONF_TWO_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "test_1",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_2",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FTEST)
+CONF_FOUR_V2 = """{{
+    "version": 2,
+    "filters": [
+    {{
+        "name": "test_1",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_2",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_3",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }},
+    {{
+        "name": "test_4",
+        "exec_path": "{0}darwin_test",
+        "config_file": "{1}",
+        "output": "NONE",
+        "next_filter": "",
+        "nb_thread": 1,
+        "log_level": "DEBUG",
+        "cache_size": 0
+    }}
+    ],
+    "report_stats": {{
+        "file": {{
+            "filepath": "/tmp/darwin-stats",
+            "permissions": 640
+        }},
+        "interval": 5
+    }}
+}}
+""".format(DEFAULT_FILTER_PATH, PATH_CONF_FTEST)
 CONF_THREE_ONE_WRONG = """{{
   "test_1": {{
         "exec_path": "{0}darwin_test",
@@ -293,6 +422,7 @@ RESP_EMPTY     = '{}'
 RESP_TEST_1 = '"test_1": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
 RESP_TEST_2 = '"test_2": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
 RESP_TEST_3 = '"test_3": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
+RESP_TEST_4 = '"test_4": {"status": "running", "connections": 0, "received": 0, "entryErrors": 0, "matches": 0, "failures": 0, "proc_stats": {'
 RESP_STATUS_OK = '"status": "OK"'
 RESP_STATUS_KO = '"status": "KO"'
 RESP_ERROR_NO_PID = '"error": "PID file not accessible"'
