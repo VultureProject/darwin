@@ -14,7 +14,7 @@ BufferThreadManager::BufferThreadManager(int nb_threads) : AThreadManager(nb_thr
 
 std::shared_ptr<AThread> BufferThreadManager::Start() {
     auto ptr = std::make_shared<BufferThread>(_connector);
-    std::shared_ptr<AThread> res = std::dynamic_pointer_cast<AThread>(ptr);
+    std::shared_ptr<AThread> res = std::static_pointer_cast<AThread>(ptr);
     return res;
 }
 

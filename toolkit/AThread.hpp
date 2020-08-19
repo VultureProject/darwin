@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <any>
 #include <string>
 #include <thread>
@@ -30,6 +31,9 @@ class AThread {
 
     ///\brief Default virtual destructor 
     virtual ~AThread() = default;
+
+    ///\brief initiates the _thread member
+    void InitiateThread();
 
     ///\brief Stops the thread (with join)
     ///

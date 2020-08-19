@@ -18,7 +18,7 @@ bool fAnomalyConnector::FormatDataToSendToFilter(std::vector<std::string> &logs,
 
     tsl::hopscotch_map<std::string, std::array<int, 5>> data = this->PreProcess(logs);
 
-    if (data.size() < 10) {
+    if (data.size() <= 10) {
         DARWIN_LOG_INFO("fAnomalyConnector::FormatDataToSendToFilter:: After Pre process, there is not enough data, anomaly will not be relevant. Reinserting logs and waiting for next trigger.");
         return false;
     }
@@ -31,8 +31,8 @@ bool fAnomalyConnector::FormatDataToSendToFilter(std::vector<std::string> &logs,
     for (const auto &item : data) {
         subres = "\"" + item.first + "\""; // Double quotes around ip.
 
-        for (int i : item.second) {
-            subres += ", " + std::to_string(i);
+        for (int j : item.second) {
+            subres += ", " + std::to_string(j);
         }
         
         if (i != 0)

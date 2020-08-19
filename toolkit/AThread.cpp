@@ -5,14 +5,15 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
+
+#include <iostream>
 #include "AThread.hpp"
 #include "Logger.hpp"
 
 AThread::AThread(int interval) : 
                 _interval(interval),
-                _thread(std::thread(&AThread::ThreadMain, this)),                
-                _is_stop(false)
-{}
+                _thread(),
+                _is_stop(false) {}
 
 void AThread::ThreadMain() {
     DARWIN_LOGGER;
@@ -21,7 +22,7 @@ void AThread::ThreadMain() {
     std::unique_lock<std::mutex> lck(mtx);
 
     while (!(this->_is_stop)) {
-        if (!Main()) {
+        if (!this->Main()) {
             DARWIN_LOG_DEBUG("ThreadManager::ThreadMain:: Error in main function, stopping the thread");
             _is_stop = true;
             break;
@@ -29,6 +30,10 @@ void AThread::ThreadMain() {
         // Wait for notification or until timeout
         this->_cv.wait_for(lck, std::chrono::seconds(_interval));
     }
+}
+
+void AThread::InitiateThread() {
+    this->_thread = std::thread(&AThread::ThreadMain, this);
 }
 
 bool AThread::Stop() {
