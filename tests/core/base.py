@@ -213,7 +213,7 @@ def check_start_invalid_cache_num():
     return True
 
 def check_start_invalid_threshold_num():
-    filter = Filter(filter_name="test", thresold="Kenobi")
+    filter = Filter(filter_name="test", threshold="Kenobi")
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
@@ -253,7 +253,7 @@ def check_start_outbound_cache_num():
     return True
 
 def check_start_outbound_threshold_num():
-    filter = Filter(filter_name="test", thresold="459230781640628620899862803482")
+    filter = Filter(filter_name="test", threshold="459230781640628620899862803482")
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
