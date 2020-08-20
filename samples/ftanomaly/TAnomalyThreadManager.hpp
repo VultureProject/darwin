@@ -53,8 +53,9 @@ private:
     bool WriteRedis(const std::string& log_line);
 
     /// Used by "PreProcess" to process a log's line
-    void PreProcessLine(const std::string& ip, const std::string& protocol, std::string port,
+    void PreProcessLine(const std::string& ip, const std::string &ip_dst, const std::string& protocol, const std::string& port,
                         tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_data,
+                        tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_ip,
                         tsl::hopscotch_map<std::string, std::array<int, 5>>& data);
 
     /// Query the Redis to get length of the list
