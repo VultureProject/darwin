@@ -16,7 +16,7 @@
 #include "Time.hpp"
 #include "protocol.h"
 #include "AlertManager.hpp"
-#include "StringUtils.hpp"
+#include "../../toolkit/StringUtils.hpp"
 
 AnomalyThreadManager::AnomalyThreadManager(std::string& redis_internal)
         :_redis_internal(redis_internal) {}
