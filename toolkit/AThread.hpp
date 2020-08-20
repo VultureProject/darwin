@@ -8,7 +8,6 @@
 #pragma once
 
 #include <atomic>
-#include <any>
 #include <string>
 #include <thread>
 
@@ -17,7 +16,7 @@
 class AThread {
     /// This abstract class is made to be inheritated by subclasses
     /// Its purpose is to handle everything needed to run a thread.
-    /// It is likely to be called by AThreadManager or ay subclass inheritating from it.
+    /// It is likely to be called by AThreadManager or any subclass inheriting from it.
     /// ThreadMain is calling Main every _interval seconds.
     /// Main MUST be overrode by children.
     ///
@@ -63,7 +62,4 @@ class AThread {
 
     /// The condition variable for the thread
     std::condition_variable _cv;
-
-    /// The mutex used to manage multiple accesses to the _thread member
-    std::mutex _mutex;
 };

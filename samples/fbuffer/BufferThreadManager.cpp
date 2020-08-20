@@ -8,7 +8,6 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "BufferThreadManager.hpp"
 #include "BufferThread.hpp"
-#include "Logger.hpp"
 
 BufferThreadManager::BufferThreadManager(int nb_threads) : AThreadManager(nb_threads) {}
 

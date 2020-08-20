@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <boost/token_functions.hpp>
 #include <map>
 #include <string>
 
@@ -21,7 +20,7 @@
 class BufferTask final : public darwin::Session {
     /// This class inherits from Session (see Session.hpp)
     /// This class handles Tasks for Buffer Filter.
-    /// It parses the body of incomming messages and splits data into several REDIS lists depending on
+    /// It parses the body of incoming messages and splits data into several REDIS lists depending on
     /// the output Filters described in the config file.
     ///
     ///\class BufferTask
@@ -33,7 +32,7 @@ class BufferTask final : public darwin::Session {
     ///\param manager Transfered to Session constructor
     ///\param cache Transfered to Session constructor
     ///\param cache_mutex Transfered to Session constructor
-    ///\param inputs This vector holds the name and types of datas in input (in the correct order)
+    ///\param inputs This vector holds the name and types of data in input (in the correct order)
     ///\param connectors This vector holds all the Connectors needed depending on the output Filters in config file.
     BufferTask(boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
@@ -45,9 +44,7 @@ class BufferTask final : public darwin::Session {
     ///\brief Virtual final default constructor    
     virtual ~BufferTask() override final = default;
 
-    public:
     ///\brief This operator is the entry point of BufferTask.
-    /// You must overload this operator in order to compile and be executed.
     /// Calls ParseLine on every line received in the body.
     void operator()() override;
 
@@ -57,8 +54,8 @@ class BufferTask final : public darwin::Session {
 
     private:
     ///\brief Parses a line of the body.
-    /// Calls ParseData for every input in the config file and put the result (in _data) in _input_line
-    /// Then it call AddEntries() to add the complete _input_line into REDIS.
+    /// Calls ParseData for every input in the config file and puts the result (in _data) in _input_line
+    /// Then it calls AddEntries() to add the complete _input_line into REDIS.
     ///
     ///\param line the line to parse
     ///
@@ -80,7 +77,7 @@ class BufferTask final : public darwin::Session {
 
 
     private:
-    /// Temporarily used during the lifetime of ParseLine, used to store a data just parsed by ParseData before adding it inti _input_line in ParseLine.
+    /// Temporarily used during the lifetime of ParseLine, used to store a data just parsed by ParseData before adding it into _input_line in ParseLine.
     std::string _data;
 
     /// It needs to be a vector of pair and not a map to keep the order correct. It holds all the names and types of the inputs.
@@ -90,6 +87,6 @@ class BufferTask final : public darwin::Session {
     std::vector<std::shared_ptr<AConnector>> _connectors;
 
     /// Temporarily used during the lifetime of ParseLine.
-    /// It is send to Connector when adding a line into Redis (in AddEntries)
+    /// It is sent to Connector when adding a line into Redis (in AddEntries)
     std::map<std::string, std::string> _input_line;
 };

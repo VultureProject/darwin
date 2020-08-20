@@ -25,7 +25,7 @@ class BufferThreadManager : public AThreadManager {
     public:
     ///\brief Unique constructor. Does not create the BufferThreads
     ///
-    ///\param nb_thread The number of theads the Manager can handle.
+    ///\param nb_thread The number of threads the Manager can handle.
     BufferThreadManager(int nb_thread);
 
     ///\brief default destructor (Parent class destructor stops the threads)

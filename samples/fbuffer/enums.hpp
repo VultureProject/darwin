@@ -7,9 +7,8 @@
 
 #pragma once
 
-namespace darwin
-{
-        typedef enum valueType_e {
+namespace darwin {
+    typedef enum valueType_e {
         STRING = 0,
         INT,
         UNKNOWN_VALUE_TYPE

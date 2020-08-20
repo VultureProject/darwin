@@ -1,6 +1,5 @@
 import os
 import uuid
-import json
 import redis
 import logging
 from time import sleep, time
@@ -12,8 +11,7 @@ from tools.output import print_result
 from darwin import DarwinApi, DarwinPacket
 from filters.fanomaly import Anomaly
 
-REDIS_SOCKET = "/var/sockets/redis/redis.sock"
-ALERT_FILE = "/tmp/test_fbuffer.txt"
+REDIS_SOCKET = "/tmp/redis.sock"
 FILTER_CODE = 0x62756672
 DATA_TEST = "filters/data/anomalyData.txt"
 REDIS_ALERT_LIST = "darwin_buffer_test_alert"
@@ -23,7 +21,6 @@ class Buffer(Filter):
         super().__init__(filter_name="buffer", cache_size=1)
         self.redis = RedisServer(unix_socket=REDIS_SOCKET)
         self.test_data = None
-        self.internal_redis = self.filter_name + "_bufferFilter_internal"
 
     def configure(self, config=None):
         content = config if config else '{{' \
@@ -70,33 +67,8 @@ class Buffer(Filter):
                           '}}]' \
                         '}}' \
                       ']' \
-                    '}}'.format(log_file=ALERT_FILE,
-                        redis_socket=REDIS_SOCKET)
+                    '}}'.format(redis_socket=REDIS_SOCKET)
         super().configure(content)
-
-    def clean_files(self):
-        super().clean_files()
-
-        try:
-            os.remove(ALERT_FILE)
-        except:
-            pass
-
-
-    def send(self, data):
-        header = DarwinPacket(
-            packet_type="other",
-            response_type="no",
-            filter_code=FILTER_CODE,
-            event_id=uuid.uuid4().hex,
-            body_size=len(data)
-        )
-
-        api = DarwinApi(socket_type="unix", socket_path=self.socket)
-
-        api.socket.sendall(header)
-        api.socket.sendall(data)
-        api.close()
 
     def get_internal_redis_set_data(self, redis_list_name):
         res = None
@@ -204,7 +176,6 @@ def redis_test(test_name, data, expectations, config=None, bulk=True):
     # CLEAN
     darwin_api.close()
 
-    buffer_filter.clean_files()
     # ret = buffer_filter.valgrind_stop() or buffer_filter.valgrind_stop()
     # would erase upper ret if this function return True
     if not buffer_filter.valgrind_stop():
@@ -230,7 +201,7 @@ def well_formatted_data_test():
 
 def not_data_list_ignored_test():
     return redis_test(
-        "not_list_data_ignored_test",
+        "not_data_list_ignored_test",
         [
             ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 3], # Well formated
             "source_1"
@@ -245,7 +216,7 @@ def not_data_list_ignored_test():
 
 def not_data_string_ignored_test():
     return redis_test(
-        "not_string_data_ignored_test",
+        "not_data_string_ignored_test",
         [
             ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 12], # Well formated
             ["source_1", 42, "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2"]
@@ -260,7 +231,7 @@ def not_data_string_ignored_test():
 
 def not_data_int_ignored_test():
     return redis_test(
-        "not_string_data_ignored_test",
+        "not_data_int_ignored_test",
         [
             ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 7], # Well formated
             ["source_1", "net_src_ip_value_2", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", "8"]
@@ -290,7 +261,7 @@ def data_too_short_ignored_test():
 
 def data_too_long_ignored_test():
     return redis_test(
-        "data_too_short_ignored_test",
+        "data_too_long_ignored_test",
         [
             ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
             ["source_1", "net_src_ip_value__", "1", "2", "3", "ip_value", "hostname_value", "os_value", "proto_value", "port_value_2", 10, 12]
@@ -333,7 +304,7 @@ def multiple_sources_test():
 
 def multiple_outputs_redis_test():
     return redis_test(
-        "multiple_outputs_test",
+        "multiple_outputs_redis_test",
         [
             ["source_1", "net_src_ip_value_1", "1", "2", "3", "ip_value_1", "hostname_value", "os_value", "proto_value", "port_value_1", 9], # Well formated
             ["source_2", "net_src_ip_value_2", "1", "2", "3", "ip_value_2", "hostname_value", "os_value", "proto_value", "port_value_2", 8]  # Well formated
@@ -479,7 +450,6 @@ def thread_working_test():
     # CLEAN
     darwin_api.close()
 
-    buffer_filter.clean_files()
     # ret = buffer_filter.valgrind_stop() or buffer_filter.valgrind_stop()
     # would erase upper ret if this function return True
     if not buffer_filter.valgrind_stop():
@@ -518,8 +488,7 @@ def missing_data_in_conf():
                           '}}]' \
                         '}}' \
                       ']' \
-                    '}}'.format(log_file=ALERT_FILE,
-                        redis_socket=REDIS_SOCKET)
+                    '}}'.format(redis_socket=REDIS_SOCKET)
 
     )
 
@@ -590,7 +559,7 @@ def fanomaly_connector_and_send_test():
     expected_data = '"details": {"ip": "192.168.110.2","udp_nb_host": 1.000000,"udp_nb_port": 252.000000,"tcp_nb_host": 0.000000,"tcp_nb_port": 0.000000,"icmp_nb_host": 0.000000,"distance": 246.193959}'
 
     if len(redis_data) != 1:
-        logging.error("Expecting a single element list.")
+        logging.error("{}: Expecting a single element list.".format(test_name))
         ret = False
 
 
@@ -604,7 +573,6 @@ def fanomaly_connector_and_send_test():
     # CLEAN
     darwin_api.close()
 
-    buffer_filter.clean_files()
     test_filter.clean_files()
     # ret = buffer_filter.valgrind_stop() or buffer_filter.valgrind_stop()
     # would erase upper ret if this function return True

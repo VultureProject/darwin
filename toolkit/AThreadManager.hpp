@@ -14,7 +14,7 @@
  
 
 class AThreadManager {
-    /// This abstract class is made to be inheritated by subclasses
+    /// This abstract class is made to be inherited by subclasses
     /// Its purpose is to handle everything needed to run multiple AThread instances (AThread.hpp).
     /// Start MUST be overrode. It creates an AThread (or child) instance and returns it as a pointer.
     /// It can handle AThreads, and any subclasses of it by overriding Start to create the correct type of AThread child.

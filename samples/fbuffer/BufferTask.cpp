@@ -5,9 +5,6 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/tokenizer.hpp>
 #include <string>
 #include <thread>
 
@@ -36,9 +33,7 @@ long BufferTask::GetFilterCode() noexcept {
 }
 
 void BufferTask::operator()() {
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
-    std::string body;
-
+    DARWIN_LOGGER;
     // Should not fail, as the Session body parser MUST check for validity !
     rapidjson::GenericArray<false, rapidjson::Value> array = this->_body.GetArray();
 
@@ -48,14 +43,12 @@ void BufferTask::operator()() {
         if (ParseLine(line)) {
             STAT_MATCH_INC;
             this->_certitudes.push_back(0);
-            if (is_log) {
-                _logs += _data + "\n";
-            }
             this->AddEntries();
         } else {
             STAT_PARSE_ERROR_INC;
             this->_certitudes.push_back(DARWIN_ERROR_RETURN);
         }
+        DARWIN_LOG_DEBUG("BufferTask:: processed entry in " + std::to_string(GetDurationMs()) + "ms");
     }
 }
 
@@ -63,7 +56,7 @@ bool BufferTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
 
     if(not line.IsArray()) {
-        DARWIN_LOG_ERROR("BufferTask:: ParseBody: The input line is not an array");
+        DARWIN_LOG_ERROR("BufferTask:: ParseLine: The input line is not an array");
         return false;
     }
 
@@ -92,8 +85,6 @@ bool BufferTask::ParseLine(rapidjson::Value &line) {
         this->_input_line[this->_inputs_format[i].first] = this->_data;
         i++;
     }
-
-    DARWIN_LOG_DEBUG("BufferTask:: processed entry in " + std::to_string(GetDurationMs()) + "ms");
     return true;
 }
 

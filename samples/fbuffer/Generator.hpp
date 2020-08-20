@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 
 #include "../toolkit/rapidjson/document.h"
@@ -35,8 +34,6 @@ class Generator: public AGenerator {
     virtual ~Generator() = default;
 
     public:
-    static constexpr int DEFAULT_MAX_TOKENS = 75;
-
     ///\brief Creates a BufferTask when input is received
     ///
     ///\param socket Transfered to BufferTask constructor

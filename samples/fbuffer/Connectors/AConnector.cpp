@@ -9,6 +9,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/asio.hpp>
 
 #include "../../../toolkit/Uuid.hpp"
 #include "../../../toolkit/RedisManager.hpp"
@@ -70,7 +71,7 @@ bool AConnector::REDISAddEntry(const std::string &entry, const std::string &list
 
 bool AConnector::REDISReinsertLogs(std::vector<std::string> &logs, const std::string &list_name) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AConnector::REDISReinsertLogs About to reinsert logs in redis list");
+    DARWIN_LOG_DEBUG("AConnector::REDISReinsertLogs:: About to reinsert logs in redis list");
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
@@ -154,7 +155,7 @@ bool AConnector::FormatDataToSendToFilter(std::vector<std::string> &logs, std::s
 
 bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AConnector::SendToFilter Sending logs to connected filter");
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Sending logs to connected filter");
 
     // Format data
     std::string data;
@@ -176,22 +177,15 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     }
 
     // Prepare packet
-    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: " + data);
-    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data size: " + std::to_string(data.size()));
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: " + data + ", data size: " + std::to_string(data.size()));
     /*
      * Allocate the header +
      * the size of the certitude -
      * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
      */
-    std::size_t packet_size = 0;
     std::size_t certitude_size = 1;
-    if (logs.size() > DEFAULT_CERTITUDE_LIST_SIZE) {
-        packet_size = sizeof(darwin_filter_packet_t) +
-            (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
-    } else {
-        packet_size = sizeof(darwin_filter_packet_t);
-    }
-    packet_size += data.size();
+    std::size_t packet_size = sizeof(darwin_filter_packet_t) + data.size();
+
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
     darwin_filter_packet_t* packet;
     packet = (darwin_filter_packet_t *)malloc(packet_size);
@@ -225,7 +219,7 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     free(packet);
     _filter_socket.close();
     if (ec) {
-        DARWIN_LOG_ERROR("BufferFilter::AConnector::SendToFilter 'Unable to write to output filter: " + ec.message());
+        DARWIN_LOG_ERROR("AConnector::SendToFilter:: 'Unable to write to output filter: " + ec.message());
         return false;
     }
     return true;
@@ -238,7 +232,7 @@ long AConnector::GetFilterCode() noexcept {
 std::string AConnector::GetSource() {
     DARWIN_LOGGER;
     if (this->_input_line.find("source") == this->_input_line.end()) {
-        DARWIN_LOG_ERROR("AConnector::GetSource 'source' is missing in the input line. Output ignored.");
+        DARWIN_LOG_ERROR("AConnector::GetSource:: 'source' is missing in the input line. Output ignored.");
         return std::string();
     }
     return this->_input_line["source"];

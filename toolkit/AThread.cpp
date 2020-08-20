@@ -17,13 +17,13 @@ AThread::AThread(int interval) :
 
 void AThread::ThreadMain() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ThreadManager::ThreadMain:: Begin");
+    DARWIN_LOG_DEBUG("AThread::ThreadMain:: Begin");
     std::mutex mtx;
     std::unique_lock<std::mutex> lck(mtx);
 
     while (!(this->_is_stop)) {
         if (!this->Main()) {
-            DARWIN_LOG_DEBUG("ThreadManager::ThreadMain:: Error in main function, stopping the thread");
+            DARWIN_LOG_DEBUG("AThread::ThreadMain:: Error in main function, stopping the thread");
             _is_stop = true;
             break;
         }
@@ -38,9 +38,8 @@ void AThread::InitiateThread() {
 
 bool AThread::Stop() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("ThreadManager:: Stopping thread...");
+    DARWIN_LOG_DEBUG("AThread::Stop:: Stopping thread...");
 
-    std::lock_guard<std::mutex> lck(_mutex);
     this->_is_stop = true;
     //Notify the thread
     this->_cv.notify_all();
@@ -49,9 +48,9 @@ bool AThread::Stop() {
             _thread.join();
         }
     } catch (const std::system_error &e) {
-        DARWIN_LOG_WARNING("ThreadManager:: Error when trying to stop the thread: " + e.code().message());
+        DARWIN_LOG_WARNING("AThread::Stop:: Error when trying to stop the thread: " + e.code().message());
         return false;
     }
-    DARWIN_LOG_DEBUG("ThreadManager:: Thread stopped");
+    DARWIN_LOG_DEBUG("AThread::Stop:: Thread stopped");
     return true;
 }

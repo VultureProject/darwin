@@ -5,8 +5,6 @@
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
-#include <iostream>
-
 #include "fSofaConnector.hpp"
 
 fSofaConnector::fSofaConnector(boost::asio::io_context &context, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int minLogLen) : 
@@ -30,6 +28,7 @@ bool fSofaConnector::ParseInputForRedis(std::map<std::string, std::string> &inpu
         return false;
 
     for (const auto &redis_config : this->_redis_lists) {
+        // If the source in the input is equal to the source in the redis list, or the redis list's source is ""
         if (not redis_config.first.compare(source) or redis_config.first.empty())
                 this->REDISAddEntry(this->_entry, redis_config.second);
     }

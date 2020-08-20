@@ -8,14 +8,13 @@
 #pragma once
 
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "Connectors.hpp"
 #include "AThread.hpp"
 
 class BufferThread : public AThread {
-    /// This calss is inheriting from AThread (AThread.hpp)
+    /// This class is inheriting from AThread (AThread.hpp)
     /// Its purpose is to add to everything needed to handle a thread (implemented by AThread)
     /// what is specific to Buffer Filter threads.
     ///
@@ -36,7 +35,7 @@ class BufferThread : public AThread {
     /// This function checks on Redis if there is enough logs on the associated _redis_list. (Given by Connector)
     /// If needed, it tries to pick the logs in REDIS.
     /// On success it sends them to the output Filter.
-    /// On failure, it reiserts the logs into REDIS.
+    /// On failure, it reinserts the logs into REDIS.
     ///
     ///\return true on success, false otherwise.
     virtual bool Main() override final;

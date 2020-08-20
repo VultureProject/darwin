@@ -6,7 +6,6 @@
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.
 
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "../../toolkit/RedisManager.hpp"
@@ -22,7 +21,7 @@ BufferThread::BufferThread(std::shared_ptr<AConnector> output) :
 
 bool BufferThread::Main() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Begin");
+    DARWIN_LOG_DEBUG("BufferThread::Main:: Begin");
 
     for (auto &redis_config : this->_redis_lists) {
         std::string redis_list = redis_config.second;
@@ -38,10 +37,10 @@ bool BufferThread::Main() {
             continue;
         } else {
             if (not _connector->SendToFilter(logs)) {
-                DARWIN_LOG_INFO("BufferThread::Main unable to send data to next filter, reinserting logs in redis ...");
+                DARWIN_LOG_INFO("BufferThread::Main:: unable to send data to next filter, reinserting logs in redis ...");
                 this->_connector->REDISReinsertLogs(logs, redis_list);
             } else {
-                DARWIN_LOG_DEBUG("BufferThread::ThreadMain:: Removed " + std::to_string(logs.size()) + " elements from redis");
+                DARWIN_LOG_DEBUG("BufferThread::Main:: Removed " + std::to_string(logs.size()) + " elements from redis");
             }
         }
     }

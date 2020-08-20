@@ -42,10 +42,10 @@ bool AThreadManager::Stop() {
 
 AThreadManager::~AThreadManager() {
     DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("AThreadManager::~AThreadManager Preparing to shut down all the threads");
+    DARWIN_LOG_DEBUG("AThreadManager::~AThreadManager:: Preparing to shut down all the threads");
     if (not this->Stop()) {
-        DARWIN_LOG_ERROR("AThreadManager::~AThreadManager At least one thread didn't stop correctly");
+        DARWIN_LOG_ERROR("AThreadManager::~AThreadManager:: At least one thread didn't stop correctly");
     } else {
-        DARWIN_LOG_DEBUG("AThreadManager::~AThreadManager All threads stopped correctly");
+        DARWIN_LOG_DEBUG("AThreadManager::~AThreadManager:: All threads stopped correctly");
     }
 }
