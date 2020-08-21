@@ -212,7 +212,7 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     
     std::vector<char> uuid = darwin::uuid::GenUuid();
     memcpy(packet->evt_id, uuid.data(), 16);
-    DARWIN_LOG_DEBUG("AConnector::SendToFilter Sending header + data");
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Sending header + data");
     boost::system::error_code ec;
     boost::asio::write(this->_filter_socket,
                         boost::asio::buffer(packet, packet_size), ec);
