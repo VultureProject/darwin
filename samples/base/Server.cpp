@@ -41,6 +41,10 @@ namespace darwin {
         Accept();
     }
 
+    boost::asio::io_context &Server::GetIOContext() {
+        return this->_io_context;
+    }
+
     void Server::Run() {
         // The io_context::run() call will block until all asynchronous operations
         // have finished. While the server is running, there is always at least one

@@ -30,6 +30,7 @@ public:
     virtual darwin::session_ptr_t
     CreateTask(boost::asio::local::stream_protocol::socket& socket,
                darwin::Manager& manager) noexcept = 0;
+    virtual bool ConfigureNetworkObject(boost::asio::io_context &context);
 
 protected:
     /// Configure the child object using the read configuration file.

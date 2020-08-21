@@ -56,6 +56,19 @@ namespace darwin {
                         and ip == obj.ip
                         and port == obj.port;
             }
+            
+            RedisConnectionInfo() = default;
+
+            RedisConnectionInfo(const std::string &socketPath, const std::string &ip, unsigned int port) : 
+                socketPath(socketPath), 
+                ip(ip), 
+                port(port) {}
+
+            RedisConnectionInfo(const RedisConnectionInfo &obj) {
+                socketPath.assign(obj.socketPath);
+                ip.assign(obj.ip);
+                port = obj.port;
+            }
 
             void operator=(const RedisConnectionInfo& obj) {
                 socketPath.assign(obj.socketPath);

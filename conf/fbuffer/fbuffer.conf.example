@@ -1,0 +1,25 @@
+{
+  "redis_socket_path": "/var/sockets/redis/redis.sock",
+  "input_format": [
+    {"name": "net_src_ip", "type": "string"},
+    {"name": "net_dst_ip", "type": "string"},
+    {"name": "net_dst_port", "type": "string"},
+    {"name": "ip_proto", "type": "string"}
+  ],
+  "outputs": [
+    {
+      "filter_type": "fanomaly",
+      "filter_socket_path": "/var/sockets/darwin/anomaly.sock",
+      "interval": 300,
+      "required_log_lines": 11,
+      "redis_lists": [{
+        "source": "source_1",
+        "name": "darwin_buffer_anomaly"
+      },
+      {
+        "source": "source_2",
+        "name": "darwin_buffer_anomaly_2"
+      }]
+    }
+  ]
+}

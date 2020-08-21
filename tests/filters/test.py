@@ -5,6 +5,8 @@ import filters.ftanomaly as ftanomaly
 import filters.fconnection as fconnection
 import filters.fhostlookup as fhostlookup
 import filters.fyara as fyara
+import filters.fbuffer as fbuffer
+
 from tools.output import print_results
 
 
@@ -18,6 +20,7 @@ def run():
     fsofa.run()
     fanomaly.run()
     fyara.run()
+    fbuffer.run()
 
     print()
     print()
