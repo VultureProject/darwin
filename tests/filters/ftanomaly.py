@@ -29,7 +29,8 @@ class TAnomaly(Filter):
             '"redis_socket_path": "{redis_socket}",\n' \
             '"alert_redis_list_name": "{redis_list}",\n' \
             '"alert_redis_channel_name": "{redis_channel}",\n' \
-            '"log_file_path": "{log_file}"\n'\
+            '"log_file_path": "{log_file}",\n'\
+            '"detection_frequency": 10\n'\
             '}}'.format(redis_socket=REDIS_SOCKET,
                         redis_list=REDIS_ALERT_LIST,
                         redis_channel=REDIS_ALERT_CHANNEL,
@@ -290,7 +291,7 @@ def thread_working_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    sleep(12)
 
     redis_data = tanomaly_filter.get_internal_redis_data()
 
@@ -340,47 +341,28 @@ def alert_in_redis_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    sleep(12)
 
     # Too hard to test with "time" field, so it's removed,
     # but we check in alert received if this field is present
     expected_alerts = [
         {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '213.211.198.58',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '213.211.198.58',
-                'udp_nb_host': 0.0,
-                'udp_nb_port': 0.0,
-                'tcp_nb_host': 126.0,
-                'tcp_nb_port': 126.0,
-                'icmp_nb_host': 0.0,
-                'distance': 122.697636
-            }
-        },
-        {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '192.168.110.2',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '192.168.110.2',
-                'udp_nb_host': 252.0,
-                'udp_nb_port': 252.0,
-                'tcp_nb_host': 0.0,
-                'tcp_nb_port': 0.0,
-                'icmp_nb_host': 0.0,
-                'distance': 349.590273
+            "alert_type": "darwin",
+            "alert_subtype": "anomaly",
+            "level": "high",
+            "rule_name": "Abnormal Number of Unique Port Connexion",
+            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+            "entry": "192.168.110.2",
+            "score": 100,
+            "evt_id": "-",
+            "details": {
+                "ip": "192.168.110.2",
+                "udp_nb_host": 1.000000,
+                "udp_nb_port": 252.000000,
+                "tcp_nb_host": 0.000000,
+                "tcp_nb_port": 0.000000,
+                "icmp_nb_host": 0.000000,
+                "distance": 246.193959
             }
         }
     ]
@@ -438,41 +420,22 @@ def alert_published_test():
     # but we check in alert received if this field is present
     expected_alerts = [
         {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '213.211.198.58',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '213.211.198.58',
-                'udp_nb_host': 0.0,
-                'udp_nb_port': 0.0,
-                'tcp_nb_host': 126.0,
-                'tcp_nb_port': 126.0,
-                'icmp_nb_host': 0.0,
-                'distance': 122.697636
-            }
-        },
-        {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '192.168.110.2',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '192.168.110.2',
-                'udp_nb_host': 252.0,
-                'udp_nb_port': 252.0,
-                'tcp_nb_host': 0.0,
-                'tcp_nb_port': 0.0,
-                'icmp_nb_host': 0.0,
-                'distance': 349.590273
+            "alert_type": "darwin",
+            "alert_subtype": "anomaly",
+            "level": "high",
+            "rule_name": "Abnormal Number of Unique Port Connexion",
+            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+            "entry": "192.168.110.2",
+            "score": 100,
+            "evt_id": "-",
+            "details": {
+                "ip": "192.168.110.2",
+                "udp_nb_host": 1.000000,
+                "udp_nb_port": 252.000000,
+                "tcp_nb_host": 0.000000,
+                "tcp_nb_port": 0.000000,
+                "icmp_nb_host": 0.000000,
+                "distance": 246.193959
             }
         }
     ]
@@ -483,14 +446,11 @@ def alert_published_test():
         pubsub = r.pubsub()
         pubsub.subscribe([REDIS_ALERT_CHANNEL])
 
-        # We wait for the thread to activate
-        sleep(280)
-
         alert_received = 0
-        timeout = 30  # in seconds
+        timeout = 10  # in seconds
         timeout_start = time()
-        # We stop waiting for the data fter 30 seconds
-        while (time() < timeout_start + timeout) or (alert_received < 2):
+        # We stop waiting for the data after 10 seconds
+        while (time() < timeout_start + timeout) and (alert_received < 2):
             message = pubsub.get_message()
             if message:
                 if message["type"] == "message":
@@ -548,47 +508,28 @@ def alert_in_file_test():
     )
 
     # We wait for the thread to activate
-    sleep(302)
+    sleep(12)
 
     # Too hard to test with "time" field, so it's removed,
     # but we check in alert received if this field is present
     expected_alerts = [
         {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '213.211.198.58',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '213.211.198.58',
-                'udp_nb_host': 0.0,
-                'udp_nb_port': 0.0,
-                'tcp_nb_host': 126.0,
-                'tcp_nb_port': 126.0,
-                'icmp_nb_host': 0.0,
-                'distance': 122.697636
-            }
-        },
-        {
-            'alert_type': 'darwin',
-            'alert_subtype': 'anomaly',
-            'level': 'high',
-            'rule_name': 'Abnormal Number of Unique Port Connexion',
-            'tags': ['attack.discovery', 'attack.t1046', 'attack.command_and_control', 'attack.defense_evasion', 'attack.t1205'],
-            'entry': '192.168.110.2',
-            'score': 100,
-            'evt_id': '-',
-            'details': {
-                'ip': '192.168.110.2',
-                'udp_nb_host': 252.0,
-                'udp_nb_port': 252.0,
-                'tcp_nb_host': 0.0,
-                'tcp_nb_port': 0.0,
-                'icmp_nb_host': 0.0,
-                'distance': 349.590273
+            "alert_type": "darwin",
+            "alert_subtype": "anomaly",
+            "level": "high",
+            "rule_name": "Abnormal Number of Unique Port Connexion",
+            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+            "entry": "192.168.110.2",
+            "score": 100,
+            "evt_id": "-",
+            "details": {
+                "ip": "192.168.110.2",
+                "udp_nb_host": 1.000000,
+                "udp_nb_port": 252.000000,
+                "tcp_nb_host": 0.000000,
+                "tcp_nb_port": 0.000000,
+                "icmp_nb_host": 0.000000,
+                "distance": 246.193959
             }
         }
     ]
