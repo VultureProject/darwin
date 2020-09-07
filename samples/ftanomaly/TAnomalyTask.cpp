@@ -78,13 +78,12 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
     if (!std::regex_match (_entry, std::regex(
             "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
             "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
-            "(([0-9]+;(17|6))|([0-9]*;*1))")))
+            "(([0-9]+;(17|6))|([0-9]*;1))")))
     {
         DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: The data: "+ _entry +", isn't valid, ignored. "
                                                                             "Format expected : "
-                                                                            "[\\\"[ip4]\\\",\\\"[ip4]\\\",((\\\"[port]\\\","
-                                                                            "\\\"[ip_protocol udp or tcp]\\\")|"
-                                                                            "\\\"[ip_protocol icmp]\\\")]");
+                                                                            "[\\\"[ip4]\\\",\\\"[ip4]\\\",\\\"[port]\\\","
+                                                                            "(\\\"1\\\"|\\\"6\\\"|\\\"17\\\")");
         return false;
     }
 
