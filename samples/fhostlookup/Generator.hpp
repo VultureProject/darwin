@@ -42,6 +42,7 @@ protected:
 
     bool LoadTextFile(const std::string& filename);
     bool LoadJsonFile(const std::string& filename, const db_type type);
+    void LoadFeedNameFromFile(const std::string& filename);
     bool LoadJsonDatabase(const rapidjson::Document& database);
     bool LoadJsonEntry(const rapidjson::Value& entry);
     bool LoadRsyslogDatabase(const rapidjson::Document& database);
