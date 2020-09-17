@@ -21,6 +21,7 @@ from time import sleep
 from config import load_conf, ConfParseError
 from config import filters as conf_filters
 from config import stats_reporting as conf_stats_report
+from datetime import datetime
 
 def create_dirs(dirs, prefix, suffix):
     """
@@ -81,11 +82,17 @@ elif args.log_level == 'CRITICAL':
 logger = logging.getLogger()
 logger.setLevel(loglevel)
 
+# Get RFC3339 format date without ms and timezone
+date = datetime.utcnow().isoformat('T').split('.')[0] + 'Z' 
+# date = datetime.now(timezone.utc).astimezone().isoformat('T').split('.')[0] + 'Z' 
+print("date: ", date)
+
 formatter = logging.Formatter(
-    '{"date":"%(asctime)s","level":"%(levelname)s","message":"%(message)s"}')
+    '{"date":"' + date + '","level":"%(levelname)s","message":"%(message)s"}')
 
 # Create log file if doesn't exist
 log_path = '{}/log{}/darwin_manager.log'.format(prefix, suffix)
+
 if not os.path.isfile(log_path):
     open(log_path, "a+").close()
 
