@@ -109,13 +109,75 @@ class TAnomaly(Filter):
         return self.test_data
 
 
+EXPECTED_ALERTS = [
+    {
+        "alert_type": "darwin",
+        "alert_subtype": "anomaly",
+        "level": "high",
+        "rule_name": "Abnormal Number of Unique Port Connexion",
+        "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+        "entry": "127.0.1.1",
+        "score": 100,
+        "evt_id": "-",
+        "details": {
+            "ip": "127.0.1.1",
+            "udp_nb_host": 0.000000,
+            "udp_nb_port": 0.000000,
+            "tcp_nb_host": 1.000000,
+            "tcp_nb_port": 200.000000,
+            "icmp_nb_host": 0.000000,
+            "distance": 161.860548
+        }
+    },
+    {
+        "alert_type": "darwin",
+        "alert_subtype": "anomaly",
+        "level": "high",
+        "rule_name": "Abnormal Number of Unique Port Connexion",
+        "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+        "entry": "fc00::1",
+        "score": 100,
+        "evt_id": "-",
+        "details": {
+            "ip": "fc00::1",
+            "udp_nb_host": 200.000000,
+            "udp_nb_port": 1.000000,
+            "tcp_nb_host": 0.000000,
+            "tcp_nb_port": 0.000000,
+            "icmp_nb_host": 0.000000,
+            "distance": 163.234405
+        }
+    },
+    {
+        "alert_type": "darwin",
+        "alert_subtype": "anomaly",
+        "level": "high",
+        "rule_name": "Abnormal Number of Unique Port Connexion",
+        "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
+        "entry": "127.0.0.1",
+        "score": 100,
+        "evt_id": "-",
+        "details": {
+            "ip": "127.0.0.1",
+            "udp_nb_host": 0.000000,
+            "udp_nb_port": 0.000000,
+            "tcp_nb_host": 0.000000,
+            "tcp_nb_port": 0.000000,
+            "icmp_nb_host": 200.000000,
+            "distance": 162.321790
+        }
+    }
+]
+
+
 def run():
     tests = [
         well_formatted_data_test,
         data_too_short_ignored_test,
         not_data_string_ignored_test,
         not_data_list_ignored_test,
-        invalid_ip_ignored_test,
+        invalid_field_ignored_test,
+        empty_field_ignored_test,
         invalid_protocol_ignored_test,
         thread_working_test,
         alert_in_redis_test,
@@ -231,16 +293,37 @@ def data_too_short_ignored_test():
         ]
     )
 
-def invalid_ip_ignored_test():
+def invalid_field_ignored_test():
     return redis_test(
         "invalid_ip_ignored_test",
         [
-            ["90.76.52","99.184.81.66","1017","17"],
-            ["143.92.16.229","233","705","17"],
+            ["90.76.52;12","99.184.81.66","1017","17"],
+            ["143.92.16.229","233;45","705","17"],
+            ["143.92.16.229","1.2.3.4",";1","17"],
+            ["143.92.16.229","5.6.7.8","42","17;"],
             ["250.230.92.234","54.220.65.198","2922","6"],
+            ["fc00::1","fc00::2","2922","6"],
+            ["google.com","wikipedia.org","2922","6"],
         ],
         [
             ["250.230.92.234","54.220.65.198","2922","6"],
+            ["fc00::1","fc00::2","2922","6"],
+            ["google.com","wikipedia.org","2922","6"],
+        ]
+    )
+
+def empty_field_ignored_test():
+    return redis_test(
+        "invalid_ip_ignored_test",
+        [
+            ["1.2.3.4","5.6.7.8","42","17"],
+            ["","5.6.7.8","42","17"],
+            ["1.2.3.4","","42","17"],
+            ["1.2.3.4","5.6.7.8","","17"],
+            ["1.2.3.4","5.6.7.8","42",""],
+        ],
+        [
+            ["1.2.3.4","5.6.7.8","42","17"],
         ]
     )
 
@@ -341,47 +424,24 @@ def alert_in_redis_test():
     )
 
     # We wait for the thread to activate
-    sleep(12)
-
-    # Too hard to test with "time" field, so it's removed,
-    # but we check in alert received if this field is present
-    expected_alerts = [
-        {
-            "alert_type": "darwin",
-            "alert_subtype": "anomaly",
-            "level": "high",
-            "rule_name": "Abnormal Number of Unique Port Connexion",
-            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
-            "entry": "192.168.110.2",
-            "score": 100,
-            "evt_id": "-",
-            "details": {
-                "ip": "192.168.110.2",
-                "udp_nb_host": 1.000000,
-                "udp_nb_port": 252.000000,
-                "tcp_nb_host": 0.000000,
-                "tcp_nb_port": 0.000000,
-                "icmp_nb_host": 0.000000,
-                "distance": 246.193959
-            }
-        }
-    ]
+    # Wait more to let detection happen with valgrind
+    sleep(30)
 
     redis_alerts = tanomaly_filter.get_redis_alerts()
 
     redis_alerts = [format_alert(a.decode(), "alerts_in_redis_test")
                     for a in redis_alerts]
 
-    if len(redis_alerts)!=len(expected_alerts):
+    if len(redis_alerts)!=len(EXPECTED_ALERTS):
         ret = False
         logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
-            redis_alerts, expected_alerts))
+            redis_alerts, EXPECTED_ALERTS))
 
     for a in redis_alerts:
-        if a not in expected_alerts:
+        if a not in EXPECTED_ALERTS:
             ret = False
             logging.error("alerts_in_redis_test : Not the expected data in Redis. Got : {}, expected : {}".format(
-                redis_alerts, expected_alerts))
+                redis_alerts, EXPECTED_ALERTS))
 
     # CLEAN
     darwin_api.close()
@@ -416,30 +476,6 @@ def alert_published_test():
         response_type="back",
     )
 
-    # Too hard to test with "time" field, so it's removed,
-    # but we check in alert received if this field is present
-    expected_alerts = [
-        {
-            "alert_type": "darwin",
-            "alert_subtype": "anomaly",
-            "level": "high",
-            "rule_name": "Abnormal Number of Unique Port Connexion",
-            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
-            "entry": "192.168.110.2",
-            "score": 100,
-            "evt_id": "-",
-            "details": {
-                "ip": "192.168.110.2",
-                "udp_nb_host": 1.000000,
-                "udp_nb_port": 252.000000,
-                "tcp_nb_host": 0.000000,
-                "tcp_nb_port": 0.000000,
-                "icmp_nb_host": 0.000000,
-                "distance": 246.193959
-            }
-        }
-    ]
-
     try:
         r = redis.Redis(
             unix_socket_path=tanomaly_filter.redis.unix_socket, db=0)
@@ -447,26 +483,28 @@ def alert_published_test():
         pubsub.subscribe([REDIS_ALERT_CHANNEL])
 
         alert_received = 0
-        timeout = 10  # in seconds
+        timeout = 30  # in seconds
         timeout_start = time()
         # We stop waiting for the data after 10 seconds
-        while (time() < timeout_start + timeout) and (alert_received < 2):
+        while (time() < timeout_start + timeout) and (alert_received < 3):
             message = pubsub.get_message()
             if message:
                 if message["type"] == "message":
                     alert = format_alert(
                         message["data"].decode(), "alert_published_test")
-                    if alert not in expected_alerts:
+                    if alert not in EXPECTED_ALERTS:
                         ret = False
                         logging.error(
                             "alert_published_test: Not the expected alert received in redis. Got {}".format(alert))
+                    logging.error(alert)
                     alert_received += 1
             sleep(0.001)
 
-        if alert_received != len(expected_alerts):
+        if alert_received != len(EXPECTED_ALERTS):
             ret = False
             logging.error(
                 "alert_published_test: Not the expected alerts number received on the channel")
+            logging.error("alert_published_test: got {} alerts".format(alert_received))
 
         r.close()
     except Exception as e:
@@ -508,31 +546,8 @@ def alert_in_file_test():
     )
 
     # We wait for the thread to activate
-    sleep(12)
-
-    # Too hard to test with "time" field, so it's removed,
-    # but we check in alert received if this field is present
-    expected_alerts = [
-        {
-            "alert_type": "darwin",
-            "alert_subtype": "anomaly",
-            "level": "high",
-            "rule_name": "Abnormal Number of Unique Port Connexion",
-            "tags": ["attack.discovery", "attack.t1046", "attack.command_and_control", "attack.defense_evasion", "attack.t1205"],
-            "entry": "192.168.110.2",
-            "score": 100,
-            "evt_id": "-",
-            "details": {
-                "ip": "192.168.110.2",
-                "udp_nb_host": 1.000000,
-                "udp_nb_port": 252.000000,
-                "tcp_nb_host": 0.000000,
-                "tcp_nb_port": 0.000000,
-                "icmp_nb_host": 0.000000,
-                "distance": 246.193959
-            }
-        }
-    ]
+    # Wait more to let detection happen with valgrind
+    sleep(30)
 
     redis_alerts = tanomaly_filter.get_file_alerts()
 
@@ -543,16 +558,16 @@ def alert_in_file_test():
         ret = False
         logging.error("alert_in_file_test : No alerts writing in alert file")
 
-    if len(redis_alerts)!=len(expected_alerts):
+    if len(redis_alerts)!=len(EXPECTED_ALERTS):
         ret = False
         logging.error("alerts_in_file_test : Not the expected data in file. Got : {}, expected : {}".format(
-            redis_alerts, expected_alerts))
+            redis_alerts, EXPECTED_ALERTS))
 
     for a in redis_alerts:
-        if a not in expected_alerts:
+        if a not in EXPECTED_ALERTS:
             ret = False
             logging.error("alerts_in_file_test : Not the expected data in file. Got : {}, expected : {}".format(
-                redis_alerts, expected_alerts))
+                redis_alerts, EXPECTED_ALERTS))
 
     # CLEAN
     darwin_api.close()
