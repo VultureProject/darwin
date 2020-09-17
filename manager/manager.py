@@ -82,17 +82,14 @@ elif args.log_level == 'CRITICAL':
 logger = logging.getLogger()
 logger.setLevel(loglevel)
 
-# Get RFC3339 format date without ms and timezone
-date = datetime.utcnow().isoformat('T').split('.')[0] + 'Z' 
-# date = datetime.now(timezone.utc).astimezone().isoformat('T').split('.')[0] + 'Z' 
-print("date: ", date)
+# Get UTC date with RFC 3339 format without ms and without local timezone offset
+date = datetime.utcnow().isoformat('T').split('.')[0] + 'Z'
 
 formatter = logging.Formatter(
     '{"date":"' + date + '","level":"%(levelname)s","message":"%(message)s"}')
 
 # Create log file if doesn't exist
 log_path = '{}/log{}/darwin_manager.log'.format(prefix, suffix)
-
 if not os.path.isfile(log_path):
     open(log_path, "a+").close()
 
