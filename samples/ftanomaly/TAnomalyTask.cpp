@@ -54,6 +54,7 @@ void AnomalyTask::operator()() {
 
 bool AnomalyTask::ParseLine(rapidjson::Value& line){
     DARWIN_LOGGER;
+    std::unordered_set<std::string> valid_protos = {"1", "6", "17"};
 
     if(not line.IsArray()) {
         DARWIN_LOG_ERROR("TAnomalyTask:: ParseLine:: The input line is not an array");
@@ -63,28 +64,40 @@ bool AnomalyTask::ParseLine(rapidjson::Value& line){
     _entry.clear();
     auto values = line.GetArray();
 
+    if(values.Size() != 4) {
+        DARWIN_LOG_WARNING("TanomalyTask:: ParseLine:: Line should have 4 entries: [ip_src, ip_dst, port, proto]");
+        return false;
+    }
+
     for (auto& value : values){
 
-        if (!value.IsString()) {
+        // all values should be strings
+        if(not value.IsString()) {
             DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: Every entry must be a string");
             return false;
         }
-        _entry += value.GetString();
+
+        std::string value_str = value.GetString();
+        // no value should be empty
+        if(value_str.empty()) {
+            DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: entry in line should not be empty");
+            return false;
+        }
+
+        // all values should NOT contain any ';'
+        if(value_str.find(';') != std::string::npos) {
+            DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: forbidden ';' in entry");
+            return false;
+        }
+        _entry += value_str;
         _entry += ";";
     }
+    _entry.pop_back();
 
-    if(_entry.size() > 0) _entry.pop_back();
-
-    if (!std::regex_match (_entry, std::regex(
-            "(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\."
-            "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?);){2})"
-            "(([0-9]+;(17|6))|([0-9]*;*1))")))
-    {
-        DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: The data: "+ _entry +", isn't valid, ignored. "
-                                                                            "Format expected : "
-                                                                            "[\\\"[ip4]\\\",\\\"[ip4]\\\",((\\\"[port]\\\","
-                                                                            "\\\"[ip_protocol udp or tcp]\\\")|"
-                                                                            "\\\"[ip_protocol icmp]\\\")]");
+    // check if given proto (4th entry in line) is a valid proto
+    std::string proto = values[3].GetString();
+    if (valid_protos.find(proto) == valid_protos.end()) {
+        DARWIN_LOG_WARNING("TAnomalyTask:: ParseLine:: proto " + proto + " is not valid");
         return false;
     }
 
