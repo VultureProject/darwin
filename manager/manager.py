@@ -21,7 +21,7 @@ from time import sleep
 from config import load_conf, ConfParseError
 from config import filters as conf_filters
 from config import stats_reporting as conf_stats_report
-from datetime import datetime
+from time import gmtime
 
 def create_dirs(dirs, prefix, suffix):
     """
@@ -82,11 +82,10 @@ elif args.log_level == 'CRITICAL':
 logger = logging.getLogger()
 logger.setLevel(loglevel)
 
-# Get UTC date with RFC 3339 format without ms and without local timezone offset
-date = datetime.utcnow().isoformat('T').split('.')[0] + 'Z'
-
 formatter = logging.Formatter(
-    '{"date":"' + date + '","level":"%(levelname)s","message":"%(message)s"}')
+    '{"date":"%(asctime)s","level":"%(levelname)s","message":"%(message)s"}')
+formatter.datefmt = "%Y-%m-%dT%H:%M:%SZ"
+formatter.converter = gmtime # Unlike the method name implies this method returns UTC time (https://docs.python.org/3/library/time.html#time.gmtime)
 
 # Create log file if doesn't exist
 log_path = '{}/log{}/darwin_manager.log'.format(prefix, suffix)
