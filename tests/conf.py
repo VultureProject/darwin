@@ -1,7 +1,7 @@
 # DARWIN FILES
-MANAGEMENT_SOCKET_PATH = '/tmp/sockets/darwin.sock'
-FILTER_SOCKETS_DIR = "/tmp/sockets/"
-FILTER_PIDS_DIR = "/tmp/run/"
+MANAGEMENT_SOCKET_PATH = '/var/sockets/darwin/darwin.sock'
+FILTER_SOCKETS_DIR = "/var/sockets/darwin/"
+FILTER_PIDS_DIR = "/var/run/darwin/"
 DEFAULT_CONFIGURATION_PATH = '/tmp/darwin.conf'
 
 # ENV CONFIG
@@ -14,3 +14,4 @@ DEFAULT_FILTER_PATH = '/home/darwin/filters/'
 
 # TEST CONFIG
 VALGRIND_MEMCHECK = False
+    

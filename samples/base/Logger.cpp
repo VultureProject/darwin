@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <iomanip>
 #include "Logger.hpp"
+#include "Time.hpp"
 
 namespace darwin {
     namespace logger {
@@ -31,16 +32,9 @@ namespace darwin {
             if (type < this->_logLevel || !_file.is_open())
                 return;
 
-            char buf[27] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                          0, 0, 0, 0, 0, 0, 0, 0, 0};
-            std::string date;
-            std::time_t time;
-            time = std::chrono::system_clock::to_time_t(
-                    std::chrono::system_clock::now());
-            date = ctime_r(&time, buf);
-            date.erase(--date.end());
-
+            std::string date = darwin::time_utils::GetTime();
             std::stringstream fmt{};
+
             fmt << '{';
             fmt << "\"date\":\"" << date << "\",";
             switch (type) {

@@ -49,6 +49,8 @@ namespace darwin {
         /// Clean the server's ressources (sessions, socket)
         void Clean();
 
+        boost::asio::io_context &GetIOContext();
+
     private:
         /// Start async waiting for the stopping signals.
         void AwaitStop();

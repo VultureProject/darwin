@@ -71,9 +71,9 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         return this->LoadTextFile(db);
     } else {
         DARWIN_LOG_CRITICAL("HostLookup:: Generator:: Unknown 'db_type'");
-        return false;
     }
-    return false; // Put it there just in case.
+
+    return false;
 }
 
 bool Generator::LoadTextFile(const std::string& filename) {
@@ -95,13 +95,8 @@ bool Generator::LoadTextFile(const std::string& filename) {
             _database.insert({buf,{"", 100}});
         }
     }
+    this->LoadFeedNameFromFile(filename);
     file.close();
-
-    // Get feed name from file name
-    buf = darwin::files_utils::GetNameFromPath(filename); // Filename already proven valid
-    darwin::files_utils::ReplaceExtension(buf, "");
-    this->_feed_name = buf;
-
     return true;
 }
 
@@ -126,10 +121,16 @@ bool Generator::LoadJsonFile(const std::string& filename, const db_type type) {
     if (type == db_type::json) {
         ret = this->LoadJsonDatabase(database);
     } else if (type == db_type::rsyslog) {
+        this->LoadFeedNameFromFile(filename);
         ret = this->LoadRsyslogDatabase(database);
     }
     file.close();
     return ret;
+}
+
+void Generator::LoadFeedNameFromFile(const std::string& filename) {
+        this->_feed_name = darwin::files_utils::GetNameFromPath(filename);
+        darwin::files_utils::ReplaceExtension(this->_feed_name, "");
 }
 
 bool Generator::LoadJsonDatabase(const rapidjson::Document& database) {

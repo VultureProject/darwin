@@ -23,6 +23,7 @@ if (NOT DEFINED FILTER)
         TANOMALY
         ANOMALY
         CONTENT_INSPECTION
+        BUFFER
         YARA
     )
 else (NOT DEFINED FILTER)
@@ -101,6 +102,8 @@ set(
         toolkit/Files.cpp toolkit/Files.hpp
         toolkit/RedisManager.cpp toolkit/RedisManager.hpp
         toolkit/FileManager.cpp toolkit/FileManager.hpp
+        toolkit/StringUtils.cpp toolkit/StringUtils.hpp
+        toolkit/Uuid.cpp toolkit/Uuid.hpp
 )
 
 
@@ -144,6 +147,10 @@ endif()
 
 if("SOFA" IN_LIST FILTERS)
 include(fsofa)
+endif()
+
+if("BUFFER" IN_LIST FILTERS)
+include(fbuffer)
 endif()
 
 if("YARA" IN_LIST FILTERS)

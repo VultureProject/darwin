@@ -8,7 +8,7 @@ from darwin import DarwinApi
 
 class HostLookup(Filter):
     def __init__(self):
-        super().__init__(filter_name="hostlookup", thresold=80)
+        super().__init__(filter_name="hostlookup", threshold=80)
         self.database = "/tmp/database.txt".format(self.filter_name)
 
     def configure(self, db_type="json"):

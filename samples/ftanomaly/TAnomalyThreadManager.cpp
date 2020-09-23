@@ -16,6 +16,7 @@
 #include "Time.hpp"
 #include "protocol.h"
 #include "AlertManager.hpp"
+#include "../../toolkit/StringUtils.hpp"
 
 AnomalyThreadManager::AnomalyThreadManager(std::string& redis_internal)
         :_redis_internal(redis_internal) {}
@@ -105,14 +106,15 @@ void AnomalyThreadManager::Detection(){
     _matrix.reset();
 }
 
-void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){
+void AnomalyThreadManager::PreProcess(std::vector<std::string> logs) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::PreProcess:: Starting the pre-process...");
 
     size_t size, pos, i;
     char delimiter = ';';
     std::array<int, 5> values{};
-    std::string ip, protocol, port;
+    std::string ip, ip_dst, port, protocol;
+    std::vector<std::string> vec;
 
     // data to be pre-processed : {
     //                                  ip1 : [net_src_ip4, udp_nb_host, udp_nb_port, tcp_nb_host, tcp_nb_port, icmp_nb_host],
@@ -120,55 +122,41 @@ void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){
     //                                  ...
     //                            }
     tsl::hopscotch_map<std::string, std::array<int, 5>> data;
-    tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> cache_data;
+    tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> cache_port;
+    tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> cache_ip;
 
-    for (std::string l: logs){
-        // line of log : ip_src;ip_dst;port;(udp|tcp) or  ip_src;ip_dst;(icmp)
+    for (const std::string &l : logs) {
+        // line of log : ip_src;ip_dst;port;(udp|tcp) or  ip_src;ip_dst;0;icmp
         // where udp, tcp and icmp are represented by the ip protocol number
-        try{
-            size = l.size();
+        try {
+            vec = darwin::strings::SplitString(l, delimiter);
 
-            pos = l.find(delimiter);
-            if (pos==std::string::npos){
-                DARWIN_LOG_WARNING("AnomalyThread::PreProcess:: Error when parsing a log line, line ignored");
+            if (vec.size() != 4) {
+                DARWIN_LOG_WARNING("fAnomalyConnector::PreProcess:: Error when parsing a log line (element missing), line ignored");
                 continue;
             }
-            ip = l.substr(0, pos);
-            l.erase(0, pos+1);
+            ip = vec[0];
+            ip_dst = vec[1];
+            port = vec[2];
+            protocol = vec[3];
 
-            pos = l.find_last_of(delimiter);
-            if (pos==std::string::npos){
-                DARWIN_LOG_WARNING("AnomalyThread::PreProcess:: Error when parsing a log line, line ignored");
+            if (ip.empty() or ip_dst.empty() or protocol.empty() or (protocol != "1" and port.empty())) {
+                DARWIN_LOG_WARNING("fAnomalyConnector::PreProcess:: Error when parsing a log line (element empty), line ignored");
                 continue;
             }
-            protocol = l.substr(pos+1);
-            l.erase(pos, size);
+            PreProcessLine(ip, ip_dst, protocol, port, cache_port, cache_ip, data);
 
-            if(protocol=="1"){
-                PreProcessLine(ip, protocol, "", cache_data, data);
-
-            }else{
-                pos = l.find_last_of(delimiter);
-                if (pos==std::string::npos){
-                    DARWIN_LOG_WARNING("AnomalyThread::PreProcess:: Error when parsing a log line, line ignored");
-                    continue;
-                }
-                port = l.substr(pos+1, size);
-                PreProcessLine(ip, protocol, port, cache_data, data);
-
-            }
-
-        }catch (const std::out_of_range& e){
-            DARWIN_LOG_WARNING("AnomalyThread::PreProcess:: Error when parsing a log line, line ignored");
+        } catch (const std::out_of_range& e) {
+            std::string warning("fAnomalyConnector::PreProcess:: Error when parsing a log line , line ignored: ");
+            warning += e.what();
+            DARWIN_LOG_WARNING(warning);
             continue;
         }
     }
-
     size = data.size();
     // Set the size of the matrix and fill it w/ zeros
     // (see .hpp file to know this matrix's content)
     _matrix.zeros(5, size);
-
     i = 0;
     for(auto it = data.begin(); it != data.end(); ++it) {
         _ips.emplace_back(it->first);
@@ -180,48 +168,65 @@ void AnomalyThreadManager::PreProcess(std::vector<std::string> logs){
     }
 }
 
-void AnomalyThreadManager::PreProcessLine(const std::string& ip, const std::string& protocol, std::string port,
-                                          tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_data,
-                                          tsl::hopscotch_map<std::string, std::array<int, 5>>& data){
+void AnomalyThreadManager::PreProcessLine(const std::string& ip, const std::string &ip_dst, const std::string& protocol, const std::string& port,
+                                          tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_port,
+                                          tsl::hopscotch_map<std::string, tsl::hopscotch_set<std::string>> &cache_ip,
+                                          tsl::hopscotch_map<std::string, std::array<int, 5>>& data) {
+    tsl::hopscotch_set<std::string>* set_ip;
+    tsl::hopscotch_set<std::string>* set_port;
 
-    tsl::hopscotch_set<std::string>* set;
     if(data.find(ip) != data.end()){
 
-        if (protocol=="1"){
-            data[ip][ICMP_NB_HOST] += 1;
-
-        }else if (protocol=="17"){
-            data[ip][UDP_NB_HOST] += 1;
-            set = &cache_data[ip+":17"];
-
-            if(set->find(port) == set->end()) {
-                data[ip][UDP_NB_PORT] += 1;
-                set->emplace(port);
+        if (protocol == "1") {
+            set_ip = &cache_ip[ip + ":1"];
+            if (set_ip->find(ip_dst) == set_ip->end()) {
+                data[ip][ICMP_NB_HOST] += 1;
+                set_ip->emplace(ip_dst);
             }
 
-        }else if (protocol=="6"){
-            data[ip][TCP_NB_HOST] += 1;
-            set = &cache_data[ip+":6"];
+        } else if (protocol == "17") {
+            set_ip = &cache_ip[ip + ":17"];
+            if (set_ip->find(ip_dst) == set_ip->end()) {
+                data[ip][UDP_NB_HOST] += 1;
+                set_ip->emplace(ip_dst);
+            }
 
-            if(set->find(port) == set->end()) {
+            set_port = &cache_port[ip + ":17"];
+            if(set_port->find(port) == set_port->end()) {
+                data[ip][UDP_NB_PORT] += 1;
+                set_port->emplace(port);
+            }
+
+        } else if (protocol == "6") {
+            set_ip = &cache_ip[ip + ":6"];
+            if (set_ip->find(ip_dst) == set_ip->end()) {
+                data[ip][TCP_NB_HOST] += 1;
+                set_ip->emplace(ip_dst);
+            }
+
+            set_port = &cache_port[ip + ":6"];
+            if(set_port->find(port) == set_port->end()) {
                 data[ip][TCP_NB_PORT] += 1;
-                set->emplace(port);
+                set_port->emplace(port);
             }
         }
         return;
     }
 
 
-    if (protocol=="1"){
+    if (protocol == "1") {
         data.insert({ip, {0,0,0,0,1}});
+        cache_ip[ip + ":1"].emplace(ip_dst);
 
-    }else if (protocol=="17"){
+    } else if (protocol == "17") {
         data.insert({ip, {1,1,0,0,0}});
-        cache_data[ip+":17"].emplace(port);
+        cache_ip[ip + ":17"].emplace(ip_dst);
+        cache_port[ip + ":17"].emplace(port);
 
-    }else if (protocol=="6"){
+    } else if (protocol == "6") {
         data.insert({ip, {0,0,1,1,0}});
-        cache_data[ip+":6"].emplace(port);
+        cache_ip[ip + ":6"].emplace(ip_dst);
+        cache_port[ip + ":6"].emplace(port);
     }
 }
 

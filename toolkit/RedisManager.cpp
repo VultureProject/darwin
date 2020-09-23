@@ -40,24 +40,14 @@ namespace darwin {
 
         void RedisManager::SetUnixConnection(const std::string& fullpath) {
             std::lock_guard<std::mutex> lock(this->_availableConnectionsMut);
-            this->_baseConnection = {
-                .socketPath = fullpath,
-                .ip = "",
-                .port = 0
-            };
-
+            this->_baseConnection = RedisConnectionInfo(fullpath, "", 0);
             return;
         }
 
 
         void RedisManager::SetIpConnection(const std::string& ip, const unsigned int port) {
             std::lock_guard<std::mutex> lock(this->_availableConnectionsMut);
-            this->_baseConnection = {
-                .socketPath = "",
-                .ip = ip,
-                .port = port
-            };
-
+            this->_baseConnection = RedisConnectionInfo("", ip, port);
             return;
         }
 
@@ -495,12 +485,7 @@ namespace darwin {
                 // if the element in the list has 3  variables (ip, port, replication offset)
                 if (replicasList->element[i]->elements == 3) {
                     //take and add it to the list of potential connections
-                    RedisConnectionInfo replicaConn {
-                        .socketPath = "",
-                        .ip = replicasList->element[i]->element[0]->str,
-                        // yep... that's a string...
-                        .port = (unsigned int)std::stoi(replicasList->element[i]->element[1]->str)
-                    };
+                    RedisConnectionInfo replicaConn("", replicasList->element[i]->element[0]->str, (unsigned int)std::stoi(replicasList->element[i]->element[1]->str));
                     DARWIN_LOG_DEBUG("RedisManager::AddReplicas:: added " + to_string(replicaConn));
                     set.emplace(replicaConn);
                 }
@@ -546,11 +531,7 @@ namespace darwin {
                         DARWIN_LOG_DEBUG("RedisManager::Discover:: found replica " + to_string(*it));
                             DARWIN_LOG_DEBUG("RedisManager::Discover:: searching for master");
                             // Get master connection info
-                            connection = RedisConnectionInfo({
-                                .socketPath= "",
-                                .ip = reply->element[1]->str,
-                                .port = (unsigned int)reply->element[2]->integer
-                            });
+                            connection = RedisConnectionInfo("", reply->element[1]->str, (unsigned int)reply->element[2]->integer);
                             redisFree(context);
                             freeReplyObject(reply);
                             context = nullptr;
