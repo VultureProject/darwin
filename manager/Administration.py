@@ -6,6 +6,7 @@ __maintainer__ = "Vulture Project"
 __email__ = "contact@vultureproject.org"
 __doc__ = 'The unix socket administration server class'
 
+import datetime
 import socket
 import logging
 import redis
@@ -188,7 +189,9 @@ class Server:
                 if not self._continue:
                     logger.debug("Reporter: stopping")
                     break
-                stats = json.dumps(services.monitor_all())
+                jsonStats = services.monitor_all()
+                jsonStats['timestamp'] = datetime.datetime.utcnow().strftime("%FT%TZ")
+                stats = json.dumps(jsonStats)
                 logger.debug("reporting stats: {}".format(stats))
 
                 if self._stats_redis:
