@@ -156,3 +156,7 @@ endif()
 if("YARA" IN_LIST FILTERS)
 include(fyara)
 endif()
+
+if("VAST" IN_LIST FILTERS)
+include(fvast)
+endif()
