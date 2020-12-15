@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import os.path
@@ -147,3 +148,55 @@ class Filter():
 
         api.close()
         return ret
+
+
+    def validate_alert_line(self, alert_line, details_checks=[]):
+        try:
+            # Check if the alert is a valid json
+            json_line = json.loads(alert_line)
+        except Exception as e:
+            logging.error("filter: alert_line is not a valid json: {}".format(e))
+            return False
+
+        for key, key_type in [
+            ("alert_type", "str"),
+            ("alert_subtype", "str"),
+            ("alert_time", "str"),
+            ("level", "str"),
+            ("rule_name", "str"),
+            ("tags", "list"),
+            ("entry", "str"),
+            ("score", "int"),
+            ("evt_id", "str"),
+            ("details", "dict"),
+            ]:
+            # Check if key is present in alert
+            if key not in json_line:
+                logging.error("filter: key '{}' not in alert line".format(key))
+                logging.error("filter: alert line is {}".format(alert_line))
+                return False
+
+            # Check if the key is the correct type
+            real_key_type = type(json_line[key]).__name__
+            if real_key_type != key_type:
+                logging.error("filter: alert key '{}' is not the expected type, got '{}' but expected '{}'".format(key, real_key_type, key_type))
+                logging.error("filter: alert line is\n{}".format(alert_line))
+                return False
+
+            if key == "details" and details_checks:
+                for subkey, subkey_type in details_checks:
+                    # Check if key is present in alert
+                    if subkey not in json_line[key]:
+                        logging.error("filter: key '{}' not in alert details line".format(subkey))
+                        logging.error("filter: alert line is\n{}".format(alert_line))
+                        return False
+
+                    # Check if the subkey is the correct type
+                    real_subkey_type = type(json_line[key][subkey]).__name__
+                    if real_subkey_type != subkey_type:
+                        logging.error("filter: alert details key '{}' is not the expected type, got '{}' but expected '{}'".format(subkey, real_subkey_type, subkey_type))
+                        logging.error("filter: alert line is\n{}".format(alert_line))
+                        return False
+
+
+        return True
