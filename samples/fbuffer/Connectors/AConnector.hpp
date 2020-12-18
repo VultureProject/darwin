@@ -66,7 +66,7 @@ class AConnector {
     /// if a key is not the correct type, it is assumed it's already used for another application and filter will fail
     ///
     ///\return true if the keys are not in redis, or are of a correct type, false otherwise.
-    virtual bool TestKeysInRedis();
+    virtual bool PrepareKeysInRedis();
 
     ///\brief Virtual function that can be overrode if needed. Used to add an entry in the Redis storage set list_name.
     ///

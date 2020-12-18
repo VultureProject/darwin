@@ -35,7 +35,7 @@ public:
     ///\brief test every Redis Key in _redis_lists to ensure keys are of the correct type if they exist in Redis
     ///
     ///\return true if the keys are not in redis, or are of the good type, false otherwise.
-    virtual bool TestKeysInRedis();
+    virtual bool PrepareKeysInRedis();
 
     ///\brief This function sends data to the REDIS storage. It overrides default pure virtual one as each filter doesn't need the same data.
     ///

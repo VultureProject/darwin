@@ -33,7 +33,7 @@ bool SumConnector::ParseInputForRedis(std::map<std::string, std::string> &input_
 }
 
 
-bool SumConnector::TestKeysInRedis(){
+bool SumConnector::PrepareKeysInRedis(){
     DARWIN_LOGGER;
     std::string redis_list, reply;
     bool ret = true;
@@ -42,30 +42,30 @@ bool SumConnector::TestKeysInRedis(){
 
     for(auto key : this->_redis_lists) {
         redis_list = key.second;
-        DARWIN_LOG_DEBUG("SumConnector::TestKeysInRedis:: testing key " + redis_list);
+        DARWIN_LOG_DEBUG("SumConnector::PrepareKeysInRedis:: testing key " + redis_list);
         if(redis.Query(std::vector<std::string>{"TYPE", redis_list}, reply, true) != REDIS_REPLY_STATUS) {
-            DARWIN_LOG_ERROR("SumConnector::TestKeysInRedis:: Could not get current type of key");
+            DARWIN_LOG_ERROR("SumConnector::PrepareKeysInRedis:: Could not get current type of key");
             ret = false;
             continue;
         }
 
-        DARWIN_LOG_DEBUG("SumConnector::TestKeysInRedis:: key '"+ redis_list + "' is '" + reply + "'");
+        DARWIN_LOG_DEBUG("SumConnector::PrepareKeysInRedis:: key '"+ redis_list + "' is '" + reply + "'");
 
         if(reply != "none") {
             if(reply != "string") {
-                DARWIN_LOG_ERROR("SumConnector::TestKeysInRedis:: key '" + redis_list + "' is already present but seems"
+                DARWIN_LOG_ERROR("SumConnector::PrepareKeysInRedis:: key '" + redis_list + "' is already present but seems"
                                 " to be used by something else, cannot start the filter "
                                 "and risk overriding data in Redis");
                 ret = false;
                 continue;
             }
 
-            DARWIN_LOG_WARNING("SumConnector::TestKeysInRedis:: The key '" + redis_list + "' was already set in Redis, "
+            DARWIN_LOG_WARNING("SumConnector::PrepareKeysInRedis:: The key '" + redis_list + "' was already set in Redis, "
                                 "the key will be overrode!");
 
-            DARWIN_LOG_DEBUG("SumConnector::TestKeysInRedis:: reseting Redis key '" + redis_list + "'");
+            DARWIN_LOG_DEBUG("SumConnector::PrepareKeysInRedis:: reseting Redis key '" + redis_list + "'");
             if(redis.Query(std::vector<std::string>{"DEL", redis_list}) != REDIS_REPLY_INTEGER) {
-                DARWIN_LOG_WARNING("SumConnector::TestKeysInRedis:: could not reset the key");
+                DARWIN_LOG_WARNING("SumConnector::PrepareKeysInRedis:: could not reset the key");
             }
         }
     }

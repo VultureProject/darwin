@@ -172,7 +172,7 @@ std::shared_ptr<AConnector> Generator::_CreateOutput(boost::asio::io_context &co
         DARWIN_LOG_WARNING("Generator::_CreateOutput:: " + filter_type + " is not recognized as a valid filter.");
     }
 
-    if(not ret->TestKeysInRedis())
+    if(not ret->PrepareKeysInRedis())
         ret = nullptr;
 
     return ret;
