@@ -107,24 +107,29 @@ bool TestTask::REDISPublishChannel(const std::string& channel, const std::string
 bool TestTask::ParseLine(rapidjson::Value& line) {
     DARWIN_LOGGER;
 
-    if(not line.IsArray()) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: The input line is not an array");
-        return false;
+    _line.clear();
+
+    if (line.IsArray()) {
+        auto values = line.GetArray();
+
+        if (values.Size() < 1) {
+            DARWIN_LOG_ERROR("TestTask:: ParseBody: You must provide at least a value in the list");
+            return false;
+        }
+
+        if (not values[0].IsString()) {
+            DARWIN_LOG_ERROR("TestTask:: ParseBody: The value sent must be a string");
+            return false;
+        }
+
+        _line = values[0].GetString();
     }
-
-    auto values = line.GetArray();
-
-    if (values.Size() != 1) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: You must provide only one value in the list");
-        return false;
+    else if (line.IsString()){
+        _line = line.GetString();
     }
-
-    if (not values[0].IsString()) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: The value sent must be a string");
-        return false;
+    else if (line.IsNumber()) {
+        _line = std::to_string(line.GetDouble());
     }
-
-    _line = values[0].GetString();
 
     if (_line == "trigger_ParseLine_error")
         return false;
