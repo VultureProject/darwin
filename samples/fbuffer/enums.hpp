@@ -11,12 +11,14 @@ namespace darwin {
     typedef enum valueType_e {
         STRING = 0,
         INT,
+        FLOAT,
         UNKNOWN_VALUE_TYPE
     } valueType;
     
     typedef enum outputType_e {
         ANOMALY = 0,
         SOFA,
+        SUM,
         UNKNOWN_OUTPUT
     } outputType;
 } // namespace darwin

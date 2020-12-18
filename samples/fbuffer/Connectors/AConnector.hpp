@@ -61,6 +61,13 @@ class AConnector {
     ///\return this->_redis_lists
     std::vector<std::pair<std::string, std::string>> GetRedisLists() const;
 
+    ///\brief test every Redis Key in _redis_lists to see if they can be used in REdis
+    /// if keys exist and are of the correct type, they are deleted to be reset
+    /// if a key is not the correct type, it is assumed it's already used for another application and filter will fail
+    ///
+    ///\return true if the keys are not in redis, or are of a correct type, false otherwise.
+    virtual bool TestKeysInRedis();
+
     ///\brief Virtual function that can be overrode if needed. Used to add an entry in the Redis storage set list_name.
     ///
     /// It can be overrode by children if they need another type of REDIS storage. 

@@ -49,6 +49,43 @@ bool AConnector::ParseData(std::string fieldname) {
     this->_entry += this->_input_line[fieldname];
     return true;
 }
+
+bool AConnector::TestKeysInRedis(){
+    DARWIN_LOGGER;
+    std::string redis_list, reply;
+    bool ret = true;
+
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+
+    for(auto key : this->_redis_lists) {
+        redis_list = key.second;
+        DARWIN_LOG_DEBUG("AConnector::TestKeysInRedis:: testing key " + redis_list);
+        if(redis.Query(std::vector<std::string>{"TYPE", redis_list}, reply, true) != REDIS_REPLY_STATUS) {
+            DARWIN_LOG_ERROR("AConnector::TestKeysInRedis:: Could not get current type of key");
+            ret = false;
+            continue;
+        }
+
+        DARWIN_LOG_DEBUG("AConnector::TestKeysInRedis:: key '"+ redis_list + "' is '" + reply + "'");
+
+        if(reply != "none") {
+            if(reply != "list") {
+                DARWIN_LOG_ERROR("AConnector::TestKeysInRedis:: key '" + redis_list + "' is already present but seems "
+                                    "to be used for something else, cannot start the filter "
+                                    "and risk overriding data in Redis");
+                ret = false;
+            }
+
+            DARWIN_LOG_WARNING("AConnector::TestKeysInRedis:: The list '" + redis_list + "' was already set in Redis, "
+                                "the key will be overrode!");
+            if(redis.Query(std::vector<std::string>{"DEL", redis_list}) != REDIS_REPLY_INTEGER) {
+                DARWIN_LOG_WARNING("SumConnector::TestKeysInRedis:: could not reset the key");
+            }
+        }
+    }
+
+    return ret;
+}
  
 bool AConnector::REDISAddEntry(const std::string &entry, const std::string &list_name) {
     DARWIN_LOGGER;
