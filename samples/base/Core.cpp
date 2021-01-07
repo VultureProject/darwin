@@ -48,8 +48,11 @@ namespace darwin {
 
             try {
                 Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
-                if (not gen.ConfigureNetworkObject(server.GetIOContext()))
+                if (not gen.ConfigureNetworkObject(server.GetIOContext())) {
+                    raise(SIGTERM);
+                    t.join();
                     return 1;
+                }
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
                 DARWIN_LOG_DEBUG("Core::run:: Creating threads...");
