@@ -80,7 +80,8 @@ class Filter():
             return self.start()
         command = ['valgrind',
                    '--tool=memcheck',
-                   '--leak-check=yes',
+                   '--leak-check=full',
+                   '--errors-for-leak-kinds=definite',
                    '-q', # Quiet mode so it doesn't pollute the output
                    '--error-exitcode={}'.format(self.error_code), #If valgrind reports error(s) during the run, return this exit code.
                    ] + self.cmd
@@ -103,11 +104,14 @@ class Filter():
             return False
 
         # If valgrind return the famous error code
+        out, err = self.process.communicate()
         if self.process.returncode == self.error_code :
-            out, err = self.process.communicate()
             logging.error("Valgrind returned error code: {}".format(self.process.returncode))
             logging.error("Valgrind error: {}".format(err))
             return False
+        elif err:
+            print("Valgrind: warning(s) came up while running filter, please check test_error.log")
+            logging.error("Valgrind warning: {}".format(err))
 
         return self.check_stop()
 
@@ -144,7 +148,7 @@ class Filter():
         Send a single line.
         """
         api = DarwinApi(socket_type="unix", socket_path=self.socket)
-        ret = api.call([line], response_type="back")
+        ret = api.call(line, response_type="back")
 
         api.close()
         return ret
