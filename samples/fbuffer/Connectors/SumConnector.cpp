@@ -10,6 +10,7 @@
 #include "../../../toolkit/RedisManager.hpp"
 
 #include "SumConnector.hpp"
+#include "Time.hpp"
 
 SumConnector::SumConnector(boost::asio::io_context &context, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int minLogLen) :
                     AConnector(context, darwin::SOFA, filter_socket_path, interval, redis_lists, minLogLen) {}
@@ -173,7 +174,7 @@ long long int SumConnector::REDISListLen(const std::string &sum_name) noexcept {
 bool SumConnector::FormatDataToSendToFilter(std::vector<std::string> &logs, std::string &res) {
     res.clear();
     if(logs.size() == 1) {
-        res = "[" + logs[0] + "]";
+        res = "[[" + logs[0] + ",\"" + darwin::time_utils::GetTime() + "\"" + "]]";
     }
 
     return not res.empty();

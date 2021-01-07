@@ -54,8 +54,7 @@ def simple_master_server():
         num_list_entries = redis_connection.llen(REDIS_LIST_NAME)
 
     if num_list_entries != 1:
-        logging.error("simple_master_server: wrong number of entries in the redis list {}: " +
-                        "expected 1 but got {}".format(REDIS_LIST_NAME, str(num_list_entries)))
+        logging.error("simple_master_server: wrong number of entries in the redis list {}: expected 1 but got {}".format(REDIS_LIST_NAME, str(num_list_entries)))
         return False
 
     return True

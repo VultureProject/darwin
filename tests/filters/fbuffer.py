@@ -421,7 +421,7 @@ def thread_working_test():
     if not buffer_filter.valgrind_start():
         return False
 
-    if not test_filter.start():
+    if not test_filter.valgrind_start():
         print("Anomaly did not start")
         return False
 
@@ -667,11 +667,11 @@ def sum_tests(test_name, values=[], required_log_lines=0, expected_alert=1, init
 
     # START FILTER
     if should_start:
-        if not test_filter.start():
-            print("Anomaly did not start")
+        if not test_filter.valgrind_start():
+            print("test filter did not start")
             return False
         # FIXME cannot valgrind_start buffer while there is a problem with io_context destruction
-        if not buffer_filter.start():
+        if not buffer_filter.valgrind_start():
             print("Buffer did not start")
             return False
 
@@ -703,11 +703,17 @@ def sum_tests(test_name, values=[], required_log_lines=0, expected_alert=1, init
                 return  False
 
             # already validated as a json by validate_alert_line()
-            parsed_alert = json.loads(redis_data[0])
+            log_line = json.loads(redis_data[0])
+            parsed_entry = json.loads(log_line['entry'])
 
-            if float(parsed_alert['entry']) != sum(values):
-                logging.error("{}: alert entry is not what was expected\nexpected {}\nbut got {}".format(test_name, sum(values), parsed_alert['entry']))
-                logging.error("{}: log is {}".format(test_name, parsed_alert))
+            if not len(parsed_entry) == 1:
+                logging.error("{}: there should only be 2 fields in output 'entry', but got {}".format(test_name, len(parsed_entry)))
+                logging.error("{}: entry is {}".format(test_name, parsed_entry))
+
+            # Test the delta of real and theoretical values, as Redis rounds up floats a bit "coarsely"
+            if abs(float(parsed_entry[0]) - sum(values)) > 1e-10:
+                logging.error("{}: alert entry is not what was expected\nexpected {}\nbut got {}".format(test_name, sum(values), parsed_entry[0]))
+                logging.error("{}: log is {}".format(test_name, log_line))
                 ret = False
 
         # CLEAN
@@ -717,14 +723,14 @@ def sum_tests(test_name, values=[], required_log_lines=0, expected_alert=1, init
         # ret = buffer_filter.valgrind_stop() or buffer_filter.valgrind_stop()
         # would erase upper ret if this function return True
         # FIXME cannot valgrind_stop buffer while there is a problem with io_context destruction
-        if not buffer_filter.stop():
+        if not buffer_filter.valgrind_stop():
             ret = False
 
-        if not test_filter.stop():
+        if not test_filter.valgrind_stop():
             ret = False
     else:
         #filter should not start
-        if buffer_filter.start():
+        if buffer_filter.valgrind_start():
             logging.error("{}: buffer filter started but it shouldn't have".format(test_name))
             return False
 
