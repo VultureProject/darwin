@@ -59,7 +59,7 @@ private:
     /// call the method appropriate to the data type received.
     ///
     /// \return true on success, false otherwise.
-    bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
+    unsigned int ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
 
     /// Read a session number (from Cookie or HTTP header) from the session and
     /// perform a redis lookup.
