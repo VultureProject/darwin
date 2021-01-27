@@ -41,7 +41,6 @@ void BufferTask::operator()() {
     for (rapidjson::Value &line : array) {
         STAT_INPUT_INC;
         if (ParseLine(line)) {
-            STAT_MATCH_INC;
             this->_certitudes.push_back(0);
             this->AddEntries();
         } else {
