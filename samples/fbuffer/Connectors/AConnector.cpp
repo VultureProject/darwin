@@ -70,16 +70,17 @@ bool AConnector::PrepareKeysInRedis(){
 
         if(reply != "none") {
             if(reply != "list") {
-                DARWIN_LOG_ERROR("AConnector::PrepareKeysInRedis:: key '" + redis_list + "' is already present but seems "
-                                    "to be used for something else, cannot start the filter "
-                                    "and risk overriding data in Redis");
+                DARWIN_LOG_ERROR("AConnector::PrepareKeysInRedis:: key '" + redis_list + "' is already present "
+                                    "but seems to be used for something else, "
+                                    "cannot start the filter and risk overriding data in Redis");
                 ret = false;
             }
-
-            DARWIN_LOG_WARNING("AConnector::PrepareKeysInRedis:: The list '" + redis_list + "' was already set in Redis, "
-                                "the key will be overrode!");
-            if(redis.Query(std::vector<std::string>{"DEL", redis_list}) != REDIS_REPLY_INTEGER) {
-                DARWIN_LOG_WARNING("SumConnector::PrepareKeysInRedis:: could not reset the key");
+            else {
+                DARWIN_LOG_WARNING("AConnector::PrepareKeysInRedis:: The list '" + redis_list + "' "
+                                    "was already set in Redis, the key will be overrode!");
+                if(redis.Query(std::vector<std::string>{"DEL", redis_list}) != REDIS_REPLY_INTEGER) {
+                    DARWIN_LOG_WARNING("SumConnector::PrepareKeysInRedis:: could not reset the key");
+                }
             }
         }
     }

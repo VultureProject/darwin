@@ -13,7 +13,7 @@
 #include "Time.hpp"
 
 SumConnector::SumConnector(boost::asio::io_context &context, std::string &filter_socket_path, unsigned int interval, std::vector<std::pair<std::string, std::string>> &redis_lists, unsigned int minLogLen) :
-                    AConnector(context, darwin::SOFA, filter_socket_path, interval, redis_lists, minLogLen) {}
+                    AConnector(context, darwin::SUM, filter_socket_path, interval, redis_lists, minLogLen) {}
 
 
 bool SumConnector::ParseInputForRedis(std::map<std::string, std::string> &input_line) {
