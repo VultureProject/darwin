@@ -11,6 +11,10 @@ else ()
     SET(CMAKE_CXX_FLAGS "-W -Wall -Wextra -o2")
 endif ()
 
+if (COVERAGE)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 if (NOT DEFINED FILTER)
@@ -159,4 +163,8 @@ endif()
 
 if("VAST" IN_LIST FILTERS)
 include(fvast)
+endif()
+
+if("VAML" IN_LIST FILTERS)
+include(fvaml)
 endif()

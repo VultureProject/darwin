@@ -35,7 +35,7 @@ RUN BOOST_UNDERSCORE_VERSION=`echo ${BOOST_VERSION} | tr . _` \
  && mkdir boost \
  && tar xvf boost_${BOOST_UNDERSCORE_VERSION}.tar.gz -C boost --strip-components 1 \
  && cd boost \
- && ./bootstrap.sh --with-libraries="math,program_options,serialization,system,test" --prefix=./install  \
+ && ./bootstrap.sh --with-libraries="math,program_options,serialization,system,test,date_time" --prefix=./install  \
  && ./b2 install
 
 

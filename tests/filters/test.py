@@ -7,6 +7,7 @@ import filters.fhostlookup as fhostlookup
 import filters.fyara as fyara
 import filters.fbuffer as fbuffer
 import filters.fvast as fvast
+import filters.fvaml as fvaml
 
 from tools.output import print_results
 
@@ -23,6 +24,7 @@ def run():
     fyara.run()
     fbuffer.run()
     fvast.run()
+    fvaml.run()
 
     print()
     print()

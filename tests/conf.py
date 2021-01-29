@@ -8,7 +8,7 @@ DEFAULT_CONFIGURATION_PATH = '/tmp/darwin.conf'
 PYTHON_ENV_PATH = "/usr/local/lib/python3.7"
 DEFAULT_PYTHON_EXEC = 'python3'
 
-MOCK_PATH = '/home/darwin/tests/tools/'
+TEST_FILES_DIR = '/tmp'
 DEFAULT_MANAGER_PATH = '/home/darwin/manager/manager.py'
 DEFAULT_FILTER_PATH = '/home/darwin/filters/'
 
