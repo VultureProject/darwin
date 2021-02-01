@@ -105,6 +105,13 @@ bool BufferTask::ParseData(rapidjson::Value &data, darwin::valueType input_type)
             }
             this->_data = std::to_string(data.GetInt64());
             break;
+        case darwin::FLOAT:
+            if (not data.IsDouble() and not data.IsInt64()) {
+                DARWIN_LOG_ERROR("BufferTask::ParseData: The value sent must be a decimal");
+                return false;
+            }
+            this->_data = std::to_string(data.GetDouble());
+            break;
         default:
             return false;
     }

@@ -144,6 +144,8 @@ darwin::valueType Generator::_TypeToEnum(std::string type) {
         return darwin::STRING;
     if (type == "int")
         return darwin::INT;
+    if (type == "float")
+        return darwin::FLOAT;
     return darwin::UNKNOWN_VALUE_TYPE;
 }
 
@@ -154,16 +156,26 @@ std::shared_ptr<AConnector> Generator::_CreateOutput(boost::asio::io_context &co
     unsigned int interval = output_config._interval;
     std::vector<std::pair<std::string, std::string>> redis_lists = output_config._redis_lists;
     unsigned int nb_log_lines = output_config._required_log_lines;
+    std::shared_ptr<AConnector> ret = nullptr;
 
     if (filter_type == "fanomaly") {
         std::shared_ptr<fAnomalyConnector> output = std::make_shared<fAnomalyConnector>(context, filter_socket_path, interval, redis_lists, nb_log_lines);
-        return std::static_pointer_cast<AConnector>(output);
+        ret = std::static_pointer_cast<AConnector>(output);
     } else if (filter_type == "fsofa") {
         std::shared_ptr<fSofaConnector> output = std::make_shared<fSofaConnector>(context, filter_socket_path, interval, redis_lists, nb_log_lines);
-        return std::static_pointer_cast<AConnector>(output);
+        ret = std::static_pointer_cast<AConnector>(output);
+    } else if (filter_type == "sum") {
+        std::shared_ptr<SumConnector> output = std::make_shared<SumConnector>(context, filter_socket_path, interval, redis_lists, nb_log_lines);
+        ret = std::static_pointer_cast<AConnector>(output);
     }
-    DARWIN_LOG_WARNING("Generator::_CreateOutput:: " + filter_type + " is not recognized as a valid filter.");
-    return nullptr;
+    else {
+        DARWIN_LOG_WARNING("Generator::_CreateOutput:: " + filter_type + " is not recognized as a valid filter.");
+    }
+
+    if(not ret->PrepareKeysInRedis())
+        ret = nullptr;
+
+    return ret;
 }
 
 bool Generator::LoadOutputs(const rapidjson::Value &array) {
