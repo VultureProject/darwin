@@ -233,14 +233,14 @@ def load_conf(prefix, suffix, conf=""):
             configuration = json.load(f)
     except Exception as e:
         logger.critical("Configurator: Unable to load configuration: {}".format(e))
-        raise e
+        raise ConfParseError("Incorrect configuration format: {}".format(e))
 
     if configuration.get('version'):
         logger.debug("Configurator: found a 'version' field, trying v2 format...")
         try:
             custom_validator(conf_v2_schema).validate(configuration)
         except Exception as e:
-            raise ConfParseError("Incorrect configuration format: {}".format(e.message))
+            raise ConfParseError("Incorrect configuration format: {}".format(e))
         filters.clear()
         stats_reporting.clear()
         stats_reporting.update(configuration['report_stats'])
@@ -252,7 +252,7 @@ def load_conf(prefix, suffix, conf=""):
         try:
             custom_validator(conf_v1_schema).validate(configuration)
         except Exception as e:
-            raise ConfParseError("Incorrect configuration format: {}".format(e.message))
+            raise ConfParseError("Incorrect configuration format: {}".format(e))
         stats_reporting.clear()
         filters.clear()
         filters.update(configuration)
