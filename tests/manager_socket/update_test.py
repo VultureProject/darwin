@@ -7,6 +7,8 @@ from tools.output import print_result
 
 def run():
     tests = [
+        wrong_manager_conf,
+        wrong_manager_conf_v2,
         no_filter_to_none,
         no_filter_to_one,
         no_filter_to_one_conf_v2,
@@ -22,30 +24,66 @@ def run():
         one_update_none_conf_v2,
         one_update_one,
         one_update_one_conf_v2,
-        one_update_one_wrong_conf,
-        one_update_one_wrong_conf_conf_v2,
+        one_update_one_wrong_filter_conf,
+        one_update_one_wrong_filter_conf_v2,
         many_update_none,
         many_update_none_conf_v2,
         many_update_one,
         many_update_one_conf_v2,
         many_update_many,
         many_update_many_conf_v2,
-        many_update_two_wrong_conf_conf_v2,
-        many_update_two_wrong_conf,
+        many_update_two_wrong_filter_conf,
+        many_update_two_wrong_filter_conf_v2,
         many_update_all,
         many_update_all_conf_v2,
-        many_update_all_wrong_conf,
-        many_update_all_wrong_conf_conf_v2,
+        many_update_all_wrong_filter_conf,
+        many_update_all_wrong_filter_conf_v2,
         non_existing_filter,
         non_existing_filter_conf_v2,
         update_no_filter,
         many_update_diff_one_more_v2,
         many_update_diff_one_less_v2,
         many_update_diff_one_more_one_less_v2,
+        one_update_one_wrong_manager_conf,
+        one_update_one_wrong_manager_conf_v2,
+        many_update_all_wrong_manager_conf,
+        many_update_all_wrong_manager_conf_v2,
+        many_update_two_less_wrong_then_good_manager_conf
     ]
 
     for i in tests:
         print_result("Update: " + i.__name__, i)
+
+
+def wrong_manager_conf():
+    ret = True
+
+    darwin_configure(CONF_ONE + "this is no valid JSON")
+    process = darwin_start()
+
+    sleep(1)
+    darwin_stop(process)
+    if process.returncode != 1:
+        logging.error("wrong_manager_conf: manager didn't return an error for the wrong configuration")
+        ret = False
+
+    darwin_remove_configuration()
+    return ret
+
+def wrong_manager_conf_v2():
+    ret = True
+
+    darwin_configure(CONF_ONE_V2 + "this is still not a valid JSON")
+    process = darwin_start()
+
+    sleep(1)
+    darwin_stop(process)
+    if process.returncode != 1:
+        logging.error("wrong_manager_conf_v2: manager didn't return an error for the wrong configuration")
+        ret = False
+
+    darwin_remove_configuration()
+    return ret
 
 
 def no_filter_to_none():
@@ -112,19 +150,19 @@ def no_filter_to_one_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_EMPTY not in resp:
-        logging.error("no_filter_to_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("no_filter_to_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_ONE_V2)
     darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_OK not in resp:
-        logging.error("no_filter_to_one: Update response error; got \"{}\"".format(resp))
+        logging.error("no_filter_to_one_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("no_filter_to_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("no_filter_to_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -171,19 +209,19 @@ def no_filter_to_many_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_EMPTY not in resp:
-        logging.error("no_filter_to_many: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("no_filter_to_many_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_THREE_V2)
     darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_THREE)
     if RESP_STATUS_OK not in resp:
-        logging.error("no_filter_to_many: Update response error; got \"{}\"".format(resp))
+        logging.error("no_filter_to_many_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("no_filter_to_many: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("no_filter_to_many_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -230,18 +268,18 @@ def one_filter_to_none_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_filter_to_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_EMPTY)
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_OK not in resp:
-        logging.error("one_filter_to_none: Update response error; got \"{}\"".format(resp))
+        logging.error("one_filter_to_none_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if RESP_EMPTY not in resp:
-        logging.error("one_filter_to_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_filter_to_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -288,18 +326,18 @@ def many_filters_to_none_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_filters_to_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_filters_to_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_configure(CONF_EMPTY)
     resp = requests(REQ_UPDATE_THREE)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_filters_to_none: Update response error; got \"{}\"".format(resp))
+        logging.error("many_filters_to_none_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if RESP_EMPTY not in resp:
-        logging.error("many_filters_to_none: Mismatching second monitor response; got \"{}\"".format(resp))
+        logging.error("many_filters_to_none_conf_v2: Mismatching second monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -350,20 +388,20 @@ def many_filters_to_one_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_filters_to_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_filters_to_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     darwin_configure(CONF_ONE_V2)
     resp = requests(REQ_UPDATE_TWO)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_filters_to_one: Update response error; got \"{}\"".format(resp))
+        logging.error("many_filters_to_one_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1)
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("many_filters_to_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_filters_to_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -413,19 +451,19 @@ def one_update_none_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_EMPTY)
     if RESP_STATUS_OK not in resp:
-        logging.error("one_update_none: Update response error; got \"{}\"".format(resp))
+        logging.error("one_update_none_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -475,19 +513,19 @@ def one_update_one_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_OK not in resp:
-        logging.error("one_update_one: Update response error; got \"{}\"".format(resp))
+        logging.error("one_update_one_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -496,7 +534,7 @@ def one_update_one_conf_v2():
     return ret
 
 
-def one_update_one_wrong_conf():
+def one_update_one_wrong_filter_conf():
 
     ret = True
 
@@ -506,23 +544,23 @@ def one_update_one_wrong_conf():
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_1", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("one_update_one_wrong_filter_conf: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -531,7 +569,7 @@ def one_update_one_wrong_conf():
     return ret
 
 
-def one_update_one_wrong_conf_conf_v2():
+def one_update_one_wrong_filter_conf_v2():
 
     ret = True
 
@@ -541,23 +579,23 @@ def one_update_one_wrong_conf_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if RESP_TEST_1 not in resp:
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_1", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("one_update_one_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -606,18 +644,18 @@ def many_update_none_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_EMPTY)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_update_none: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_none_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_none: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_none_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -666,18 +704,18 @@ def many_update_one_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_ONE)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_update_one: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_one_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_one: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_one_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -724,18 +762,18 @@ def many_update_many_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_many: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_many_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_TWO)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_update_many: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_many_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_many: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_many_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -744,7 +782,7 @@ def many_update_many_conf_v2():
     return ret
 
 
-def many_update_two_wrong_conf():
+def many_update_two_wrong_filter_conf():
 
     ret = True
 
@@ -754,27 +792,27 @@ def many_update_two_wrong_conf():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_TWO)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("one_update_one_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_2", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("one_update_one_wrong_filter_conf: filter files check failed")
         ret = False
 
     if not check_filter_files("test_3", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("one_update_one_wrong_filter_conf: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -783,7 +821,7 @@ def many_update_two_wrong_conf():
     return ret
 
 
-def many_update_two_wrong_conf_conf_v2():
+def many_update_two_wrong_filter_conf_v2():
 
     ret = True
 
@@ -793,27 +831,27 @@ def many_update_two_wrong_conf_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_two_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_TWO)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_two_wrong_filter_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_two_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_2", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_two_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     if not check_filter_files("test_3", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_two_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -822,7 +860,7 @@ def many_update_two_wrong_conf_conf_v2():
     return ret
 
 
-def many_update_all_wrong_conf():
+def many_update_all_wrong_filter_conf():
 
     ret = True
 
@@ -832,31 +870,31 @@ def many_update_all_wrong_conf():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_THREE)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_1", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf: filter files check failed")
         ret = False
 
     if not check_filter_files("test_2", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf: filter files check failed")
         ret = False
 
     if not check_filter_files("test_3", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -865,7 +903,7 @@ def many_update_all_wrong_conf():
     return ret
 
 
-def many_update_all_wrong_conf_conf_v2():
+def many_update_all_wrong_filter_conf_v2():
 
     ret = True
 
@@ -875,31 +913,31 @@ def many_update_all_wrong_conf_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(2) # Need this because of the starting delay
     darwin_configure(CONF_FTEST_WRONG_CONF, path=PATH_CONF_FTEST)
     resp = requests(REQ_UPDATE_THREE)
     if RESP_STATUS_KO not in resp:
-        logging.error("one_update_one_wrong_conf: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("one_update_one_wrong_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_wrong_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     if not check_filter_files("test_1", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     if not check_filter_files("test_2", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     if not check_filter_files("test_3", ".1"):
-        logging.error("Error: filter files check failed")
+        logging.error("many_update_all_wrong_filter_conf_v2: filter files check failed")
         ret = False
 
     darwin_stop(process)
@@ -948,18 +986,18 @@ def many_update_all_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_all: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_THREE)
     if RESP_STATUS_OK not in resp:
-        logging.error("many_update_all: Update response error; got \"{}\"".format(resp))
+        logging.error("many_update_all_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("many_update_all: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("many_update_all_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -1008,18 +1046,18 @@ def non_existing_filter_conf_v2():
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("non_existing_filter: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("non_existing_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     sleep(1) # Need this because of the starting delay
     resp = requests(REQ_UPDATE_NON_EXISTING)
     if RESP_ERROR_FILTER_NOT_EXISTING not in resp:
-        logging.error("non_existing_filter: Update response error; got \"{}\"".format(resp))
+        logging.error("non_existing_filter_conf_v2: Update response error; got \"{}\"".format(resp))
         ret = False
 
     resp = requests(REQ_MONITOR)
     if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
-        logging.error("non_existing_filter: Mismatching monitor response; got \"{}\"".format(resp))
+        logging.error("non_existing_filter_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
         ret = False
 
     darwin_stop(process)
@@ -1151,6 +1189,220 @@ def many_update_diff_one_more_one_less_v2():
 
     if RESP_TEST_3 in resp:
         logging.error('many_update_diff_one_more_one_less_v2: Wrong filter in monitor response; got "{}"'.format(resp))
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
+    return ret
+
+
+def one_update_one_wrong_manager_conf():
+
+    ret = True
+
+    darwin_configure(CONF_ONE)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if RESP_TEST_1 not in resp:
+        logging.error("one_update_one_wrong_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(2) # Need this because of the starting delay
+    # add test at the end to invalidate configuration file json
+    darwin_configure(CONF_ONE + "Hello There")
+    resp = requests(REQ_UPDATE_ONE)
+    if RESP_STATUS_KO not in resp:
+        logging.error("one_update_one_wrong_manager_conf: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if RESP_TEST_1 not in resp:
+        logging.error("one_update_one_wrong_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    if not check_filter_files("test_1", ".1"):
+        logging.error("one_update_one_wrong_manager_conf: filter files check failed")
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
+    return ret
+
+
+def one_update_one_wrong_manager_conf_v2():
+
+    ret = True
+
+    darwin_configure(CONF_ONE_V2)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if RESP_TEST_1 not in resp:
+        logging.error("one_update_one_wrong_manager_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(2) # Need this because of the starting delay
+    # add test at the end to invalidate configuration file json
+    darwin_configure(CONF_ONE_V2 + "Mystere au chocolat")
+    resp = requests(REQ_UPDATE_ONE)
+    if RESP_STATUS_KO not in resp:
+        logging.error("one_update_one_wrong_manager_conf_v2: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if RESP_TEST_1 not in resp:
+        logging.error("one_update_one_wrong_manager_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    if not check_filter_files("test_1", ".1"):
+        logging.error("one_update_one_wrong_manager_conf_v2: filter files check failed")
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
+    return ret
+
+
+def many_update_all_wrong_manager_conf():
+
+    ret = True
+
+    darwin_configure(CONF_THREE)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("one_update_one_wrong_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(2) # Need this because of the starting delay
+    # add test at the end to invalidate configuration file json
+    darwin_configure(CONF_THREE + "more is not always good")
+    resp = requests(REQ_UPDATE_THREE)
+    if RESP_STATUS_KO not in resp:
+        logging.error("one_update_one_wrong_manager_conf: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("one_update_one_wrong_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    if not check_filter_files("test_1", ".1"):
+        logging.error("one_update_one_wrong_manager_conf: filter files check failed")
+        ret = False
+
+    if not check_filter_files("test_2", ".1"):
+        logging.error("one_update_one_wrong_manager_conf: filter files check failed")
+        ret = False
+
+    if not check_filter_files("test_3", ".1"):
+        logging.error("one_update_one_wrong_manager_conf: filter files check failed")
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
+    return ret
+
+
+def many_update_all_wrong_manager_conf_v2():
+
+    ret = True
+
+    darwin_configure(CONF_THREE_V2)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("many_update_all_wrong_manager_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(2) # Need this because of the starting delay
+    # add test at the end to invalidate configuration file json
+    darwin_configure(CONF_THREE_V2 + "}")
+    resp = requests(REQ_UPDATE_THREE)
+    if RESP_STATUS_KO not in resp:
+        logging.error("many_update_all_wrong_manager_conf_v2: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("many_update_all_wrong_manager_conf_v2: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    if not check_filter_files("test_1", ".1"):
+        logging.error("many_update_all_wrong_manager_conf_v2: filter files check failed")
+        ret = False
+
+    if not check_filter_files("test_2", ".1"):
+        logging.error("many_update_all_wrong_manager_conf_v2: filter files check failed")
+        ret = False
+
+    if not check_filter_files("test_3", ".1"):
+        logging.error("many_update_all_wrong_manager_conf_v2: filter files check failed")
+        ret = False
+
+    darwin_stop(process)
+    darwin_remove_configuration()
+    darwin_remove_configuration(path=PATH_CONF_FTEST)
+    return ret
+
+def many_update_two_less_wrong_then_good_manager_conf():
+
+    ret = True
+
+    darwin_configure(CONF_THREE)
+    darwin_configure(CONF_FTEST, path=PATH_CONF_FTEST)
+    process = darwin_start()
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    sleep(2) # Need this because of the starting delay
+    # add test at the end to invalidate configuration file json
+    darwin_configure(CONF_THREE + "}")
+    resp = requests(REQ_UPDATE_EMPTY)
+    if RESP_STATUS_KO not in resp:
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: Update response error; got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1, RESP_TEST_2, RESP_TEST_3]):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: Mismatching monitor response; got \"{}\"".format(resp))
+        ret = False
+
+    darwin_configure(CONF_ONE)
+    resp = requests(REQ_UPDATE_EMPTY)
+    if RESP_STATUS_OK not in resp:
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: expected OK but got \"{}\"".format(resp))
+        ret = False
+
+    resp = requests(REQ_MONITOR)
+    if not all(x in resp for x in [RESP_TEST_1]):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: Expected one running filter but got \"{}\"".format(resp))
+        ret = False
+
+    if not check_filter_files("test_1", ".1"):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: filter files check failed")
+        ret = False
+
+    if check_filter_files("test_2", ".1"):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: filter files check failed")
+        ret = False
+
+    if check_filter_files("test_3", ".1"):
+        logging.error("many_update_two_less_wrong_then_good_manager_conf: filter files check failed")
         ret = False
 
     darwin_stop(process)

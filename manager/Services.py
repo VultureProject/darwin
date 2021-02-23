@@ -322,10 +322,9 @@ class Services:
         try:
             #Reload conf, global variable 'conf_filters' will be updated
             load_conf(prefix, suffix)
-        except ConfParseError:
-            error = "Update: wrong configuration format, unable to update"
-            logger.error(error)
-            return error
+        except ConfParseError as e:
+            logger.error("Update: Unable to update: {}".format(e))
+            return [str(e)]
 
         logger.info("Update: Configuration loaded")
 
