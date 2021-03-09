@@ -4,6 +4,7 @@ on:
   release:
     types:
       - published
+      - docker
 
 env:
   FAUP_VERSION: 1.5
