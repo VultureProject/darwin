@@ -6,6 +6,7 @@
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
 #include <sstream>
+#include <iomanip>
 #include "Logger.hpp"
 #include "AlertManager.hpp"
 #include "Time.hpp"
@@ -201,7 +202,7 @@ namespace darwin {
         else
             ss << "\"tags\": " << tags << ", ";
 
-        ss << "\"entry\": \"" << entry << "\", ";
+        ss << "\"entry\": " << std::quoted(entry, '"', '\\') << ", ";
         ss << "\"score\": "  << certitude << ", ";
         ss << "\"evt_id\": \"" << evt_id << "\", ";
         ss << "\"details\": ";

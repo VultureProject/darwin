@@ -4,18 +4,21 @@ import socket
 import subprocess
 import logging
 from time import sleep
-from conf import MANAGEMENT_SOCKET_PATH, DEFAULT_FILTER_PATH, FILTER_SOCKETS_DIR, FILTER_PIDS_DIR
+from conf import DEFAULT_FILTER_PATH, TEST_FILES_DIR
 from os import access, F_OK
 
 
 def requests(request):
+    response = ""
 
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    # Set 10s of timeout
+    sock.settimeout(10)
 
     try:
-        sock.connect(MANAGEMENT_SOCKET_PATH)
+        sock.connect("{}/sockets/darwin.sock".format(TEST_FILES_DIR))
     except socket.error as msg:
-        logging.error("manager_socket.utils.requests: Could not connect to {}: {}".format(MANAGEMENT_SOCKET_PATH, msg))
+        logging.error("manager_socket.utils.requests: Could not connect to {}: {}".format("{}/sockets/darwin.sock".format(TEST_FILES_DIR), msg))
         return ""
     try:
         sock.sendall(bytes(request))
@@ -25,9 +28,10 @@ def requests(request):
 
     try:
         response = sock.recv(4096).decode()
+    except socket.timeout:
+        logging.error("manager_socket.utils.requests: Timeout while waiting for response")
     except Exception as e:
         logging.error("manager_socket.utils.requests: Could not get the response: " + str(e))
-        return ""
 
     return response
 
@@ -61,19 +65,19 @@ def check_socket_file(socket_path):
 def check_filter_files(filter_name, extension=".1"):
 
     # Check PID file
-    if not check_pid_file(FILTER_PIDS_DIR + filter_name + extension + ".pid"):
+    if not check_pid_file(TEST_FILES_DIR + "/run/" + filter_name + extension + ".pid"):
         return False
 
     # Check main socket file
-    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + ".sock"):
+    if not check_socket_file(TEST_FILES_DIR + "/sockets/" + filter_name + ".sock"):
         return False
 
     # Check real socket file
-    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + extension + ".sock"):
+    if not check_socket_file(TEST_FILES_DIR + "/sockets/" + filter_name + extension + ".sock"):
         return False
 
     #Check monitoring socket
-    if not check_socket_file(FILTER_SOCKETS_DIR + filter_name + "_mon" + extension + ".sock"):
+    if not check_socket_file(TEST_FILES_DIR + "/sockets/" + filter_name + "_mon" + extension + ".sock"):
         return False
 
     return True

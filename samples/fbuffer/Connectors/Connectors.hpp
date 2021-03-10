@@ -13,3 +13,4 @@
 // Subclasses
 #include "fAnomalyConnector.hpp"
 #include "fSofaConnector.hpp"
+#include "SumConnector.hpp"

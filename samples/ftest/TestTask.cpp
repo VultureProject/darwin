@@ -39,17 +39,17 @@ long TestTask::GetFilterCode() noexcept {
 
 void TestTask::operator()() {
     DARWIN_LOGGER;
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
 
     // Should not fail, as the Session body parser MUST check for validity !
     auto array = _body.GetArray();
 
     for (auto &line : array) {
         SetStartingTime();
-        xxh::hash64_t hash;
 
         if(ParseLine(line)) {
+            DARWIN_LOG_DEBUG("TestTask:: parsed line successfully");
             if(_line == "trigger_redis_list") {
+                DARWIN_LOG_DEBUG("TestTask:: triggered redis list action");
                 if(REDISAddList(_redis_list, _line)) {
                     _certitudes.push_back(0);
                 }
@@ -58,6 +58,7 @@ void TestTask::operator()() {
                 }
             }
             else if(_line == "trigger_redis_channel") {
+                DARWIN_LOG_DEBUG("TestTask:: triggered redis channel action");
                 if(REDISPublishChannel(_redis_channel, _line)) {
                     _certitudes.push_back(0);
                 }
@@ -66,6 +67,7 @@ void TestTask::operator()() {
                 }
             }
             else {
+                DARWIN_LOG_DEBUG("TestTask:: not triggered specific action, generating alert by default");
                 DARWIN_ALERT_MANAGER.Alert(_line, 100, Evt_idToString());
                 _certitudes.push_back(0);
             }
@@ -83,7 +85,7 @@ bool TestTask::REDISAddList(const std::string& list, const std::string& line) {
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
     if(redis.Query(std::vector<std::string>{"LPUSH", list, line}, true) != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to add log in Redis !");
+        DARWIN_LOG_WARNING("TestTask::REDISAddLogs:: Failed to add log in Redis !");
         return false;
     }
 
@@ -97,7 +99,7 @@ bool TestTask::REDISPublishChannel(const std::string& channel, const std::string
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
     if(redis.Query(std::vector<std::string>{"PUBLISH", channel, line}, true) != REDIS_REPLY_INTEGER) {
-        DARWIN_LOG_WARNING("LogsTask::REDISAddLogs:: Failed to add log in Redis !");
+        DARWIN_LOG_WARNING("TestTask::REDISAddLogs:: Failed to add log in Redis !");
         return false;
     }
 
@@ -107,24 +109,24 @@ bool TestTask::REDISPublishChannel(const std::string& channel, const std::string
 bool TestTask::ParseLine(rapidjson::Value& line) {
     DARWIN_LOGGER;
 
-    if(not line.IsArray()) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: The input line is not an array");
-        return false;
+    _line.clear();
+
+    // Parse objects as string
+    if (line.IsArray() or line.IsObject()) {
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+
+        line.Accept(writer);
+        _line = std::string(buffer.GetString());
+    }
+    else if (line.IsString()){
+        _line = line.GetString();
+    }
+    else if (line.IsNumber()) {
+        _line = std::to_string(line.GetDouble());
     }
 
-    auto values = line.GetArray();
-
-    if (values.Size() != 1) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: You must provide only one value in the list");
-        return false;
-    }
-
-    if (not values[0].IsString()) {
-        DARWIN_LOG_ERROR("TestTask:: ParseBody: The value sent must be a string");
-        return false;
-    }
-
-    _line = values[0].GetString();
+    DARWIN_LOG_DEBUG("TestTask::ParseLine:: line is '" + _line + "'");
 
     if (_line == "trigger_ParseLine_error")
         return false;
