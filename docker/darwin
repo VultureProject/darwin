@@ -165,9 +165,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN pip3 install jsonschema==3.2.0
 
-COPY --from=faup_builder /root/faup/install/usr/local/lib/libfaup.so* /usr/local/lib/
+COPY --from=faup_builder /root/faup/install/usr/local/lib/libfaup* /usr/local/lib/
 COPY --from=faup_builder /root/faup/install/usr/local/share/faup/ /usr/local/share/faup
-COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara.so* /usr/local/lib/
+COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara* /usr/local/lib/
 COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
 COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
 COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
