@@ -40,15 +40,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.DEPLOY_TOKEN }}
           registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
-          image_tag: ${{ env.IMAGE_TAG }}
+          image_tag: dev
           dockerfile: docker/darwin
           build_extra_args: --target darwin_builder --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }} --build-arg YARA_VERSION=${{ env.YARA_VERSION }}
 
       - name: push image to docker hub
         run: |
           echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
-          docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:dev ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:dev
+          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:dev
           docker logout
 
 
