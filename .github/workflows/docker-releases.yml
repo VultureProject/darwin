@@ -4,6 +4,9 @@ on:
   release:
     types:
       - published
+  push:
+    branches:
+      - dev
       - docker
 
 env:
@@ -19,11 +22,44 @@ env:
 
 jobs:
 
-  darwin-docker-release:
+  darwin-docker-dev:
     runs-on: ubuntu-latest
+
+    if: github.event_name == "push"
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Prepare build
+        run: |
+          echo "github_lowercase_repo=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`" >> $GITHUB_ENV
+
+      - uses: whoan/docker-build-with-cache-action@v5
+        with:
+          image_name: ${{ env.IMAGE_NAME }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.DEPLOY_TOKEN }}
+          registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
+          image_tag: ${{ env.IMAGE_TAG }}
+          dockerfile: docker/darwin
+          build_extra_args: --target darwin_builder --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }} --build-arg YARA_VERSION=${{ env.YARA_VERSION }}
+
+      - name: push image to docker hub
+        run: |
+          echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
+          docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker logout
+
+
+  darwin-docker-release:
+    runs-on: ubuntu-latest
+
+    if: github.event_name == "release"
+
+    steps:
+      - uses: actions/checkout@v2
+
       - name: Prepare build
         run: |
           echo "github_lowercase_repo=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`" >> $GITHUB_ENV
@@ -39,7 +75,7 @@ jobs:
           dockerfile: docker/darwin
           build_extra_args: --target darwin --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }} --build-arg YARA_VERSION=${{ env.YARA_VERSION }}
 
-      - name: push image to docker hub
+      - name: push release image to docker hub
         run: |
           echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
           docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:${{ env.tag_name }} ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.tag_name }}
