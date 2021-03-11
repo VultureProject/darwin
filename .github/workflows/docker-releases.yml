@@ -14,7 +14,7 @@ env:
   ARMADILLO_VERSION: 9.900.1
   MLPACK_VERSION: 3.4.0
   TF_VERSION: 1.13.0
-  YARA_VERSION: 3.11.0
+  YARA_VERSION: 4.0.5
   DOCKER_REPO: vultureproject
   DOCKER_USER: vultureworker
   IMAGE_NAME: darwin
