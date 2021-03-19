@@ -85,9 +85,8 @@ namespace darwin {
 
     bool Core::SetLogLevel(std::string level){
         DARWIN_LOGGER;
-        if (level == "DEVELOPER"){
+        if (level == "DEVELOPER") {
             log.setLevel(logger::Debug);
-            DARWIN_LOG_DEBUG("Developer mode activated");
             daemon = false;
             return true;
         }
@@ -104,16 +103,21 @@ namespace darwin {
         // OPTIONS
         log.setLevel(logger::Warning); // Log level by default
         opt = -1;
-        while((opt = getopt(ac, av, ":l:h")) != -1)
+        while((opt = getopt(ac, av, ":l:hno:")) != -1)
         {
-            DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
-            DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
             switch(opt)
             {
+                case 'n':
+                    daemon = false;
+                    break;
+                case 'o':
+                    if (not log.setFilePath(optarg))
+                        return false;
+                    break;
                 case 'l':
                     log_level.assign(optarg);
                     if(!Core::SetLogLevel(log_level)){
-                        DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown log-level given");
+                        std::clog << "Unknown log-level " << optarg << std::endl << std::endl;
                         Core::Usage();
                         return false;
                     }
@@ -121,21 +125,20 @@ namespace darwin {
                 case 'h':
                     Core::Usage();
                     return false;
-                    break;
                 case ':':
-                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing option argument");
+                    std::clog << "Missing an option argument for -" << (char)optopt << std::endl << std::endl;
                     Core::Usage();
                     return false;
                 case '?':
-                    DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown option");
+                    std::clog << "Unknown option -" << (char)optopt << std::endl << std::endl;
                     Core::Usage();
                     return false;
             }
         }
 
         // After options we need 10 mandatory arguments
-        if(ac-optind < 10){
-            DARWIN_LOG_ERROR("Core:: Program Arguments:: Missing some parameters");
+        if (ac-optind < 10) {
+            std::clog << "Missing some parameters" << std::endl << std::endl;
             Core::Usage();
             return false;
         }
@@ -160,10 +163,9 @@ namespace darwin {
     }
 
     void Core::Usage() {
-        std::cout << "Usage: ./darwin filter_name socket_path config_file" <<
-                  " monitoring_socket_path pid_file output next_filter_socket_path nb_thread "
-                  <<
-                  "cache_size threshold [OPTIONS]\n";
+        std::cout << "Usage: ./filter <filter_name> <socket_path> <config_file> "
+                  "<monitoring_socket_path> <pid_file> <output> <next_filter_socket_path> <nb_thread> "
+                  "<cache_size> <threshold> [OPTIONS]\n\n";
         std::cout
                 << "  filter_name\tSpecify the name of this filter in the logs\n";
         std::cout
@@ -183,14 +185,16 @@ namespace darwin {
         std::cout
                 << "  cache_size\tInteger specifying the cache's size\n";
         std::cout
-                << "  threshold\tInteger specifying the minimum certitude at which the filter will output a log."
-                   "If it's over 100, take the filter's default threshold\n";
+                << "  threshold\tInteger specifying the minimal certitude at which the filter will output an alert. "
+                   "If it's over 100, take the filter's default threshold (80)\n";
         std::cout << "\nOPTIONS\n";
-        std::cout << "  -l\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n"
-                  << "    \tDefault is WARNING."
-                  << "    \tNOTE: DEVELOPER mode does not create a daemon and sets log level to DEBUG."
+        std::cout << "  -o <logfilepath> \tSet custom log file path.\n";
+        std::cout << "  -n\t\t\tDon't daemonize, filter will stay attached to parent process.\n";
+        std::cout << "  -l\t\t\tSet log level to [DEBUG|INFO|NOTICE|WARNING|ERROR|CRITICAL|DEVELOPER].\n"
+                  << "    \t\t\tDefault is WARNING.\n"
+                  << "    \t\t\tNOTE: DEVELOPER mode deactivates daemonization and sets log level to DEBUG.\n"
                   << std::endl;
-        std::cout << "  -h\tPrint help" << std::endl;
+        std::cout << "  -h\t\t\tPrint help" << std::endl;
     }
 
     bool Core::WritePID() {
