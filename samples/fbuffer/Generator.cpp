@@ -22,8 +22,8 @@ bool Generator::ConfigureNetworkObject(boost::asio::io_context &context) {
     for (auto &output : this->_output_configs) {
         std::shared_ptr<AConnector> newOutput = _CreateOutput(context, output);
         if (newOutput == nullptr) {
-            DARWIN_LOG_WARNING("Generator::ConfigureNetworkObject:: Unable to create the Output. Output " + 
-                                    output._filter_type + " ignored.");   
+            DARWIN_LOG_WARNING("Generator::ConfigureNetworkObject:: Unable to create the Output. Output " +
+                                    output._filter_type + " ignored.");
             continue;
         }
         this->_outputs.push_back(newOutput);
@@ -51,20 +51,48 @@ bool Generator::ConfigureNetworkObject(boost::asio::io_context &context) {
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
+    std::string redis_socket_path, redis_ip;
+    unsigned int redis_port = 6379;
     DARWIN_LOG_DEBUG("Generator::LoadConfig:: Loading classifier...");
 
-    if (not configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("Generator::LoadConfig:: 'redis_socket_path' parameter missing, mandatory");
-        return false;
+    if(configuration.HasMember("redis_socket_path")) {
+        if (not configuration["redis_socket_path"].IsString()) {
+            DARWIN_LOG_CRITICAL("Generator::LoadConfig:: 'redis_socket_path' needs to be a string");
+            return false;
+        } else {
+            redis_socket_path = configuration["redis_socket_path"].GetString();
+        }
     }
-    if (not configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("Generator::LoadConfig:: 'redis_socket_path' needs to be a string");
-        return false;
+
+    if(configuration.HasMember("redis_ip")) {
+        if (not configuration["redis_ip"].IsString()) {
+            DARWIN_LOG_CRITICAL("Generator::LoadConfig:: 'redis_ip' needs to be a string");
+            return false;
+        } else {
+            redis_ip = configuration["redis_ip"].GetString();
+        }
     }
-    std::string redis_socket_path = configuration["redis_socket_path"].GetString();
+
+    if(configuration.HasMember("redis_port")) {
+        if (not configuration["redis_port"].IsUint()) {
+            DARWIN_LOG_CRITICAL("Generator::LoadConfig:: 'redis_port' needs to be an unsigned integer");
+            return false;
+        } else {
+            redis_port = configuration["redis_port"].GetUint();
+        }
+    }
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    redis.SetUnixConnection(redis_socket_path);
+    if (not redis_socket_path.empty()) {
+        redis.SetUnixConnection(redis_socket_path);
+    } else if (not redis_ip.empty()) {
+        redis.SetIpConnection(redis_ip, redis_port);
+    } else {
+        DARWIN_LOG_CRITICAL("Generator::LoadConfig:: no valid way to connect to Redis, "
+                            "please set 'redis_socket_path' or 'redis_ip' (and optionally 'redis_port').");
+        return false;
+    }
+
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
     if(not redis.FindAndConnect()) {
         DARWIN_LOG_CRITICAL("Generator::LoadConfig:: Could not connect to a redis!");
@@ -187,14 +215,14 @@ bool Generator::LoadOutputs(const rapidjson::Value &array) {
         if (not array[i].HasMember("filter_type") or not array[i]["filter_type"].IsString()) {
             DARWIN_LOG_WARNING("Generator::LoadOutputs:: 'filter_type' field missing or is not a string in outputs. Output ignored.");
             continue;
-        } 
+        }
         if (not array[i].HasMember("filter_socket_path") or not array[i]["filter_socket_path"].IsString()) {
-            DARWIN_LOG_WARNING("Generator::LoadOutputs:: 'filter_socket_path' field missing or is not a string in outputs. Output '" + 
+            DARWIN_LOG_WARNING("Generator::LoadOutputs:: 'filter_socket_path' field missing or is not a string in outputs. Output '" +
                                 std::string(array[i]["filter_type"].GetString()) + "' ignored.");
             continue;
-        } 
+        }
         if (not array[i].HasMember("interval") or not array[i]["interval"].IsInt64()) {
-            DARWIN_LOG_WARNING("Generator::LoadOutputs:: 'interval' field missing or is not an integer in outputs. Output '" + 
+            DARWIN_LOG_WARNING("Generator::LoadOutputs:: 'interval' field missing or is not an integer in outputs. Output '" +
                                 std::string(array[i]["filter_type"].GetString()) + "' ignored.");
             continue;
         }
