@@ -1,35 +1,32 @@
-# FAUP
-FROM ubuntu:18.04 AS faup_builder
-ARG FAUP_VERSION
-
-WORKDIR /root
-RUN apt-get update && apt-get install -y --no-install-recommends\
- ca-certificates\
- wget\
- cmake\
- g++\
- pkg-config
-RUN wget https://github.com/stricaud/faup/archive/v${FAUP_VERSION}.tar.gz \
- && mkdir faup \
- && tar xvf v${FAUP_VERSION}.tar.gz -C faup --strip-components 1 \
- && mkdir faup/build || true \
- && cd faup/build \
- && cmake .. \
- && make -j4 install DESTDIR=../install
+ARG BASE_IMAGE=ubuntu:18.04
+ARG FULL_RELEASE_IMAGE=${BASE_IMAGE}
+ARG FILTER_RELEASE_IMAGE=${BASE_IMAGE}
+ARG BOOST_VERSION=1.71.0
+ARG ARMADILLO_VERSION=9.900.1
+ARG MLPACK_VERSION=3.4.0
+ARG YARA_VERSION=4.0.5
 
 
+#########
+# BOOST #
+#########
 
-# BOOST
-FROM ubuntu:18.04 as boost_builder
+FROM ${BASE_IMAGE} as boost_builder
 ARG BOOST_VERSION
 
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /root
+
 RUN apt-get update && apt-get install -y --no-install-recommends\
  wget\
  cmake\
  g++\
  pkg-config\
- ca-certificates
+ ca-certificates\
+ && rm -rf /var/lib/apt/lists/*
+
 RUN BOOST_UNDERSCORE_VERSION=`echo ${BOOST_VERSION} | tr . _` \
  && wget https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_UNDERSCORE_VERSION}.tar.gz \
  && mkdir boost \
@@ -40,27 +37,33 @@ RUN BOOST_UNDERSCORE_VERSION=`echo ${BOOST_VERSION} | tr . _` \
 
 
 
-# MLPACK
-FROM ubuntu:18.04 AS mlpack_builder
+##########
+# MLPACK #
+##########
+
+FROM ${BASE_IMAGE} AS mlpack_builder
 ARG ARMADILLO_VERSION
 ARG MLPACK_VERSION
 
 WORKDIR /root
+
 COPY --from=boost_builder /root/boost/install/ /usr/local/
+
 RUN apt-get update && apt-get install -y --no-install-recommends\
+ build-essential\
  wget\
  cmake\
- make\
- xz-utils\
- gcc\
- g++\
  git\
  liblapacke-dev\
  libopenblas-dev\
- ca-certificates
+ ca-certificates\
+ && rm -rf /var/lib/apt/lists/*
+
 RUN wget https://sourceforge.net/projects/arma/files/armadillo-${ARMADILLO_VERSION}.tar.xz \
- && mkdir armadillo-code \
- && tar xvf armadillo-${ARMADILLO_VERSION}.tar.xz -C armadillo-code --strip-components 1
+ && mkdir armadillo-code\
+ && tar xvf armadillo-${ARMADILLO_VERSION}.tar.xz -C armadillo-code --strip-components 1 \
+ && rm -r armadillo-${ARMADILLO_VERSION}.tar.xz
+
 RUN wget https://github.com/mlpack/mlpack/archive/${MLPACK_VERSION}.tar.gz \
  && mkdir mlpack \
  && tar xvf ${MLPACK_VERSION}.tar.gz -C mlpack --strip-components 1 \
@@ -68,14 +71,19 @@ RUN wget https://github.com/mlpack/mlpack/archive/${MLPACK_VERSION}.tar.gz \
  && mkdir build\
  && cd build\
  && cmake .. -DBUILD_TESTS=OFF -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_PYTHON_BINDINGS=OFF -DFORCE_CXX11=ON -DUSE_OPENMP=ON -DBUILD_SHARED_LIBS=OFF -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/ -DCMAKE_INSTALL_PREFIX:PATH=../install\
- && make -j16 install
+ && make -j$(nproc) install
 
 
-# YARA
-FROM ubuntu:18.04 AS yara_builder
+
+########
+# YARA #
+########
+
+FROM ${BASE_IMAGE} AS yara_builder
 ARG YARA_VERSION
 
 WORKDIR /root
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
  ca-certificates\
  libjansson-dev\
@@ -89,7 +97,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  wget\
  autoconf\
  automake\
- libtool
+ libtool\
+ && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz \
  && mkdir yara \
@@ -97,89 +106,363 @@ RUN wget https://github.com/VirusTotal/yara/archive/v${YARA_VERSION}.tar.gz \
  && cd yara\
  && ./bootstrap.sh\
  && ./configure\
- && make -j4 install DESTDIR=`pwd`/install
+ && make -j$(nproc) install DESTDIR=`pwd`/install
 
 
 
-# DARWIN dev image
-FROM ubuntu:18.04 AS darwin_builder
+###########################
+# DARWIN BUILDER TEMPLATE #
+###########################
 
-RUN mkdir -p var/sockets/darwin \
+FROM ${BASE_IMAGE} as darwin_builder_template
+
+WORKDIR /darwin
+ENV TZ=UTC
+
+COPY --from=boost_builder /root/boost/install/ /usr/local/
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone\
+ && mkdir -p /var/sockets/darwin \
  && mkdir -p /var/run/darwin \
- && mkdir -p /var/log/darwin
+ && mkdir -p /var/log/darwin \
+ && mkdir -p /darwin/filters
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
- ca-certificates\
- libevent-dev\
- libmaxminddb-dev\
  libhiredis-dev\
- libssl-dev\
- liblapacke-dev\
- libopenblas-dev\
  cmake\
  pkg-config\
  g++\
- git\
- redis\
+ && rm -rf /var/lib/apt/lists/*
+
+COPY ./cmake/ /darwin/cmake/
+COPY ./conf/ /darwin/conf/
+COPY ./manager/ /darwin/manager/
+COPY ./samples/ /darwin/samples/
+COPY ./tests/ /darwin/tests/
+COPY ./toolkit/ /darwin/toolkit/
+COPY ./tools/ /darwin/tools/
+COPY ./CMakeLists.txt /darwin/
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
+
+
+
+###########################
+# FILTER RELEASE TEMPLATE #
+###########################
+
+FROM ${FILTER_RELEASE_IMAGE} AS filter_release_template
+VOLUME ["/darwin/conf"]
+HEALTHCHECK CMD nc -U /var/sockets/darwin/${FILTER_NAME}.mon.sock
+
+WORKDIR /darwin
+ENV OUTPUT_TYPE NONE
+ENV NB_THREADS 5
+ENV CACHE 0
+ENV THRESHOLD 70
+ENV LOGLEVEL WARNING
+ENV TZ=UTC
+
+RUN groupadd -r darwin && useradd -r -s /bin/false -g darwin darwin
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone\
+ && mkdir -p /var/sockets/darwin\
+ && mkdir -p /var/run/darwin\
+ && mkdir -p /var/log/darwin\
+ && ln -s /dev/stdout /var/log/darwin/darwin.log\
+ && chown -R darwin:darwin /var/sockets/darwin\
+ && chown -R darwin:darwin /var/run/darwin\
+ && chown -R darwin:darwin /var/log/darwin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ dumb-init\
+ netcat-openbsd\
+ && rm -rf /var/lib/apt/lists/*
+
+CMD  /darwin/filters/filter ${FILTER_NAME} /var/sockets/darwin/${FILTER_NAME}.sock /darwin/conf/filter.conf /var/sockets/darwin/${FILTER_NAME}.mon.sock /var/run/darwin/${FILTER_NAME}.pid ${OUTPUT_TYPE} no ${NB_THREADS} ${CACHE} ${THRESHOLD} -l${LOGLEVEL} -n
+
+
+
+###########################
+# DARWIN FULL BUILD IMAGE #
+###########################
+
+FROM darwin_builder_template as darwin_full_build
+
+COPY --from=mlpack_builder /root/mlpack/install/ /
+COPY --from=mlpack_builder /root/armadillo-code/include/ /usr/local/include/
+COPY --from=yara_builder /root/yara/install/ /
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ libssl-dev\
+ liblapacke-dev\
+ libopenblas-dev\
+ libgomp1\
  python3-dev\
  python3-pip\
  python3-setuptools\
- python3-wheel
+ python3-venv\
+ git\
+ && rm -rf /var/lib/apt/lists/*
 
-COPY --from=faup_builder /root/faup/install/ /
-COPY --from=mlpack_builder /root/mlpack/install/ /
-COPY --from=mlpack_builder /root/armadillo-code/ /root/armadillo-code/
-COPY --from=boost_builder /root/boost/install/ /usr/local/
-COPY --from=yara_builder /root/yara/install/ /
+RUN python3 -m venv /darwin/env\
+ && /darwin/env/bin/pip3 install --no-cache-dir -r /darwin/manager/requirements.txt\
+ && /darwin/env/bin/pip3 install --no-cache-dir -r /darwin/tests/requirements.txt
 
-COPY . /home/darwin
-WORKDIR /home/darwin
-
-RUN mkdir filters || rm -rf filters/*\
- && cd filters \
- && cmake .. -DARMADILLO_INCLUDE_DIR=/root/armadillo-code/include/\
- && make -j4
-RUN pip3 install -r manager/requirements.txt\
- && pip3 install -r tests/requirements.txt
+RUN cd filters\
+ && cmake ..\
+ && make -j$(nproc)
 
 
 
-FROM ubuntu:18.04 AS darwin
-RUN mkdir -p /var/sockets/darwin \
- && mkdir -p /var/run/darwin \
- && mkdir -p /var/log/darwin
+########################
+# DARWIN RELEASE IMAGE #
+########################
+
+FROM ${FULL_RELEASE_IMAGE} AS darwin
+VOLUME ["/darwin/conf"]
+
+HEALTHCHECK CMD echo '{"type": "monitor"}' | nc -U /var/sockets/darwin/darwin.sock
+
+WORKDIR /darwin
+ENV LOGLEVEL WARNING
+ENV TZ=UTC
+
+RUN groupadd -r darwin && useradd -r -s /bin/false -g darwin darwin
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone\
+ && mkdir -p /var/sockets/darwin\
+ && mkdir -p /var/run/darwin\
+ && mkdir -p /var/log/darwin\
+ && ln -s /dev/stdout /var/log/darwin/darwin.log\
+ && chown -R darwin:darwin /var/sockets/darwin\
+ && chown -R darwin:darwin /var/run/darwin\
+ && chown -R darwin:darwin /var/log/darwin
+
+RUN apt-get update && apt-get install -y --no-install-recommends\
+ liblapacke\
+ libopenblas-base\
+ libgomp1\
+ python3\
+ netcat-openbsd\
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara* /usr/local/lib/
+COPY --from=darwin_full_build --chown=darwin:darwin /darwin/filters/darwin_* /darwin/filters/
+COPY --from=darwin_full_build --chown=darwin:darwin /darwin/env/ /darwin/env/
+COPY --from=darwin_builder_template --chown=darwin:darwin /darwin/manager /darwin/manager
+COPY --from=darwin_builder_template --chown=darwin:darwin /darwin/conf /darwin/conf
+
+CMD /darwin/env/bin/python3 /darwin/manager/manager.py -l ${LOGLEVEL} /darwin/conf/darwin.conf
+
+
+
+################
+# BUFR BUILDER #
+################
+
+FROM darwin_builder_template as fbuffer_builder
+
+RUN cd filters \
+ && cmake .. -DFILTER="BUFFER"\
+ && make -j$(nproc)
+
+
+################
+# BUFR RELEASE #
+################
+
+FROM filter_release_template as fbuffer_release
+
+ENV FILTER_NAME buffer
+
+COPY --chown=darwin:darwin --from=fbuffer_builder /darwin/filters/darwin_buffer /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fbuffer/ /darwin/conf/
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_buffer /darwin/filters/filter\
+ && ln -s /darwin/conf/fbuffer.conf /darwin/conf/filter.conf
+
+USER darwin
+
+
+
+################
+# CONN BUILDER #
+################
+
+FROM darwin_builder_template as fconnection_builder
+
+RUN cd filters \
+ && cmake .. -DFILTER="CONNECTION"\
+ && make -j$(nproc)
+
+
+################
+# CONN RELEASE #
+################
+
+FROM filter_release_template as fconnection_release
+
+ENV FILTER_NAME connection
+
+COPY --chown=darwin:darwin --from=fconnection_builder /darwin/filters/darwin_connection /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fconnection/ /darwin/conf/
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_connection /darwin/filters/filter\
+ && ln -s /darwin/conf/fconnection.conf /darwin/conf/filter.conf
+
+USER darwin
+
+
+
+################
+# LKUP BUILDER #
+################
+
+FROM darwin_builder_template as fhostlookup_builder
+
+RUN cd filters \
+ && cmake .. -DFILTER="HOSTLOOKUP"\
+ && make -j$(nproc)
+
+
+################
+# LKUP RELEASE #
+################
+
+FROM filter_release_template as fhostlookup_release
+
+ENV FILTER_NAME hostlookup
+
+COPY --chown=darwin:darwin --from=fhostlookup_builder /darwin/filters/darwin_hostlookup /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fhostlookup/ /darwin/conf/
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_hostlookup /darwin/filters/filter\
+ && ln -s /darwin/conf/fhostlookup.conf /darwin/conf/filter.conf
+
+USER darwin
+
+
+
+################
+# SESS BUILDER #
+################
+
+FROM darwin_builder_template as fsession_builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
- libevent-2.1 \
- libmaxminddb0 \
- libhiredis0.13 \
- liblapacke \
- libopenblas-base \
- libgomp1 \
- python3 \
- python3-pip \
- python3-setuptools \
- python3-wheel \
- python3-psutil \
- python3-redis
+ libssl-dev\
+ && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install jsonschema==3.2.0
+RUN cd filters \
+ && cmake .. -DFILTER="SESSION"\
+ && make -j$(nproc)
 
-COPY --from=faup_builder /root/faup/install/usr/local/lib/libfaup* /usr/local/lib/
-COPY --from=faup_builder /root/faup/install/usr/local/share/faup/ /usr/local/share/faup
+
+################
+# SESS RELEASE #
+################
+
+FROM filter_release_template as fsession_release
+
+ENV FILTER_NAME session
+
+COPY --chown=darwin:darwin --from=fsession_builder /darwin/filters/darwin_session /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fsession/ /darwin/conf/
+
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_session /darwin/filters/filter\
+ && ln -s /darwin/conf/fsession.conf /darwin/conf/filter.conf
+
+USER darwin
+
+
+
+################
+# UNAD BUILDER #
+################
+
+FROM darwin_builder_template as fanomaly_builder
+
+COPY --from=mlpack_builder /root/mlpack/install/ /
+COPY --from=mlpack_builder /root/armadillo-code/include/ /usr/local/include/
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ liblapacke-dev\
+ libopenblas-dev\
+ libgomp1\
+ && rm -rf /var/lib/apt/lists/*
+
+RUN cd filters \
+ && cmake .. -DFILTER="ANOMALY"\
+ && make -j$(nproc)
+
+
+################
+# UNAD RELEASE #
+################
+
+FROM filter_release_template as fanomaly_release
+
+ENV FILTER_NAME anomaly
+
+COPY --chown=darwin:darwin --from=fanomaly_builder /darwin/filters/darwin_anomaly /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fanomaly/ /darwin/conf/
+
+RUN apt-get update && apt-get install -y --no-install-recommends\
+ liblapacke\
+ libopenblas-base\
+ libgomp1\
+ && rm -rf /var/lib/apt/lists/*
+
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_anomaly /darwin/filters/filter\
+ && ln -s /darwin/conf/fanomaly.conf /darwin/conf/filter.conf
+
+USER darwin
+
+
+
+################
+# YARA BUILDER #
+################
+
+FROM darwin_builder_template as fyara_builder
+
+COPY --from=yara_builder /root/yara/install/ /
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+ libssl-dev\
+ && rm -rf /var/lib/apt/lists/*
+
+RUN cd filters \
+ && cmake .. -DFILTER="YARA"\
+ && make -j$(nproc)
+
+
+################
+# YARA RELEASE #
+################
+
+FROM filter_release_template as fyara_release
+
+ENV FILTER_NAME yara
+
 COPY --from=yara_builder /root/yara/install/usr/local/lib/libyara* /usr/local/lib/
-COPY --from=darwin_builder /home/darwin/filters/darwin_* /home/darwin/filters/
-COPY --from=darwin_builder /home/darwin/manager /home/darwin/manager
-COPY --from=darwin_builder /home/darwin/conf /home/darwin/conf
 
-RUN find /home/darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;
+COPY --chown=darwin:darwin --from=fyara_builder /darwin/filters/darwin_yara /darwin/filters/
+COPY --chown=darwin:darwin ./conf/fyara/ /darwin/conf/
 
-WORKDIR /home/darwin
-ENV LOGLEVEL WARNING
-CMD sh -c "python3 ./manager/manager.py -l ${LOGLEVEL} /home/darwin/conf/darwin.conf"
-VOLUME ["/home/darwin/conf"]
-VOLUME ["/var/sockets/darwin"]
-VOLUME ["/var/log/darwin"]
+RUN apt-get update && apt-get install -y --no-install-recommends\
+ libssl1.1\
+ && rm -rf /var/lib/apt/lists/*
 
-# define default final image
-FROM darwin
+RUN find /darwin/conf/ -type f -exec bash -c 'mv $0 ${0/.example/}' {} \;\
+ && ln -s /darwin/filters/darwin_yara /darwin/filters/filter\
+  && ln -s /darwin/conf/fyara.conf /darwin/conf/filter.conf
+
+USER darwin
