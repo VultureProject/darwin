@@ -79,4 +79,5 @@ private:
     // Session_status in Redis
     std::string _token; // The token to check
     std::vector<std::string> _repo_ids; // The associated repository IDs to check
+    uint64_t _expiration; // The expiration to set
 };

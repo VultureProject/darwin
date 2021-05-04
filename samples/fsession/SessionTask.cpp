@@ -119,11 +119,18 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
 
     try {
         result_vector = std::any_cast<std::vector<std::any>>(result);
-        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: " + std::to_string(result_vector.size()) + " element(s) retrieved");
+        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: " + std::to_string(result_vector.size())
+                            + " element(s) retrieved");
     }
     catch(const std::bad_any_cast& error) {
         DARWIN_LOG_ERROR("SessionTask::REDISLookup:: wrong answer format: " + std::string(error.what()));
         return 0;
+    }
+
+    if(_expiration != 0) {
+        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: resetting token expiration to " + std::to_string(_expiration)
+                            + "s");
+        redis.Query(std::vector<std::string>{"EXPIRE", token, std::to_string(_expiration)}, true);
     }
 
     for(auto& object : result_vector) {
@@ -154,6 +161,9 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
 
 bool SessionTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
+    unsigned long long expiration = 0;
+
+    _expiration = 0;
 
     if(not line.IsArray()) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The input line is not an array");
@@ -168,11 +178,18 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The list provided is empty");
         return false;
     }
-
-    if (values.Size() != 2) {
+    else if (values.Size() < 2) {
         DARWIN_LOG_ERROR(
-                "SessionTask:: ParseBody: You must provide exactly two arguments per request: the token and"
-                " repository IDs"
+                "SessionTask:: ParseBody: You must provide at least two arguments per request: the token and"
+                " repository ID"
+        );
+
+        return false;
+    }
+    else if (values.Size() > 3) {
+        DARWIN_LOG_ERROR(
+                "SessionTask:: ParseBody: You must provide at most three arguments per request: the token, "
+                "the repository ID and the expiration value to set to the token key"
         );
 
         return false;
@@ -187,6 +204,26 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The repository IDs sent must be a string in the following "
                             "format: REPOSITORY1;REPOSITORY2;...");
         return false;
+    }
+
+    if (values.Size() == 3) {
+        if (values[2].IsString()) {
+            expiration = std::strtoll(values[2].GetString(), NULL, 10);
+            if (expiration != 0 and expiration != LONG_LONG_MAX) {
+                _expiration = expiration;
+            }
+            else {
+                DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration is not a valid number");
+                return false;
+            }
+        }
+        else if (values[2].IsUint()){
+            _expiration = values[2].GetUint64();
+        }
+        else {
+            DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration should be a valid positive number");
+            return false;
+        }
     }
 
     _token = values[0].GetString();
