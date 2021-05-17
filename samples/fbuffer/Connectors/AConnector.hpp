@@ -26,7 +26,7 @@ class AConnector {
     ///
     ///\class AConnector
 
-    public:
+public:
     ///\brief Unique constructor. It contains all stuff needed to ensure REDIS and output Filter communication
     ///
     ///\param io_context The boost::asio::io_context used by the Server. Needed for communication with output Filter.
@@ -45,7 +45,6 @@ class AConnector {
     ///\brief Virtual default constructor
     virtual ~AConnector() = default;
 
-    public:
     ///\brief Get the interval set in the connector.
     ///
     ///\return this->_interval
@@ -81,7 +80,7 @@ class AConnector {
 
     ///\brief Get the logs from the Redis List
     ///
-    /// \param len THe number of elements to pick up in the list
+    /// \param len The number of elements to pick up in the list
     /// \param logs the vector used to store our logs
     ///
     /// \return true on success, false otherwise.
@@ -99,12 +98,14 @@ class AConnector {
     ///\return true on success, false otherwise.
     virtual bool REDISReinsertLogs(std::vector<std::string> &logs, const std::string &list_name);
 
-    ///\brief This function extracts from _input_line some data, format it and add it to _entry.
+    ///\brief This function extracts from input_line some data, format it and add it to entry.
     ///
-    ///\param fieldname The name of the data to retrieve
+    ///\param input_line The map of each entry name with its value
+    ///\param fieldname The name of the entry to retrieve
+    ///\param entry The variable to store the resulting value to
     ///
     ///\return true on success, false otherwise.
-    bool ParseData(std::string fieldname);
+    bool ParseData(std::map<std::string, std::string> &input_line, std::string fieldname, std::string &entry);
 
     ///\brief Sets the connection with the output Filter and sends logs to it.
     ///
@@ -113,7 +114,11 @@ class AConnector {
     ///\return true on success, false otherwise.
     bool SendToFilter(std::vector<std::string> &logs);
 
-    public: // Functions that needs to be implemented by children
+
+    // ##########################################################
+    // ### Functions that needs to be implemented by children ###
+    // ##########################################################
+
     ///\brief This function sends data to the REDIS storage. It must be overrode as each filter doesn't need the same data.
     ///
     /// It should fill _entry with the datas to send as REDISAddEntry is picking from it.
@@ -123,13 +128,13 @@ class AConnector {
     ///\return true on success, false otherwise.
     virtual bool ParseInputForRedis(std::map<std::string, std::string> &input_line) = 0;
 
-    private:
+private:
     ///\brief Get the Buffer filter code
     ///
     ///\return the Buffer filter code
     long GetFilterCode() noexcept;
 
-    protected:
+protected:
     ///\brief this virtual function "jsonifies" the vector of strings into a single string.
     /// By default it performs no other actions on the data but CAN be overrode if needed. (e.g fAnomalyConnector)
     ///
@@ -139,10 +144,12 @@ class AConnector {
     ///\return True on success (formatting successful), False otherwise.
     virtual bool FormatDataToSendToFilter(std::vector<std::string> &logs, std::string &formatted);
 
-    ///\brief Extracts the source of this->_input_line input
+    ///\brief Extracts the "source" entry from input_line
+    ///
+    ///\param input_line The map containing the entries' name and value
     ///
     ///\return The source of the current input line
-    std::string GetSource();
+    std::string GetSource(std::map<std::string, std::string> &input_line);
 
     // Used to link with the correct task
     darwin::outputType _filter_type;
@@ -161,12 +168,6 @@ class AConnector {
 
     // The different REDIS lists used to store data depending to source before sending to filter
     std::vector<std::pair<std::string, std::string>> _redis_lists;
-
-    // Temporarily used to between formating and adding data to REDIS
-    std::string _entry;
-
-    // Temporarily used to store an input in a form that the connectors can pick what they need
-    std::map<std::string, std::string> _input_line;
 
     // The number of log lines in REDIS needed to send to the output Filter
     unsigned int _required_log_lines;

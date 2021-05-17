@@ -37,16 +37,16 @@ std::vector<std::pair<std::string, std::string>> AConnector::GetRedisLists() con
     return this->_redis_lists;
 }
 
-bool AConnector::ParseData(std::string fieldname) {
+bool AConnector::ParseData(std::map<std::string, std::string> &input_line, std::string fieldname, std::string &entry) {
     DARWIN_LOGGER;
-    if (this->_input_line.find(fieldname) == this->_input_line.end()) {
+    if (input_line.find(fieldname) == input_line.end()) {
         DARWIN_LOG_ERROR("AConnector::ParseData '" + fieldname + "' is missing in the input line. Output ignored.");
         return false;
     }
-    if (not this->_entry.empty()) {
-        this->_entry += ";";
+    if (not entry.empty()) {
+        entry += ";";
     }
-    this->_entry += this->_input_line[fieldname];
+    entry += input_line[fieldname];
     return true;
 }
 
@@ -87,7 +87,7 @@ bool AConnector::PrepareKeysInRedis(){
 
     return ret;
 }
- 
+
 bool AConnector::REDISAddEntry(const std::string &entry, const std::string &list_name) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AConnector::REDISAddEntry:: Add data in Redis...");
@@ -247,7 +247,7 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     packet->certitude_size = certitude_size;
     packet->filter_code = GetFilterCode();
     packet->body_size = data.size();
-    
+
     std::vector<char> uuid = darwin::uuid::GenUuid();
     memcpy(packet->evt_id, uuid.data(), 16);
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Sending header + data");
@@ -267,11 +267,11 @@ long AConnector::GetFilterCode() noexcept {
     return DARWIN_FILTER_BUFFER;
 }
 
-std::string AConnector::GetSource() {
+std::string AConnector::GetSource(std::map<std::string, std::string> &input_line) {
     DARWIN_LOGGER;
-    if (this->_input_line.find("source") == this->_input_line.end()) {
+    if (input_line.find("source") == input_line.end()) {
         DARWIN_LOG_ERROR("AConnector::GetSource:: 'source' is missing in the input line. Output ignored.");
         return std::string();
     }
-    return this->_input_line["source"];
+    return input_line["source"];
 }

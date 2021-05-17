@@ -17,18 +17,17 @@ SumConnector::SumConnector(boost::asio::io_context &context, std::string &filter
 
 
 bool SumConnector::ParseInputForRedis(std::map<std::string, std::string> &input_line) {
-    this->_input_line = input_line;
-    this->_entry.clear();
+    std::string entry;
 
-    std::string source = this->GetSource();
+    std::string source = this->GetSource(input_line);
 
-    if (not this->ParseData("decimal"))
+    if (not this->ParseData(input_line, "decimal", entry))
         return false;
 
     for (const auto &redis_config : this->_redis_lists) {
         // If the source in the input is equal to the source in the redis list, or the redis list's source is empty
         if (not redis_config.first.compare(source) or redis_config.first.empty())
-                this->REDISAddEntry(this->_entry, redis_config.second);
+                this->REDISAddEntry(entry, redis_config.second);
     }
     return true;
 }
