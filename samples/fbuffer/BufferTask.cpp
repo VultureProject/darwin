@@ -73,6 +73,7 @@ bool BufferTask::ParseLine(rapidjson::Value &line) {
         if (i == -1) {
             if (not value.IsString()) {
                 DARWIN_LOG_ERROR("BufferTask::ParseLine:: the source given must be a string.");
+                return false;
             }
             this->_input_line["source"] = value.GetString();
             i++;
