@@ -114,8 +114,8 @@ bool SumConnector::REDISPopLogs(long long int len __attribute__((unused)), std::
 
     redis_reply = redis.Query(std::vector<std::string>{"GETSET", sum_name, "0"}, result, true);
     if (redis_reply == REDIS_REPLY_NIL) {
-        DARWIN_LOG_INFO("SumConnector:: REDISPopLogs:: key '" + sum_name + "' does not exist (yet?)");
-        return false;
+        DARWIN_LOG_DEBUG("SumConnector:: REDISPopLogs:: key '" + sum_name + "' did not exist");
+        result = std::string("0");
     }
     else if(redis_reply != REDIS_REPLY_STRING) {
         DARWIN_LOG_ERROR("SumConnector::REDISPopLogs:: Not the expected Redis response");
@@ -150,7 +150,7 @@ long long int SumConnector::REDISListLen(const std::string &sum_name) noexcept {
 
     redis_reply = redis.Query(std::vector<std::string>{"GET", sum_name}, result_string, true);
     if (redis_reply == REDIS_REPLY_NIL) {
-        DARWIN_LOG_INFO("SumConnector::REDISListLen:: key '" + sum_name + "' does not exist (yet?)");
+        DARWIN_LOG_DEBUG("SumConnector::REDISListLen:: key '" + sum_name + "' does not exist (yet?)");
     }
     else if (redis_reply == REDIS_REPLY_STRING) {
         result = strtold(result_string.c_str(), NULL);
@@ -162,7 +162,7 @@ long long int SumConnector::REDISListLen(const std::string &sum_name) noexcept {
     }
     else {
         DARWIN_LOG_ERROR("SumConnector::REDISListLen:: Error while querying key '" + sum_name + "'");
-        result = 0.0L;
+        return -1;
     }
 
     // Return an absolute rounded value for the double, cap with the maximum value of a long long int
