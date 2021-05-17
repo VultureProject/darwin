@@ -78,6 +78,14 @@ public:
     ///\return true on success, false otherwise.
     virtual bool REDISAddEntry(const std::string &entry, const std::string &list_name);
 
+    ///\brief (Re)set the expiration on a Redis key
+    ///
+    /// \param key The name of the key to set the expiry on
+    /// \param expiry The value to set as expiration for the key
+    ///
+    /// \return true if expiry was set successfuly, false if the key did not exist or the command failed
+    bool REDISSetExpiry(const std::string &key, unsigned int expiry);
+
     ///\brief Get the logs from the Redis List
     ///
     /// \param len The number of elements to pick up in the list
