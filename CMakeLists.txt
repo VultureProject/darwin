@@ -96,7 +96,8 @@ set(
         samples/base/ThreadGroup.cpp samples/base/ThreadGroup.hpp
         samples/base/AlertManager.cpp samples/base/AlertManager.hpp
 
-        samples/base/Server.cpp samples/base/Server.hpp
+        samples/base/AServer.cpp samples/base/AServer.hpp
+        samples/base/UnixServer.cpp samples/base/UnixServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
         samples/base/Session.cpp samples/base/Session.hpp
 

@@ -15,7 +15,7 @@
 
 #include "Generator.hpp"
 #include "Logger.hpp"
-#include "Server.hpp"
+#include "UnixServer.hpp"
 #include "Core.hpp"
 #include "Stats.hpp"
 
@@ -47,7 +47,7 @@ namespace darwin {
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
             try {
-                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
+                UnixServer server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
                 if (not gen.ConfigureNetworkObject(server.GetIOContext())) {
                     raise(SIGTERM);
                     t.join();
@@ -60,7 +60,7 @@ namespace darwin {
                 // the io_context too.
                 for (std::size_t i = 1; i < _nbThread; ++i) {
                     _threadpool.CreateThread(
-                        std::bind(&Server::Run, std::ref(server))
+                        std::bind(&AServer::Run, std::ref(server))
                     );
                 }
                 server.Run();
