@@ -1,4 +1,4 @@
-/// \file     Session.cpp
+/// \file     ASession.cpp
 /// \authors  hsoszynski
 /// \version  1.0
 /// \date     05/07/18
@@ -14,7 +14,8 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "Logger.hpp"
 #include "Manager.hpp"
-#include "Session.hpp"
+#include "Generator.hpp"
+#include "ASession.hpp"
 #include "errors.hpp"
 
 #include "../../toolkit/lru_cache.hpp"
@@ -22,64 +23,45 @@
 #include "../../toolkit/xxhash.hpp"
 
 namespace darwin {
-    Session::Session(std::string name, boost::asio::local::stream_protocol::socket& socket,
+    ASession::ASession(boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
-                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                     std::mutex& cache_mutex)
-            : _filter_name(name), _connected{false}, _socket{std::move(socket)},
+                     Generator& generator)
+            : _connected{false}, _socket{std::move(socket)},
               _filter_socket{socket.get_executor()},
-              _manager{manager}, _cache{cache}, _cache_mutex{cache_mutex} {}
+              _manager{manager}, _generator{generator} {}
 
-    void Session::SetStartingTime() {
-        _starting_time = std::chrono::high_resolution_clock::now();
-    }
+    
 
-    double Session::GetDurationMs() {
-        return std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now() - _starting_time
-        ).count() / ((double)1000);
-    }
-
-    void Session::Start() {
+    void ASession::Start() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Session::Start::");
+        DARWIN_LOG_DEBUG("ASession::Start::");
         ReadHeader();
     }
 
-    void Session::Stop() {
+    void ASession::Stop() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Session::Stop::");
+        DARWIN_LOG_DEBUG("ASession::Stop::");
         _socket.close();
         if(_connected) _filter_socket.close();
     }
 
-    void Session::SetThreshold(std::size_t const& threshold) {
-        DARWIN_LOGGER;
-        //If the threshold is negative, we keep the actual default threshold
-        if(threshold>100){
-            DARWIN_LOG_DEBUG("Session::SetThreshold:: Default threshold " + std::to_string(_threshold) + "applied");
-            return;
-        }
-        _threshold = threshold;
-    }
-
-    void Session::SetNextFilterSocketPath(std::string const& path){
+    void ASession::SetNextFilterSocketPath(std::string const& path){
         _next_filter_path = path;
     }
 
-    void Session::SetOutputType(std::string const& output) {
+    void ASession::SetOutputType(std::string const& output) {
         _output = config::convert_output_string(output);
     }
 
-    config::output_type Session::GetOutputType() {
+    config::output_type ASession::GetOutputType() {
         return _output;
     }
 
-    std::string Session::GetLogs(){
+    std::string ASession::GetLogs(){
         return _logs;
     }
 
-    std::string Session::GetDataToSendToFilter(){
+    std::string ASession::GetDataToSendToFilter(){
         switch (GetOutputType()){
             case config::output_type::RAW:
                 return _raw_body;
@@ -93,18 +75,18 @@ namespace darwin {
         return "";
     }
 
-    void Session::ReadHeader() {
+    void ASession::ReadHeader() {
         DARWIN_LOGGER;
 
-        DARWIN_LOG_DEBUG("Session::ReadHeader:: Starting to read incoming header...");
+        DARWIN_LOG_DEBUG("ASession::ReadHeader:: Starting to read incoming header...");
         boost::asio::async_read(_socket,
                                 boost::asio::buffer(&_header, sizeof(_header)),
-                                boost::bind(&Session::ReadHeaderCallback, this,
+                                boost::bind(&ASession::ReadHeaderCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
     }
 
-    void Session::ReadHeaderCallback(const boost::system::error_code& e,
+    void ASession::ReadHeaderCallback(const boost::system::error_code& e,
                                      std::size_t size) {
         DARWIN_LOGGER;
 
@@ -112,10 +94,10 @@ namespace darwin {
         _certitudes.clear();
         _logs.clear();
 
-        DARWIN_LOG_DEBUG("Session::ReadHeaderCallback:: Reading header");
+        DARWIN_LOG_DEBUG("ASession::ReadHeaderCallback:: Reading header");
         if (!e) {
             if (size != sizeof(_header)) {
-                DARWIN_LOG_ERROR("Session::ReadHeaderCallback:: Mismatching header size");
+                DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
             if (_header.body_size == 0) {
@@ -127,33 +109,33 @@ namespace darwin {
         }
 
         if (boost::asio::error::eof == e) {
-            DARWIN_LOG_DEBUG("Session::ReadHeaderCallback:: " + e.message());
+            DARWIN_LOG_DEBUG("ASession::ReadHeaderCallback:: " + e.message());
         } else {
-            DARWIN_LOG_WARNING("Session::ReadHeaderCallback:: " + e.message());
+            DARWIN_LOG_WARNING("ASession::ReadHeaderCallback:: " + e.message());
         }
 
         header_callback_stop_session:
         _manager.Stop(shared_from_this());
     }
 
-    void Session::ReadBody(std::size_t size) {
+    void ASession::ReadBody(std::size_t size) {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Session::ReadBody:: Starting to read incoming body...");
+        DARWIN_LOG_DEBUG("ASession::ReadBody:: Starting to read incoming body...");
 
         _socket.async_read_some(boost::asio::buffer(_buffer,
                                                     size),
-                                boost::bind(&Session::ReadBodyCallback, this,
+                                boost::bind(&ASession::ReadBodyCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
     }
 
-    void Session::ReadBodyCallback(const boost::system::error_code& e,
+    void ASession::ReadBodyCallback(const boost::system::error_code& e,
                                    std::size_t size) {
         DARWIN_LOGGER;
 
         if (!e) {
             _raw_body.append(_buffer.data(), size);
-            DARWIN_LOG_DEBUG("Session::ReadBodyCallback:: Body len (" +
+            DARWIN_LOG_DEBUG("ASession::ReadBodyCallback:: Body len (" +
                              std::to_string(_raw_body.length()) +
                              ") - Header body size (" +
                              std::to_string(_header.body_size) +
@@ -164,20 +146,20 @@ namespace darwin {
                 ReadBody(totalBodyLength - bodyLength);
             } else {
                 if (_raw_body.empty()) {
-                    DARWIN_LOG_WARNING("Session::ReadBodyCallback Empty body retrieved");
+                    DARWIN_LOG_WARNING("ASession::ReadBodyCallback Empty body retrieved");
                     this->SendErrorResponse("Error receiving body: Empty body retrieved", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
                 if (_header.body_size <= 0) {
                     DARWIN_LOG_ERROR(
-                            "Session::ReadBodyCallback Body is not empty, but the header appears to be invalid"
+                            "ASession::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
                     this->SendErrorResponse("Error receiving body: Body is not empty, but the header appears to be invalid", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
 
-                if (!ParseBody()) {
-                    DARWIN_LOG_DEBUG("Session::ReadBodyCallback Something went wrong while parsing the body");
+                if (!PreParseBody()) {
+                    DARWIN_LOG_DEBUG("ASession::ReadBodyCallback Something went wrong while parsing the body");
                     this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
@@ -186,19 +168,20 @@ namespace darwin {
             }
             return;
         }
-        DARWIN_LOG_ERROR("Session::ReadBodyCallback:: " + e.message());
+        DARWIN_LOG_ERROR("ASession::ReadBodyCallback:: " + e.message());
         _manager.Stop(shared_from_this());
     }
 
-    void Session::ExecuteFilter() {
+    void ASession::ExecuteFilter() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Session::ExecuteFilter::");
-
-        (*this)();
+        DARWIN_LOG_DEBUG("ASession::ExecuteFilter::");
+        auto t = _generator.CreateTask(shared_from_this()); //shared pt Task
+        // TODO ThreadPool.Start(t);
+        (*t)();
         this->SendNext();
     }
 
-    void Session::SendNext() {
+    void ASession::SendNext() {
         switch(_header.response) {
             case DARWIN_RESPONSE_SEND_BOTH:
                 if(this->SendToFilter()) break;
@@ -213,24 +196,24 @@ namespace darwin {
         }
     }
 
-    bool Session::ParseBody() {
+    bool ASession::PreParseBody() {
         DARWIN_LOGGER;
         try {
             _body.Parse(_raw_body.c_str());
 
             if (!_body.IsArray()) {
-                DARWIN_LOG_ERROR("Session:: ParseBody: You must provide a list");
+                DARWIN_LOG_ERROR("ASession:: ParseBody: You must provide a list");
                 return false;
             }
         } catch (...) {
-            DARWIN_LOG_CRITICAL("Session:: ParseBody: Could not parse raw body");
+            DARWIN_LOG_CRITICAL("ASession:: ParseBody: Could not parse raw body");
             return false;
         }
-        // DARWIN_LOG_DEBUG("Session:: ParseBody:: parsed body : " + _raw_body);
+        // DARWIN_LOG_DEBUG("ASession:: ParseBody:: parsed body : " + _raw_body);
         return true;
     }
 
-    std::string Session::JsonStringify(rapidjson::Document &json) {
+    std::string ASession::JsonStringify(rapidjson::Document &json) {
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
@@ -239,7 +222,7 @@ namespace darwin {
         return std::string(buffer.GetString());
     }
 
-    bool Session::SendToClient() noexcept {
+    bool ASession::SendToClient() noexcept {
         DARWIN_LOGGER;
         const std::size_t certitude_size = _certitudes.size();
 
@@ -260,12 +243,14 @@ namespace darwin {
             packet_size += this->_response_body.size();
         }
 
-        DARWIN_LOG_DEBUG("Session::SendToClient: Computed packet size: " + std::to_string(packet_size));
+        DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(packet_size));
 
+        // TODO: to be corrected
+        // si certitudes.size() > default ET body not empty : on écrit sur les dernieres certitudes
         darwin_filter_packet_t* packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
 
         if (packet == nullptr) {
-            DARWIN_LOG_CRITICAL("Session::SendToClient: Could not create a Darwin packet");
+            DARWIN_LOG_CRITICAL("ASession::SendToClient: Could not create a Darwin packet");
             return false;
         }
 
@@ -282,14 +267,15 @@ namespace darwin {
         packet->type = DARWIN_PACKET_FILTER;
         packet->response = _header.response;
         packet->certitude_size = certitude_size;
-        packet->filter_code = GetFilterCode();
+        packet->filter_code = _generator.GetFilterCode();
         packet->body_size = this->_response_body.size();
         memcpy(packet->evt_id, _header.evt_id, 16);
+        // TODO: potentiellement corruption (effacement de certitudes)
         memcpy((char*)(packet) + sizeof(darwin_filter_packet_t), _response_body.c_str(), _response_body.length());
 
         boost::asio::async_write(_socket,
                                 boost::asio::buffer(packet, packet_size),
-                                boost::bind(&Session::SendToClientCallback, this,
+                                boost::bind(&ASession::SendToClientCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
 
@@ -298,16 +284,16 @@ namespace darwin {
         return true;
     }
 
-    bool Session::SendToFilter() noexcept {
+    bool ASession::SendToFilter() noexcept {
         DARWIN_LOGGER;
 
         if (!_next_filter_path.compare("no")) {
-            DARWIN_LOG_NOTICE("Session::SendToFilter:: No next filter provided. Ignoring...");
+            DARWIN_LOG_NOTICE("ASession::SendToFilter:: No next filter provided. Ignoring...");
             return false;
         }
 
         if (!_connected) {
-            DARWIN_LOG_DEBUG("Session::SendToFilter:: Trying to connect to: " +
+            DARWIN_LOG_DEBUG("ASession::SendToFilter:: Trying to connect to: " +
                              _next_filter_path);
             try {
                 _filter_socket.connect(
@@ -315,7 +301,7 @@ namespace darwin {
                                 _next_filter_path.c_str()));
                 _connected = true;
             } catch (std::exception const& e) {
-                DARWIN_LOG_ERROR(std::string("Session::SendToFilter:: "
+                DARWIN_LOG_ERROR(std::string("ASession::SendToFilter:: "
                                              "Unable to connect to next filter: ") +
                                  e.what());
                 return false;
@@ -323,8 +309,8 @@ namespace darwin {
         }
 
         std::string data = GetDataToSendToFilter();
-        DARWIN_LOG_DEBUG("Session::SendToFilter:: data to send: " + data);
-        DARWIN_LOG_DEBUG("Session::SendToFilter:: data size: " + std::to_string(data.size()));
+        DARWIN_LOG_DEBUG("ASession::SendToFilter:: data to send: " + data);
+        DARWIN_LOG_DEBUG("ASession::SendToFilter:: data size: " + std::to_string(data.size()));
 
         const std::size_t certitude_size = _certitudes.size();
 
@@ -343,13 +329,13 @@ namespace darwin {
 
         packet_size += data.size();
 
-        DARWIN_LOG_DEBUG("Session::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
+        DARWIN_LOG_DEBUG("ASession::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
 
         darwin_filter_packet_t* packet;
         packet = (darwin_filter_packet_t *) malloc(packet_size);
 
         if (!packet) {
-            DARWIN_LOG_CRITICAL("Session:: SendToFilter:: Could not create a Darwin packet");
+            DARWIN_LOG_CRITICAL("ASession:: SendToFilter:: Could not create a Darwin packet");
             return false;
         }
 
@@ -372,14 +358,14 @@ namespace darwin {
         packet->type = DARWIN_PACKET_FILTER;
         packet->response = _header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
         packet->certitude_size = certitude_size;
-        packet->filter_code = GetFilterCode();
+        packet->filter_code = _generator.GetFilterCode();
         packet->body_size = data.size();
         memcpy(packet->evt_id, _header.evt_id, 16);
 
-        DARWIN_LOG_DEBUG("Session:: SendToFilter:: Sending header + data");
+        DARWIN_LOG_DEBUG("ASession:: SendToFilter:: Sending header + data");
         boost::asio::async_write(_filter_socket,
                             boost::asio::buffer(packet, packet_size),
-                            boost::bind(&Session::SendToFilterCallback, this,
+                            boost::bind(&ASession::SendToFilterCallback, this,
                                         boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
 
@@ -387,26 +373,26 @@ namespace darwin {
         return true;
     }
 
-    void Session::SendToClientCallback(const boost::system::error_code& e,
+    void ASession::SendToClientCallback(const boost::system::error_code& e,
                                std::size_t size __attribute__((unused))) {
         DARWIN_LOGGER;
 
         if (e) {
-            DARWIN_LOG_ERROR("Session::SendToClientCallback:: " + e.message());
+            DARWIN_LOG_ERROR("ASession::SendToClientCallback:: " + e.message());
             _manager.Stop(shared_from_this());
-            DARWIN_LOG_DEBUG("Session::SendToClientCallback:: Stopped session in manager");
+            DARWIN_LOG_DEBUG("ASession::SendToClientCallback:: Stopped session in manager");
             return;
         }
 
         Start();
     }
 
-    void Session::SendToFilterCallback(const boost::system::error_code& e,
+    void ASession::SendToFilterCallback(const boost::system::error_code& e,
                                        std::size_t size __attribute__((unused))) {
         DARWIN_LOGGER;
 
         if (e) {
-            DARWIN_LOG_ERROR("Session::SendToFilterCallback:: " + e.message());
+            DARWIN_LOG_ERROR("ASession::SendToFilterCallback:: " + e.message());
             _filter_socket.close();
             _connected = false;
         }
@@ -419,39 +405,9 @@ namespace darwin {
         }
     }
 
-    xxh::hash64_t Session::GenerateHash() {
-        // could be easily overridden in the children
-        return xxh::xxhash<64>(_raw_body);
-    }
+    
 
-    void Session::SaveToCache(const xxh::hash64_t &hash, const unsigned int certitude) const {
-        DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("SaveToCache:: Saving certitude " + std::to_string(certitude) + " to cache");
-        std::unique_lock<std::mutex> lck{_cache_mutex};
-        _cache->insert(hash, certitude);
-    }
-
-    bool Session::GetCacheResult(const xxh::hash64_t &hash, unsigned int& certitude) {
-        DARWIN_LOGGER;
-        boost::optional<unsigned int> cached_certitude;
-
-        {
-            std::unique_lock<std::mutex> lck{_cache_mutex};
-            cached_certitude = _cache->get(hash);
-        }
-
-        if (cached_certitude != boost::none) {
-            certitude = cached_certitude.get();
-            DARWIN_LOG_DEBUG("GetCacheResult:: Already processed request. Cached certitude is " +
-                             std::to_string(certitude));
-
-            return true;
-        }
-
-        return false;
-    }
-
-    std::string Session::Evt_idToString() {
+    std::string ASession::Evt_idToString() {
         DARWIN_LOGGER;
         char str[37] = {};
         snprintf(str,
@@ -463,19 +419,31 @@ namespace darwin {
                 _header.evt_id[12], _header.evt_id[13], _header.evt_id[14], _header.evt_id[15]
         );
         std::string res(str);
-        DARWIN_LOG_DEBUG(std::string("Session::Evt_idToString:: UUID - ") + res);
+        DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + res);
         return res;
     }
 
-    std::string Session::GetFilterName() {
-        return _filter_name;
-    }
+    
 
-    void Session::SendErrorResponse(const std::string& message, const unsigned int code) {
+    void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
         if (this->_header.response != DARWIN_RESPONSE_SEND_BACK && this->_header.response != DARWIN_RESPONSE_SEND_BOTH)
             return;
         this->_response_body.clear();
         this->_response_body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
         this->SendToClient();
+    }
+
+    void ASession::SetThreshold(std::size_t const& threshold) {
+        DARWIN_LOGGER;
+        //If the threshold is negative, we keep the actual default threshold
+        if(threshold>100){
+            DARWIN_LOG_DEBUG("Session::SetThreshold:: Default threshold " + std::to_string(_threshold) + "applied");
+            return;
+        }
+        _threshold = threshold;
+    }
+
+    size_t ASession::GetThreshold() {
+        return _threshold;
     }
 }

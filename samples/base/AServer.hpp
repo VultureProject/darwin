@@ -3,7 +3,7 @@
 #include <boost/asio.hpp>
 #include <vector>
 #include <thread>
-#include "Session.hpp"
+#include "ASession.hpp"
 #include "Manager.hpp"
 #include "Generator.hpp"
 namespace darwin {

@@ -15,7 +15,8 @@
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
 #include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "ASession.fwd.hpp"
 #include "tensorflow/core/public/session.h"
 
 #define DARWIN_FILTER_DGA 0x64676164
@@ -27,12 +28,17 @@
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class DGATask : public darwin::Session {
+class DGATask : public darwin::ATask {
 public:
-    explicit DGATask(boost::asio::local::stream_protocol::socket& socket,
-                     darwin::Manager& manager,
-                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+    explicit DGATask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex,
+                     darwin::session_ptr_t s,
+                     darwin_filter_packet_t& header,
+                     rapidjson::Document& body,
+                     std::string& raw_body,
+                     std::string& logs,
+                     std::string& response_body,
+                     std::vector<unsigned int>& certitudes,
                      std::shared_ptr<tensorflow::Session> &session,
                      faup_options_t *faup_options,
                      std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);

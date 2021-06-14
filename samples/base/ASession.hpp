@@ -12,6 +12,7 @@
 
 #include "config.hpp"
 #include "protocol.h"
+#include "Generator.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
@@ -19,6 +20,8 @@
 #include "../../toolkit/rapidjson/writer.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"
 #include "Time.hpp"
+
+#include "ASession.fwd.hpp"
 
 #define DARWIN_SESSION_BUFFER_SIZE 2048
 #define DARWIN_DEFAULT_THRESHOLD 80
@@ -28,30 +31,22 @@ namespace darwin {
 
     class Manager;
 
-    class Session : public std::enable_shared_from_this<Session> {
+    class ASession : public std::enable_shared_from_this<ASession> {
     public:
-        Session(std::string name,
-                boost::asio::local::stream_protocol::socket& socket,
+        ASession(boost::asio::local::stream_protocol::socket& socket,
                 Manager& manager,
-                std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                std::mutex& cache_mutex);
+                Generator& generator);
 
-        virtual ~Session() = default;
+        virtual ~ASession() = default;
 
         // Make the manager non copyable & non movable
-        Session(Session const&) = delete;
+        ASession(ASession const&) = delete;
 
-        Session(Session const&&) = delete;
+        ASession(ASession const&&) = delete;
 
-        Session& operator=(Session const&) = delete;
+        ASession& operator=(ASession const&) = delete;
 
-        Session& operator=(Session const&&) = delete;
-
-    public:
-        /// Entry point of the execution.
-        /// MUST be overloaded.
-        /// WARNING This method will be executed by a thread.
-        virtual void operator()() = 0;
+        ASession& operator=(ASession const&&) = delete;
 
     public:
         /// Start the session and the async read of the incoming packet.
@@ -75,29 +70,28 @@ namespace darwin {
         /// \param name the string that represent the output type
         virtual void SetOutputType(std::string const& output) final;
 
-    protected:
-        /// Return filter code.
-        virtual long GetFilterCode() noexcept = 0;
-
-        /// Save the result to cache
-        virtual void SaveToCache(const xxh::hash64_t &hash, unsigned int certitude) const;
-
-        /// Get the result from the cache
-        virtual bool GetCacheResult(const xxh::hash64_t &hash, unsigned int &certitude);
-
-        /// Generate the hash
-        virtual xxh::hash64_t GenerateHash();
-
-        /// Set starting time
-        void SetStartingTime();
-
-        /// Get total time elapsed since the starting time
-        double GetDurationMs();
-
         /// Get the filter's output type
         ///
         /// \return The filter's output type
         config::output_type GetOutputType();
+
+        /// Get the filter's result in a log form
+        ///
+        /// \return The filter's log
+        virtual std::string GetLogs();
+
+        /// Get the filter's threshold
+        ///
+        /// \return The filter's threshold
+        size_t GetThreshold();
+
+        /// Transform the evt id in the header into a string
+        ///
+        /// \return evt_di as string
+        std::string Evt_idToString();
+
+    protected:
+        
 
         /// Get the data to send to the next filter
         /// according to the filter's output type
@@ -106,33 +100,7 @@ namespace darwin {
         /// \param data data to send
         std::string GetDataToSendToFilter();
 
-        /// Get the filter's result in a log form
-        ///
-        /// \return The filter's log
-        virtual std::string GetLogs();
-
-
-        /// Transform the evt id in the header into a string
-        ///
-        /// \return evt_di as string
-        std::string Evt_idToString();
-
-        /// Get the name of the filter
-        std::string GetFilterName();
-
-        /// Get the string representation of a rapidjson document
-        std::string JsonStringify(rapidjson::Document &json);
-
-        /// Parse the body received.
-        /// This is the default function, trying to get a JSON array from the _raw_body,
-        /// if you wan't to recover something else (full/complex JSON, custom data),
-        /// override the function in the child class.
-        virtual bool ParseBody();
-
-        /// Parse a line in the body.
-        /// This function should be implemented in each child,
-        /// and should be called between every entry to check validity (no early parsing).
-        virtual bool ParseLine(rapidjson::Value &line) = 0;
+        
 
         /// Send
         virtual void SendNext() final;
@@ -162,6 +130,11 @@ namespace darwin {
         virtual void
         SendToFilterCallback(const boost::system::error_code& e,
                              std::size_t size);
+
+
+        std::string JsonStringify(rapidjson::Document &json);
+
+        bool PreParseBody();
 
 private:
         /// Set the async read for the header.
@@ -193,6 +166,7 @@ private:
         /// \param code The error code to send
         virtual void SendErrorResponse(const std::string& message, const unsigned int code) final;
 
+        friend std::shared_ptr<darwin::ATask> Generator::CreateTask(std::shared_ptr<ASession> s) noexcept;
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
@@ -201,30 +175,20 @@ private:
         config::output_type _output; //!< The filter's output.
         std::array<char, DARWIN_SESSION_BUFFER_SIZE> _buffer; //!< Reading buffer for the body.
 
+        std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD;
 
         // Accessible by children
     protected:
         boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
         boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
         Manager& _manager; //!< The associated connection manager.
+        Generator& _generator; //!< The Task Generator.
         darwin_filter_packet_t _header; //!< Header received from the session.
         rapidjson::Document _body; //!< Body received from session (if any).
         std::string _raw_body; //!< Body received from session (if any), that will not be parsed.
         std::string _logs; //!< Represents data given in the logs by the Session
-        std::chrono::time_point<std::chrono::high_resolution_clock> _starting_time;
-        std::vector<unsigned int> _certitudes; //!< The Darwin results obtained.
-        //!< Cache received from the Generator
-        std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache;
-        std::mutex& _cache_mutex;
-        bool _is_cache = false;
-        std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD; //!<Default threshold
         std::string _response_body; //!< The body to send back to the client
+        std::vector<unsigned int> _certitudes;
     };
-
-    /// Definition of a session's self-managing pointer.
-    ///
-    /// \typedef session_ptr_t
-    typedef std::shared_ptr<Session> session_ptr_t;
-
 }
 

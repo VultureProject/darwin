@@ -10,7 +10,7 @@
 #include <boost/asio.hpp>
 #include <vector>
 #include <thread>
-#include "Session.hpp"
+#include "ASession.hpp"
 #include "Manager.hpp"
 #include "Generator.hpp"
 #include "AServer.hpp"
@@ -43,13 +43,13 @@ namespace darwin {
 
         UnixServer& operator=(UnixServer const&&) = delete;
 
-        void Clean();
+        void Clean() override;
 
-        void HandleStop(boost::system::error_code const& error, int sig);
+        void HandleStop(boost::system::error_code const& error, int sig) override;
 
-        void Accept();
+        void Accept() override;
 
-        void HandleAccept(boost::system::error_code const& e);
+        void HandleAccept(boost::system::error_code const& e) override;
 
     private:
         std::string _socket_path; //!< Path to the UNIX socket to listen on.

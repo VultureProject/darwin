@@ -98,8 +98,10 @@ set(
 
         samples/base/AServer.cpp samples/base/AServer.hpp
         samples/base/UnixServer.cpp samples/base/UnixServer.hpp
+        samples/base/TcpServer.cpp samples/base/TcpServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
-        samples/base/Session.cpp samples/base/Session.hpp
+        samples/base/ASession.cpp samples/base/ASession.hpp
+        samples/base/ATask.cpp samples/base/ATask.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp
         toolkit/Validators.cpp toolkit/Validators.hpp

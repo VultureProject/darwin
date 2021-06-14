@@ -14,6 +14,7 @@
 #include "base/Logger.hpp"
 #include "DGATask.hpp"
 #include "Generator.hpp"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
 #include "tensorflow/core/framework/graph.pb.h"
 
@@ -168,12 +169,19 @@ bool Generator::LoadFaupOptions() {
     }
     return true;
 }
+// Method is friend with ASession
+std::shared_ptr<darwin::ATask> Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<DGATask>(_cache, _cache_mutex, s, 
+                s->_header, s->_body, s->_raw_body, s->_logs, 
+                s->_response_body, s->_certitudes, 
+                _session, _faup_options, _token_map, _max_tokens
+                )
+            );
+}
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<DGATask>(socket, manager, _cache, _cache_mutex, _session, _faup_options, _token_map, _max_tokens));
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_DGA;
 }
 
 Generator::~Generator() {
