@@ -231,7 +231,7 @@ namespace darwin {
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
          */
-        std::size_t packet_size = 0;
+        std::size_t packet_size = 0, packet_size_wo_body = 0;
         if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
             packet_size = sizeof(darwin_filter_packet_t) +
                 (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
@@ -239,14 +239,14 @@ namespace darwin {
             packet_size = sizeof(darwin_filter_packet_t);
         }
 
+        packet_size_wo_body = packet_size;
+
         if (not this->_response_body.empty()) {
             packet_size += this->_response_body.size();
         }
 
         DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(packet_size));
 
-        // TODO: to be corrected
-        // si certitudes.size() > default ET body not empty : on écrit sur les dernieres certitudes
         darwin_filter_packet_t* packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
 
         if (packet == nullptr) {
@@ -270,8 +270,8 @@ namespace darwin {
         packet->filter_code = _generator.GetFilterCode();
         packet->body_size = this->_response_body.size();
         memcpy(packet->evt_id, _header.evt_id, 16);
-        // TODO: potentiellement corruption (effacement de certitudes)
-        memcpy((char*)(packet) + sizeof(darwin_filter_packet_t), _response_body.c_str(), _response_body.length());
+
+        memcpy((char*)(packet) + packet_size_wo_body, _response_body.c_str(), _response_body.size());
 
         boost::asio::async_write(_socket,
                                 boost::asio::buffer(packet, packet_size),
@@ -319,13 +319,15 @@ namespace darwin {
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
          */
-        std::size_t packet_size = 0;
+        std::size_t packet_size = 0, packet_size_wo_data = 0;
         if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
             packet_size = sizeof(darwin_filter_packet_t) +
                 (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
         } else {
             packet_size = sizeof(darwin_filter_packet_t);
         }
+
+        packet_size_wo_data = packet_size;
 
         packet_size += data.size();
 
@@ -352,7 +354,7 @@ namespace darwin {
         if(data.size() != 0) {
             // TODO: set a proper pointer in protocol.h for the body
             // Yes We Hack...
-            memcpy(&packet->certitude_list[certitude_size+1], data.c_str(), data.size());
+            memcpy((char *)(packet) + packet_size_wo_data, data.c_str(), data.size());
         }
 
         packet->type = DARWIN_PACKET_FILTER;
