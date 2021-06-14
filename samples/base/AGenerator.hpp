@@ -12,7 +12,7 @@
 #include <fstream>
 #include <string>
 
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "../toolkit/rapidjson/document.h"
 
 class AGenerator {
@@ -27,9 +27,8 @@ public:
     /// \param socket The Session's socket.
     /// \param manager The Session manager.
     /// \return A pointer to a new session.
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept = 0;
+    virtual std::shared_ptr<darwin::ATask> CreateTask(darwin::session_ptr_t s) noexcept = 0;
+    
     virtual bool ConfigureNetworkObject(boost::asio::io_context &context);
 
 protected:
@@ -58,6 +57,8 @@ public:
     virtual bool
     Configure(std::string const& configFile,
               const std::size_t cache_size) final;
+
+    virtual long GetFilterCode() const = 0;
 
 private:
     /// Open and read the configuration file.
