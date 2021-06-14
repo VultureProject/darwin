@@ -68,11 +68,11 @@ namespace darwin {
 
         if (!e) {
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
-            auto task = _generator.CreateTask(_new_connection, _manager);
-            task->SetNextFilterSocketPath(_socket_next);
-            task->SetOutputType(_output);
-            task->SetThreshold(_threshold);
-            _manager.Start(task);
+            auto sess = std::make_shared<ASession>(_new_connection, _manager, _generator);
+            sess->SetNextFilterSocketPath(_socket_next);
+            sess->SetOutputType(_output);
+            sess->SetThreshold(_threshold);
+            _manager.Start(sess);
             Accept();
         } else {
             DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
