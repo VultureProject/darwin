@@ -39,7 +39,6 @@ public:
                      std::string& raw_body,
                      std::string& logs,
                      std::string& response_body,
-                     std::vector<unsigned int>& certitudes,
                      std::shared_ptr<tensorflow::Session> &session,
                      DarwinTfLiteInterpreterFactory& interpreter_factory,
                      faup_options_t *faup_options,
