@@ -101,6 +101,8 @@ set(
         samples/base/TcpServer.cpp samples/base/TcpServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
         samples/base/ASession.cpp samples/base/ASession.hpp
+        samples/base/UnixSession.cpp samples/base/UnixSession.hpp
+        samples/base/TcpSession.cpp samples/base/TcpSession.hpp
         samples/base/ATask.cpp samples/base/ATask.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp

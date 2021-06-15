@@ -15,9 +15,6 @@
 
 namespace darwin {
 
-    
-// tcp: <boost/asio/ip/tcp.hpp> boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 8000)
-
     UnixServer::UnixServer(std::string const& socket_path,
                    std::string const& output,
                    std::string const& next_filter_socket,
@@ -68,7 +65,7 @@ namespace darwin {
 
         if (!e) {
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
-            auto sess = std::make_shared<ASession>(_new_connection, _manager, _generator);
+            auto sess = std::make_shared<UnixSession>(_new_connection, _manager, _generator);
             sess->SetNextFilterSocketPath(_socket_next);
             sess->SetOutputType(_output);
             sess->SetThreshold(_threshold);

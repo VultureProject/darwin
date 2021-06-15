@@ -11,19 +11,20 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include "TcpServer.hpp"
+#include "TcpSession.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
 
 namespace darwin {
 
-    TcpServer::TcpServer(std::string const& socket_path,
+    TcpServer::TcpServer(int port_nb,
+                   int next_filter_port,
                    std::string const& output,
-                   std::string const& next_filter_socket,
                    std::size_t threshold,
                    Generator& generator)
             : AServer(output, threshold, generator), 
-              _socket_path{socket_path}, _socket_next{next_filter_socket},
-              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 8000)},
+              _port_nb{port_nb}, _port_nb_next{next_filter_port},
+              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_nb)},
               _new_connection{_io_context} {
 
         this->InitSignalsAndStart();
@@ -35,7 +36,7 @@ namespace darwin {
         DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
         _manager.StopAll();
         //todo: can't work, to be changed
-        unlink(_socket_path.c_str());
+        // unlink? what? why?
     }
 
     void TcpServer::HandleStop(boost::system::error_code const& error __attribute__((unused)), int sig __attribute__((unused))) {
@@ -66,13 +67,12 @@ namespace darwin {
 
         if (!e) {
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
-            //todo to be modified
-
-            // auto task = _generator.CreateTask(_new_connection, _manager);
-            // task->SetNextFilterSocketPath(_socket_next);
-            // task->SetOutputType(_output);
-            // task->SetThreshold(_threshold);
-            // _manager.Start(task);
+            auto sess = std::make_shared<TcpSession>(_new_connection, _manager, _generator);
+            sess->SetNextFilterPort(_port_nb_next);
+            sess->SetOutputType(_output);
+            sess->SetThreshold(_threshold);
+            _manager.Start(sess);
+            Accept();
             Accept();
         } else {
             DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");

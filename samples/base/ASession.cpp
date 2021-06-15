@@ -23,12 +23,9 @@
 #include "../../toolkit/xxhash.hpp"
 
 namespace darwin {
-    ASession::ASession(boost::asio::local::stream_protocol::socket& socket,
-                     darwin::Manager& manager,
+    ASession::ASession(darwin::Manager& manager,
                      Generator& generator)
-            : _connected{false}, _socket{std::move(socket)},
-              _filter_socket{socket.get_executor()},
-              _manager{manager}, _generator{generator} {}
+            : _manager{manager}, _generator{generator}, _has_next_filter{false} {}
 
     
 
@@ -36,17 +33,6 @@ namespace darwin {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("ASession::Start::");
         ReadHeader();
-    }
-
-    void ASession::Stop() {
-        DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("ASession::Stop::");
-        _socket.close();
-        if(_connected) _filter_socket.close();
-    }
-
-    void ASession::SetNextFilterSocketPath(std::string const& path){
-        _next_filter_path = path;
     }
 
     void ASession::SetOutputType(std::string const& output) {
@@ -73,17 +59,6 @@ namespace darwin {
                 return GetLogs();
         }
         return "";
-    }
-
-    void ASession::ReadHeader() {
-        DARWIN_LOGGER;
-
-        DARWIN_LOG_DEBUG("ASession::ReadHeader:: Starting to read incoming header...");
-        boost::asio::async_read(_socket,
-                                boost::asio::buffer(&_header, sizeof(_header)),
-                                boost::bind(&ASession::ReadHeaderCallback, this,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred));
     }
 
     void ASession::ReadHeaderCallback(const boost::system::error_code& e,
@@ -116,17 +91,6 @@ namespace darwin {
 
         header_callback_stop_session:
         _manager.Stop(shared_from_this());
-    }
-
-    void ASession::ReadBody(std::size_t size) {
-        DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("ASession::ReadBody:: Starting to read incoming body...");
-
-        _socket.async_read_some(boost::asio::buffer(_buffer,
-                                                    size),
-                                boost::bind(&ASession::ReadBodyCallback, this,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred));
     }
 
     void ASession::ReadBodyCallback(const boost::system::error_code& e,
@@ -273,11 +237,7 @@ namespace darwin {
 
         memcpy((char*)(packet) + packet_size_wo_body, _response_body.c_str(), _response_body.size());
 
-        boost::asio::async_write(_socket,
-                                boost::asio::buffer(packet, packet_size),
-                                boost::bind(&ASession::SendToClientCallback, this,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred));
+        this->WriteToClient(packet, packet_size);
 
         free(packet);
         this->_response_body.clear();
@@ -287,25 +247,13 @@ namespace darwin {
     bool ASession::SendToFilter() noexcept {
         DARWIN_LOGGER;
 
-        if (!_next_filter_path.compare("no")) {
+        if (!_has_next_filter) {
             DARWIN_LOG_NOTICE("ASession::SendToFilter:: No next filter provided. Ignoring...");
             return false;
         }
 
-        if (!_connected) {
-            DARWIN_LOG_DEBUG("ASession::SendToFilter:: Trying to connect to: " +
-                             _next_filter_path);
-            try {
-                _filter_socket.connect(
-                        boost::asio::local::stream_protocol::endpoint(
-                                _next_filter_path.c_str()));
-                _connected = true;
-            } catch (std::exception const& e) {
-                DARWIN_LOG_ERROR(std::string("ASession::SendToFilter:: "
-                                             "Unable to connect to next filter: ") +
-                                 e.what());
-                return false;
-            }
+        if( ! ConnectToNextFilter()) {
+            return false;
         }
 
         std::string data = GetDataToSendToFilter();
@@ -365,12 +313,7 @@ namespace darwin {
         memcpy(packet->evt_id, _header.evt_id, 16);
 
         DARWIN_LOG_DEBUG("ASession:: SendToFilter:: Sending header + data");
-        boost::asio::async_write(_filter_socket,
-                            boost::asio::buffer(packet, packet_size),
-                            boost::bind(&ASession::SendToFilterCallback, this,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
-
+        this->WriteToFilter(packet, packet_size);
         free(packet);
         return true;
     }
@@ -395,8 +338,7 @@ namespace darwin {
 
         if (e) {
             DARWIN_LOG_ERROR("ASession::SendToFilterCallback:: " + e.message());
-            _filter_socket.close();
-            _connected = false;
+            CloseFilterConnection();
         }
 
         if(_header.response == DARWIN_RESPONSE_SEND_BOTH) {
