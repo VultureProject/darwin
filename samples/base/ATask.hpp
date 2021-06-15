@@ -24,8 +24,7 @@ namespace darwin {
                 rapidjson::Document& _body,
                 std::string& _raw_body,
                 std::string& _logs,
-                std::string& _response_body,
-                std::vector<unsigned int>& _certitudes);
+                std::string& _response_body);
 
             virtual ~ATask() = default;
 
@@ -90,12 +89,12 @@ namespace darwin {
 
             session_ptr_t _s; //!< associated session
 
-            darwin_filter_packet_t& _header; //!< Ref to the Header received from the session.
-            rapidjson::Document& _body; //!< Ref to the Body received from session (if any).
-            std::string& _raw_body; //!< Ref to the Body received from session (if any), that will not be parsed.
-            std::string& _logs; //!< Ref to the data given in the logs by the Session
-            std::string& _response_body; //!< Ref to the body to send back to the client
-            std::vector<unsigned int>& _certitudes; //!< Ref to the Darwin results obtained.
+            darwin_filter_packet_t _header; //!< Ref to the Header received from the session.
+            rapidjson::Document _body; //!< Ref to the Body received from session (if any).
+            std::string _raw_body; //!< Ref to the Body received from session (if any), that will not be parsed.
+            std::string _logs; //!< Ref to the data given in the logs by the Session
+            std::string _response_body; //!< Ref to the body to send back to the client
+            std::vector<unsigned int> _certitudes; //!< Ref to the Darwin results obtained.
 
             std::size_t _threshold; //!< Threshold, overriden at creation by the session
 

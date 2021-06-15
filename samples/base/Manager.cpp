@@ -8,6 +8,7 @@
 #include "Logger.hpp"
 #include "Stats.hpp"
 #include "Manager.hpp"
+#include "ASession.hpp"
 
 namespace darwin {
 

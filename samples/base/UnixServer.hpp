@@ -10,7 +10,7 @@
 #include <boost/asio.hpp>
 #include <vector>
 #include <thread>
-#include "ASession.hpp"
+#include "UnixSession.hpp"
 #include "Manager.hpp"
 #include "Generator.hpp"
 #include "AServer.hpp"

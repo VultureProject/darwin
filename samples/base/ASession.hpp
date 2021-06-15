@@ -8,11 +8,10 @@
 #pragma once
 
 #include <memory>
-#include <boost/asio.hpp>
-
 #include "config.hpp"
 #include "protocol.h"
 #include "Generator.hpp"
+#include "Manager.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
@@ -29,17 +28,14 @@
 
 namespace darwin {
 
-    class Manager;
-
     class ASession : public std::enable_shared_from_this<ASession> {
     public:
-        ASession(boost::asio::local::stream_protocol::socket& socket,
-                Manager& manager,
+        ASession(Manager& manager,
                 Generator& generator);
 
         virtual ~ASession() = default;
 
-        // Make the manager non copyable & non movable
+        // Make the Session non copyable & non movable
         ASession(ASession const&) = delete;
 
         ASession(ASession const&&) = delete;
@@ -50,20 +46,15 @@ namespace darwin {
 
     public:
         /// Start the session and the async read of the incoming packet.
-        virtual void Start() final;
+        virtual void Start();
 
         /// Stop the session and close the socket.
-        virtual void Stop() final;
+        virtual void Stop() = 0;
 
         /// Set the filter's threshold
         ///
         /// \param threshold The threshold wanted.
         virtual void SetThreshold(std::size_t const& threshold) final;
-
-        /// Set the path to the associated decision module UNIX socket
-        ///
-        /// \param path Path to the UNIX socket.
-        virtual void SetNextFilterSocketPath(std::string const& path) final;
 
         /// Set the output's type of the filter
         ///
@@ -100,7 +91,14 @@ namespace darwin {
         /// \param data data to send
         std::string GetDataToSendToFilter();
 
-        
+        virtual void WriteToClient(darwin_filter_packet_t* packet, size_t packet_size) = 0;
+
+        virtual bool ConnectToNextFilter() = 0;
+
+        virtual void WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) = 0;
+
+        virtual void CloseFilterConnection() = 0;
+
 
         /// Send
         virtual void SendNext() final;
@@ -136,11 +134,10 @@ namespace darwin {
 
         bool PreParseBody();
 
-private:
         /// Set the async read for the header.
         ///
         /// \return -1 on error, 0 on socket closed & sizeof(header) on success.
-        virtual void ReadHeader() final;
+        virtual void ReadHeader() = 0;
 
         /// Callback of async read for the header.
         /// Terminate the session on failure.
@@ -149,7 +146,7 @@ private:
         /// Set the async read for the body.
         ///
         /// \return -1 on error, 0 on socket closed & sizeof(header) on success.
-        virtual void ReadBody(std::size_t size) final;
+        virtual void ReadBody(std::size_t size) = 0;
 
         /// Callback of async read for the body.
         /// Terminate the session on failure.
@@ -170,17 +167,13 @@ private:
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
-        bool _connected; //!< True if the socket to the next filter is connected.
-        std::string _next_filter_path; //!< The socket path to the next filter.
         config::output_type _output; //!< The filter's output.
-        std::array<char, DARWIN_SESSION_BUFFER_SIZE> _buffer; //!< Reading buffer for the body.
 
         std::size_t _threshold = DARWIN_DEFAULT_THRESHOLD;
 
         // Accessible by children
     protected:
-        boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
-        boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
+        std::array<char, DARWIN_SESSION_BUFFER_SIZE> _buffer; //!< Reading buffer for the body.
         Manager& _manager; //!< The associated connection manager.
         Generator& _generator; //!< The Task Generator.
         darwin_filter_packet_t _header; //!< Header received from the session.
@@ -189,6 +182,7 @@ private:
         std::string _logs; //!< Represents data given in the logs by the Session
         std::string _response_body; //!< The body to send back to the client
         std::vector<unsigned int> _certitudes;
+        bool _has_next_filter;
     };
 }
 

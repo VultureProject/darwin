@@ -21,11 +21,10 @@ namespace darwin {
                 rapidjson::Document& body,
                 std::string& raw_body,
                 std::string& logs,
-                std::string& response_body,
-                std::vector<unsigned int>& certitudes) 
+                std::string& response_body) 
             : _filter_name(name), _cache{cache}, _cache_mutex{cache_mutex}, _s{s},
-            _header{header}, _body{body}, _raw_body{raw_body}, _logs{logs}, 
-            _response_body{response_body}, _certitudes{certitudes}, _threshold{_s->GetThreshold()}
+            _header{std::move(header)}, _body{std::move(body)}, _raw_body{std::move(raw_body)}, _logs{std::move(logs)}, 
+            _response_body{std::move(response_body)}, _threshold{_s->GetThreshold()}
     {
         ;
     }
