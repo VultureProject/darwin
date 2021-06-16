@@ -17,24 +17,30 @@ REDIS_CHANNEL_NAME = "darwin.tests"
 
 class Filter():
 
-    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER"):
+    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", log_filepath=None):
         self.filter_name = filter_name
         self.socket = socket_path if socket_path else "{}/{}.sock".format(TEST_FILES_DIR, filter_name)
         self.config = config_file if config_file else "{}/{}.conf".format(TEST_FILES_DIR, filter_name)
         self.path = path if path else "{}darwin_{}".format(DEFAULT_FILTER_PATH, filter_name)
         self.monitor = monitoring_socket_path if monitoring_socket_path else "{}/{}_mon.sock".format(TEST_FILES_DIR, filter_name)
         self.pid = pid_file if pid_file else "{}/{}.pid".format(TEST_FILES_DIR, filter_name)
-        self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_threads), str(cache_size), str(threshold)]
         self.process = None
         self.error_code = 99 # For valgrind testing
         self.pubsub = None
+        self.log_level = log_level
+        self.output = output
+        self.nb_threads = nb_threads
+        self.cache_size = cache_size
+        self.threshold = threshold
+        self.next_filter_socket_path = next_filter_socket_path
+        self.log_filepath = log_filepath
         self.prepare_log_file()
 
     def prepare_log_file(self):
-        # TODO variabilize once path can be changed
-        self.log_file = open("/var/log/darwin/darwin.log", 'a+')
+        filepath = self.log_filepath if self.log_filepath else DEFAULT_LOG_FILE
+        self.log_file = open(filepath, 'a+')
         if self.log_file is None:
-            logging.error("Could not open darwin.log")
+            logging.error("Could not open log file {}".format(filepath))
             return False
 
     def __del__(self):
@@ -49,6 +55,13 @@ class Filter():
                 self.log_file.close()
         except AttributeError:
             pass
+
+    @property
+    def cmd(self):
+        if self.log_filepath is not None:
+            return [self.path, "-l", self.log_level, "-n", "-o", self.log_filepath, self.filter_name, self.socket, self.config, self.monitor, self.pid, self.output, self.next_filter_socket_path, str(self.nb_threads), str(self.cache_size), str(self.threshold)]
+        else:
+            return [self.path, "-l", self.log_level, "-n", self.filter_name, self.socket, self.config, self.monitor, self.pid, self.output, self.next_filter_socket_path, str(self.nb_threads), str(self.cache_size), str(self.threshold)]
 
     def check_start(self):
         if not os.path.exists(self.pid):
@@ -147,6 +160,11 @@ class Filter():
 
         try:
             os.remove(self.pid)
+        except:
+            pass
+
+        try:
+            os.remove(self.log_file)
         except:
             pass
 

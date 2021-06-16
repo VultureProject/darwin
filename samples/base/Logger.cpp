@@ -18,18 +18,22 @@
 namespace darwin {
     namespace logger {
 
-        Logger::Logger() : _logLevel(Warning) {
-            _file = std::ofstream(DARWIN_LOG_FILE, std::ios::out | std::ios::app);
-            if (!_file.is_open())
-                std::clog << "Can't open log file " << DARWIN_LOG_FILE << std::endl;
+        Logger::~Logger() {
+            if (_file.is_open())
+                _file.close();
         }
 
-        Logger::~Logger() {
-            _file.close();
+        bool Logger::openLogFile() {
+            _file = std::ofstream(_filepath, std::ios::out | std::ios::app);
+            if (not _file.is_open()) {
+                std::clog << "Can't open log file " << _filepath << std::endl;
+                return false;
+            }
+            return true;
         }
 
         void Logger::log(log_type type, std::string const& logMsg) {
-            if (type < this->_logLevel || !_file.is_open())
+            if (type < this->_logLevel)
                 return;
 
             std::string date = darwin::time_utils::GetTime();
@@ -60,9 +64,13 @@ namespace darwin {
             fmt << "\"filter\":\"" << _name << "\",";
             fmt << "\"message\":\"" << logMsg << "\"";
             fmt << '}';
-            _fileMutex.lock();
-            _file << fmt.str().c_str() << std::endl;
-            _fileMutex.unlock();
+            if (not _file.is_open() and not this->openLogFile()) {
+                std::clog << fmt.str() << std::endl;
+            } else {
+                _fileMutex.lock();
+                _file << fmt.str().c_str() << std::endl;
+                _fileMutex.unlock();
+            }
         }
 
         void Logger::setLevel(darwin::logger::log_type type) {
@@ -88,14 +96,37 @@ namespace darwin {
             _name = name;
         }
 
+        bool Logger::setFilePath(std::string const& filepath) {
+            bool ret = true;
+
+            std::ofstream testfile = std::ofstream(filepath, std::ios::out | std::ios::app);
+
+            if (!testfile.is_open()) {
+                std::clog << "Can't open log file " << filepath << std::endl;
+                ret = false;
+            } else {
+                _filepath = filepath;
+                _file.swap(testfile);
+            }
+
+            if (testfile.is_open())
+                testfile.close();
+
+            return ret;
+        }
+
         void Logger::RotateLogs() {
-            if (access(DARWIN_LOG_FILE, F_OK) != 0) {
+            if (access(_filepath.c_str(), F_OK) != 0) {
                 _fileMutex.lock();
-                _file.close();
-                _file = std::ofstream(DARWIN_LOG_FILE, std::ios::out | std::ios::app);
-                if (!_file.is_open())
-                    std::clog << "Can't open log file " << DARWIN_LOG_FILE
-                              << std::endl;
+
+                if (_file.is_open())
+                    _file.close();
+
+                _file = std::ofstream(_filepath, std::ios::out | std::ios::app);
+
+                if (!_file.is_open()) {
+                    std::clog << "Can't open log file " << _filepath << std::endl;
+                }
                 _fileMutex.unlock();
             }
         }

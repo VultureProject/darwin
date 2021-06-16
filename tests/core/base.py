@@ -1,6 +1,6 @@
 import logging
 import socket
-from os import kill, remove, access, F_OK
+from os import kill, remove, access, path, F_OK
 from time import sleep
 from tools.filter import Filter
 from tools.output import print_result
@@ -26,6 +26,7 @@ def run():
         check_start_outbound_thread_num,
         check_start_outbound_cache_num,
         check_start_outbound_threshold_num,
+        check_log_to_custom_file,
     ]
 
     for i in tests:
@@ -261,6 +262,34 @@ def check_start_outbound_threshold_num():
     if filter.check_start():
         logging.error("check_start_outbound_threshold_num: Process started when threshold was out of bounds")
         filter.stop()
+        return False
+
+    return True
+
+def check_log_to_custom_file():
+    outfilename = "/tmp/test_log_file.log"
+    filter = Filter(filter_name="test", log_filepath=outfilename)
+
+    if path.exists(outfilename):
+        try:
+            remove(outfilename)
+        except:
+            logging.error("check_log_to_custom_file: cannot remove file {} before launching filter".format(outfilename))
+            return False
+
+    filter.configure(FTEST_CONFIG)
+
+    if not filter.valgrind_start():
+        logging.error("check_log_to_custom_file: Process did not start correctly")
+        return False
+
+    try:
+        with open(outfilename, 'r') as outfile:
+            if outfile.buffer.peek() == b'':
+                logging.error("check_log_to_custom_file: no log line in file {}".format(outfilename))
+                return False
+    except:
+        logging.error("check_log_to_custom_file: logfile {} does not exist".format(outfilename))
         return False
 
     return True

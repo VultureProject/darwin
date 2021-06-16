@@ -170,12 +170,10 @@ class Services:
             logger.error("cannot start filter: " + str(e))
             filter['status'] = psutil.STATUS_DEAD
             return False
-        try:
-            p.wait(timeout=1)
-        except TimeoutExpired:
-            if filter['log_level'].lower() == "debug":
-                logger.debug("Debug mode enabled. Ignoring timeout at process startup.")
-            else:
+        if filter['log_level'].lower() != "debug":
+            try:
+                p.wait(timeout=10)
+            except TimeoutExpired:
                 logger.error("Error starting filter. Did not daemonize before timeout. Killing it.")
                 p.kill()
                 p.wait()

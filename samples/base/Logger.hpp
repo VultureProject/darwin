@@ -16,9 +16,9 @@
 
 // Default log files
 
-#  ifndef DARWIN_LOG_FILE
-#   define DARWIN_LOG_FILE "/var/log/darwin/darwin.log"
-#  endif //!DARWIN_LOG_FILE
+#  ifndef DARWIN_DEFAULT_LOG_FILE
+#   define DARWIN_DEFAULT_LOG_FILE "/var/log/darwin/darwin.log"
+#  endif //!DARWIN_DEFAULT_LOG_FILE
 
 #  ifndef DARWIN_LOGGER
 #   define DARWIN_LOGGER darwin::logger::Logger& log = darwin::logger::Logger::instance()
@@ -100,16 +100,24 @@ namespace darwin {
             /// \param name The name to set as the module name.
             void setName(std::string const& name);
 
+            /// \brief Set the output logfile fullpath
+            /// \param filepath the fullpath to the logfile
+            bool setFilePath(std::string const& filepath);
+
             ///Rotate logs
             void RotateLogs();
 
         private:
             /// \brief This is the constructor of logger object.
             /// This constructor is private because only getLogger method can call it.
-            Logger();
+            Logger() : _logLevel(Warning) {};
 
             /// \brief This is the destructor of logger object.
             ~Logger();
+
+            /// \brief This function opens the log file to be used by the logger
+            /// \warning internal _file object should be closed before calling the function
+            bool openLogFile();
 
             /// \brief Copy operator.
             /// \param other, The logger to copy
@@ -125,6 +133,7 @@ namespace darwin {
 
         private:
             log_type _logLevel;
+            std::string _filepath = DARWIN_DEFAULT_LOG_FILE;
             std::ofstream _file;
             std::string _name;
             std::mutex _fileMutex;
