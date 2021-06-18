@@ -13,6 +13,13 @@
 #include "AGenerator.hpp"
 #include "AlertManager.hpp"
 
+AGenerator::AGenerator()
+{
+    auto opts = tp::ThreadPoolOptions();
+    opts.setThreadCount(2);
+    _threadPool = tp::ThreadPool(opts);
+}
+
 bool AGenerator::Configure(std::string const& configFile, const std::size_t cache_size) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AGenerator:: Configuring...");
@@ -115,4 +122,8 @@ bool AGenerator::ReadConfig(const std::string &configuration_file_path) {
 
     conf_file_stream.close();
     return true;
+}
+
+tp::ThreadPool& AGenerator::GetTaskThreadPool() {
+    return this->_threadPool;
 }

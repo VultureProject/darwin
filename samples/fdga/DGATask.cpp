@@ -29,16 +29,13 @@
 DGATask::DGATask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                  std::mutex& cache_mutex,
                  darwin::session_ptr_t s,
-                 darwin_filter_packet_t& header,
-                 rapidjson::Document& body,
-                 std::string& raw_body,
+                 darwin::DarwinPacket& packet,
                  std::string& logs,
-                 std::string& response_body,
                  std::shared_ptr<tensorflow::Session> &session,
                  faup_options_t *faup_options,
                  std::map<std::string, unsigned int> &token_map,
                  const unsigned int max_tokens)
-        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, header, body, raw_body, logs, response_body), _max_tokens{max_tokens}, _session{session}, _token_map{token_map},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet, logs), _max_tokens{max_tokens}, _session{session}, _token_map{token_map},
           _faup_options(faup_options) {
     _is_cache = _cache != nullptr;
 }

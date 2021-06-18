@@ -66,7 +66,6 @@ namespace darwin {
         DARWIN_LOGGER;
 
         _raw_body.clear();
-        _certitudes.clear();
         _logs.clear();
 
         DARWIN_LOG_DEBUG("ASession::ReadHeaderCallback:: Reading header");
@@ -122,11 +121,12 @@ namespace darwin {
                     return;
                 }
 
+                /* TODO pushed to Task::ParseBody, check if parsing and error handling is done somewhere
                 if (!PreParseBody()) {
                     DARWIN_LOG_DEBUG("ASession::ReadBodyCallback Something went wrong while parsing the body");
                     this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
-                }
+                }*/
 
                 ExecuteFilter();
             }
@@ -140,13 +140,16 @@ namespace darwin {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("ASession::ExecuteFilter::");
         auto t = _generator.CreateTask(shared_from_this()); //shared pt Task
-        // TODO ThreadPool.Start(t);
-        (*t)();
-        this->SendNext();
+
+        _generator.GetTaskThreadPool().post(std::bind(&ATask::run, t));
     }
 
-    void ASession::SendNext() {
-        switch(_header.response) {
+    void ASession::SendNext(DarwinPacket& packet) {
+        
+        if(! this->SendToClient(packet)) 
+            Start();
+        // Ignoring Sending to filter for now
+        /*switch(_header.response) {
             case DARWIN_RESPONSE_SEND_BOTH:
                 if(this->SendToFilter()) break;
             case DARWIN_RESPONSE_SEND_BACK:
@@ -157,25 +160,9 @@ namespace darwin {
                 break;
             default:
                 Start();
-        }
+        }*/
     }
 
-    bool ASession::PreParseBody() {
-        DARWIN_LOGGER;
-        try {
-            _body.Parse(_raw_body.c_str());
-
-            if (!_body.IsArray()) {
-                DARWIN_LOG_ERROR("ASession:: ParseBody: You must provide a list");
-                return false;
-            }
-        } catch (...) {
-            DARWIN_LOG_CRITICAL("ASession:: ParseBody: Could not parse raw body");
-            return false;
-        }
-        // DARWIN_LOG_DEBUG("ASession:: ParseBody:: parsed body : " + _raw_body);
-        return true;
-    }
 
     std::string ASession::JsonStringify(rapidjson::Document &json) {
         rapidjson::StringBuffer buffer;
@@ -186,15 +173,18 @@ namespace darwin {
         return std::string(buffer.GetString());
     }
 
-    bool ASession::SendToClient() noexcept {
+    bool ASession::SendToClient(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
+        auto vec = packet.Serialize();
+        this->WriteToClient(vec);
+        /* OLD CODE
         const std::size_t certitude_size = _certitudes.size();
 
         /*
          * Allocate the header +
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         */
+         * /
         std::size_t packet_size = 0, packet_size_wo_body = 0;
         if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
             packet_size = sizeof(darwin_filter_packet_t) +
@@ -205,8 +195,8 @@ namespace darwin {
 
         packet_size_wo_body = packet_size;
 
-        if (not this->_response_body.empty()) {
-            packet_size += this->_response_body.size();
+        if (not _response_body.empty()) {
+            packet_size += _response_body.size();
         }
 
         DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(packet_size));
@@ -221,7 +211,7 @@ namespace darwin {
         /*
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
-         */
+         * /
         memset(packet, 0, packet_size);
 
         for (std::size_t index = 0; index < certitude_size; ++index) {
@@ -229,18 +219,17 @@ namespace darwin {
         }
 
         packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _header.response;
+        packet->response = _send_header.response;
         packet->certitude_size = certitude_size;
         packet->filter_code = _generator.GetFilterCode();
-        packet->body_size = this->_response_body.size();
-        memcpy(packet->evt_id, _header.evt_id, 16);
+        packet->body_size = _response_body.size();
+        memcpy(packet->evt_id, _send_header.evt_id, 16);
 
         memcpy((char*)(packet) + packet_size_wo_body, _response_body.c_str(), _response_body.size());
 
         this->WriteToClient(packet, packet_size);
 
-        free(packet);
-        this->_response_body.clear();
+        free(packet);*/
         return true;
     }
 
@@ -255,7 +244,7 @@ namespace darwin {
         if( ! ConnectToNextFilter()) {
             return false;
         }
-
+        /* OLD CODE
         std::string data = GetDataToSendToFilter();
         DARWIN_LOG_DEBUG("ASession::SendToFilter:: data to send: " + data);
         DARWIN_LOG_DEBUG("ASession::SendToFilter:: data size: " + std::to_string(data.size()));
@@ -266,7 +255,7 @@ namespace darwin {
          * Allocate the header +
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         */
+         * /
         std::size_t packet_size = 0, packet_size_wo_data = 0;
         if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
             packet_size = sizeof(darwin_filter_packet_t) +
@@ -292,7 +281,7 @@ namespace darwin {
         /*
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
-         */
+         * / 
         memset(packet, 0, packet_size);
 
         for (std::size_t index = 0; index < certitude_size; ++index) {
@@ -306,15 +295,15 @@ namespace darwin {
         }
 
         packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
+        packet->response = _send_header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
         packet->certitude_size = certitude_size;
         packet->filter_code = _generator.GetFilterCode();
         packet->body_size = data.size();
-        memcpy(packet->evt_id, _header.evt_id, 16);
+        memcpy(packet->evt_id, _send_header.evt_id, 16);
 
         DARWIN_LOG_DEBUG("ASession:: SendToFilter:: Sending header + data");
         this->WriteToFilter(packet, packet_size);
-        free(packet);
+        free(packet);*/
         return true;
     }
 
@@ -342,7 +331,8 @@ namespace darwin {
         }
 
         if(_header.response == DARWIN_RESPONSE_SEND_BOTH) {
-            this->SendToClient();
+            // TODO re handle this after re enabling sendtofilter
+            // this->SendToClient();
         }
         else {
             Start();
@@ -372,9 +362,11 @@ namespace darwin {
     void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
         if (this->_header.response != DARWIN_RESPONSE_SEND_BACK && this->_header.response != DARWIN_RESPONSE_SEND_BOTH)
             return;
-        this->_response_body.clear();
-        this->_response_body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
-        this->SendToClient();
+        
+        // this->_response_body.clear();
+        // this->_response_body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
+        DarwinPacket p; //todo better
+        this->SendToClient(p);
     }
 
     void ASession::SetThreshold(std::size_t const& threshold) {

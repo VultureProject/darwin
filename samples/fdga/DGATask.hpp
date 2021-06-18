@@ -16,6 +16,7 @@
 #include "../../toolkit/xxhash.hpp"
 #include "protocol.h"
 #include "ATask.hpp"
+#include "DarwinPacket.hpp"
 #include "ASession.fwd.hpp"
 #include "tensorflow/core/public/session.h"
 
@@ -33,11 +34,8 @@ public:
     explicit DGATask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                      std::mutex& cache_mutex,
                      darwin::session_ptr_t s,
-                     darwin_filter_packet_t& header,
-                     rapidjson::Document& body,
-                     std::string& raw_body,
+                     darwin::DarwinPacket& packet,
                      std::string& logs,
-                     std::string& response_body,
                      std::shared_ptr<tensorflow::Session> &session,
                      faup_options_t *faup_options,
                      std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);

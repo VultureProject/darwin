@@ -62,9 +62,9 @@ namespace darwin {
                                             boost::asio::placeholders::bytes_transferred));
     }
 
-    void UnixSession::WriteToClient(darwin_filter_packet_t* packet, size_t packet_size) {
+    void UnixSession::WriteToClient(std::vector<unsigned char>& packet) {
         boost::asio::async_write(_socket,
-                                boost::asio::buffer(packet, packet_size),
+                                boost::asio::buffer(packet, packet.size()),
                                 boost::bind(&UnixSession::SendToClientCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));

@@ -173,8 +173,7 @@ bool Generator::LoadFaupOptions() {
 std::shared_ptr<darwin::ATask> Generator::CreateTask(darwin::session_ptr_t s) noexcept {
     return std::static_pointer_cast<darwin::ATask>(
             std::make_shared<DGATask>(_cache, _cache_mutex, s, 
-                s->_header, s->_body, s->_raw_body, s->_logs, 
-                s->_response_body, 
+                s->_packet, s->_logs, 
                 _session, _faup_options, _token_map, _max_tokens
                 )
             );

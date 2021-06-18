@@ -33,7 +33,7 @@ namespace darwin {
         virtual void ReadBody(std::size_t size) override final;
 
         /// 
-        virtual void WriteToClient(darwin_filter_packet_t* packet, size_t packet_size) override final;
+        virtual void WriteToClient(std::vector<unsigned char>& packet) override final;
 
         ///
         virtual void WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) override final;

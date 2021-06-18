@@ -12,6 +12,7 @@
 #include "protocol.h"
 #include "Generator.hpp"
 #include "Manager.hpp"
+#include "DarwinPacket.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
@@ -81,6 +82,9 @@ namespace darwin {
         /// \return evt_di as string
         std::string Evt_idToString();
 
+        /// Send
+        virtual void SendNext(DarwinPacket& packet) final;
+
     protected:
         
 
@@ -91,7 +95,7 @@ namespace darwin {
         /// \param data data to send
         std::string GetDataToSendToFilter();
 
-        virtual void WriteToClient(darwin_filter_packet_t* packet, size_t packet_size) = 0;
+        virtual void WriteToClient(std::vector<unsigned char>& packet) = 0;
 
         virtual bool ConnectToNextFilter() = 0;
 
@@ -99,14 +103,10 @@ namespace darwin {
 
         virtual void CloseFilterConnection() = 0;
 
-
-        /// Send
-        virtual void SendNext() final;
-
         /// Send result to the client.
         ///
         /// \return false if the function could not send the data, true otherwise.
-        virtual bool SendToClient() noexcept;
+        virtual bool SendToClient(DarwinPacket& packet) noexcept;
 
         /// Send result to next filter.
         ///
@@ -176,12 +176,11 @@ namespace darwin {
         std::array<char, DARWIN_SESSION_BUFFER_SIZE> _buffer; //!< Reading buffer for the body.
         Manager& _manager; //!< The associated connection manager.
         Generator& _generator; //!< The Task Generator.
+        DarwinPacket _packet;
         darwin_filter_packet_t _header; //!< Header received from the session.
         rapidjson::Document _body; //!< Body received from session (if any).
         std::string _raw_body; //!< Body received from session (if any), that will not be parsed.
         std::string _logs; //!< Represents data given in the logs by the Session
-        std::string _response_body; //!< The body to send back to the client
-        std::vector<unsigned int> _certitudes;
         bool _has_next_filter;
     };
 }
