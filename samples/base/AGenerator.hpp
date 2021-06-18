@@ -11,14 +11,16 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <thread_pool.hpp>
 
 #include "ATask.hpp"
 #include "../toolkit/rapidjson/document.h"
 
 class AGenerator {
 public:
-    AGenerator() = default;
+    AGenerator();
     virtual ~AGenerator() = default;
+
 
 // Methods to be implemented by the child
 public:
@@ -60,6 +62,8 @@ public:
 
     virtual long GetFilterCode() const = 0;
 
+    virtual tp::ThreadPool& GetTaskThreadPool() final;
+
 private:
     /// Open and read the configuration file.
     /// Try to load the json format of the configuration.
@@ -80,4 +84,7 @@ private:
 protected:
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; //!< The cache for already processed request
     std::mutex _cache_mutex;
+
+    tp::ThreadPool _threadPool;
+
 };

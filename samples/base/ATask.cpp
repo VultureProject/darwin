@@ -7,6 +7,7 @@
 #include "ASession.hpp"
 #include "ATask.hpp"
 #include "errors.hpp"
+#include "DarwinPacket.hpp"
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
@@ -17,14 +18,10 @@ namespace darwin {
     ATask::ATask(std::string name, 
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                 std::mutex& cache_mutex, session_ptr_t s,
-                darwin_filter_packet_t& header,
-                rapidjson::Document& body,
-                std::string& raw_body,
-                std::string& logs,
-                std::string& response_body) 
+                DarwinPacket& packet,
+                std::string& logs) 
             : _filter_name(name), _cache{cache}, _cache_mutex{cache_mutex}, _s{s},
-            _header{std::move(header)}, _body{std::move(body)}, _raw_body{std::move(raw_body)}, _logs{std::move(logs)}, 
-            _response_body{std::move(response_body)}, _threshold{_s->GetThreshold()}
+            _packet{std::move(packet)}, _logs{logs}, _threshold{_s->GetThreshold()}
     {
         ;
     }
@@ -41,7 +38,7 @@ namespace darwin {
 
     xxh::hash64_t ATask::GenerateHash() {
         // could be easily overridden in the children
-        return xxh::xxhash<64>(_raw_body);
+        return xxh::xxhash<64>(_packet.body);
     }
 
     void ATask::SaveToCache(const xxh::hash64_t &hash, const unsigned int certitude) const {
@@ -76,7 +73,28 @@ namespace darwin {
     }
 
     bool ATask::ParseBody() {
-        return false;
+        DARWIN_LOGGER;
+        try {
+            _body.Parse(_packet.body.c_str());
+
+            if (!_body.IsArray()) {
+                DARWIN_LOG_ERROR("ATask:: ParseBody: You must provide a list");
+                return false;
+            }
+        } catch (...) {
+            DARWIN_LOG_CRITICAL("ATask:: ParseBody: Could not parse raw body");
+            return false;
+        }
+        // DARWIN_LOG_DEBUG("ATask:: ParseBody:: parsed body : " + _raw_body);
+        return true;
+    }
+
+    void ATask::run() {
+        (*this)();
+        DarwinPacket p;
+
+        p.type = _packet.type;
+        _s->SendNext(p);
     }
 
 }

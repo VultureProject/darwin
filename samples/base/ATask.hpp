@@ -9,6 +9,7 @@
 #include "../../toolkit/rapidjson/writer.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"
 #include "ASession.fwd.hpp"
+#include "DarwinPacket.hpp"
 #include "config.hpp"
 #include "protocol.h"
 #include "Time.hpp"
@@ -20,11 +21,8 @@ namespace darwin {
             ATask(std::string name, 
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                 std::mutex& cache_mutex, session_ptr_t session,
-                darwin_filter_packet_t& _header,
-                rapidjson::Document& _body,
-                std::string& _raw_body,
-                std::string& _logs,
-                std::string& _response_body);
+                DarwinPacket& packet,
+                std::string& logs);
 
             virtual ~ATask() = default;
 
@@ -41,6 +39,8 @@ namespace darwin {
             /// MUST be overloaded.
             /// WARNING This method will be executed by a thread.
             virtual void operator()() = 0;
+
+            void run();
         
         protected:
             /// Return filter code.
@@ -89,9 +89,8 @@ namespace darwin {
 
             session_ptr_t _s; //!< associated session
 
-            darwin_filter_packet_t _header; //!< Ref to the Header received from the session.
+            DarwinPacket _packet; //!< Ref to the Header received from the session.
             rapidjson::Document _body; //!< Ref to the Body received from session (if any).
-            std::string _raw_body; //!< Ref to the Body received from session (if any), that will not be parsed.
             std::string _logs; //!< Ref to the data given in the logs by the Session
             std::string _response_body; //!< Ref to the body to send back to the client
             std::vector<unsigned int> _certitudes; //!< Ref to the Darwin results obtained.

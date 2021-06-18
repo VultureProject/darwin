@@ -73,7 +73,6 @@ namespace darwin {
             sess->SetThreshold(_threshold);
             _manager.Start(sess);
             Accept();
-            Accept();
         } else {
             DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
         }
