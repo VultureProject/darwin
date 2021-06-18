@@ -50,9 +50,9 @@ namespace darwin {
     std::string ASession::GetDataToSendToFilter(){
         switch (GetOutputType()){
             case config::output_type::RAW:
-                return _raw_body;
+                return _packet.body;
             case config::output_type::PARSED:
-                return JsonStringify(_body);
+                return JsonStringify(_packet.JsonBody());
             case config::output_type::NONE:
                 return "";
             case config::output_type::LOG:
@@ -65,20 +65,21 @@ namespace darwin {
                                      std::size_t size) {
         DARWIN_LOGGER;
 
-        _raw_body.clear();
+        _packet.clear();
         _logs.clear();
 
         DARWIN_LOG_DEBUG("ASession::ReadHeaderCallback:: Reading header");
         if (!e) {
-            if (size != sizeof(_header)) {
+            if (size != DarwinPacket::getMinimalSize()) {
                 DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
-            if (_header.body_size == 0) {
+            _packet = DarwinPacket::ParseHeader(_header_buffer);
+            if (_packet.parsed_body_size == 0) {
                 ExecuteFilter();
                 return;
             } // Else the ReadBodyCallback will call ExecuteFilter
-            ReadBody(_header.body_size);
+            ReadBody(_packet.parsed_body_size);
             return;
         }
 
@@ -97,23 +98,23 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (!e) {
-            _raw_body.append(_buffer.data(), size);
+            _packet.body.append(_body_buffer.data(), size);
             DARWIN_LOG_DEBUG("ASession::ReadBodyCallback:: Body len (" +
-                             std::to_string(_raw_body.length()) +
+                             std::to_string(_packet.body.length()) +
                              ") - Header body size (" +
-                             std::to_string(_header.body_size) +
+                             std::to_string(_packet.parsed_body_size) +
                              ")");
-            unsigned int bodyLength = _raw_body.length();
-            unsigned int totalBodyLength = _header.body_size;
+            size_t bodyLength = _packet.body.length();
+            size_t totalBodyLength = _packet.parsed_body_size;
             if (bodyLength < totalBodyLength) {
                 ReadBody(totalBodyLength - bodyLength);
             } else {
-                if (_raw_body.empty()) {
+                if (_packet.body.empty()) {
                     DARWIN_LOG_WARNING("ASession::ReadBodyCallback Empty body retrieved");
                     this->SendErrorResponse("Error receiving body: Empty body retrieved", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
-                if (_header.body_size <= 0) {
+                if (_packet.parsed_body_size <= 0) { //TODO useless branch
                     DARWIN_LOG_ERROR(
                             "ASession::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
@@ -176,11 +177,12 @@ namespace darwin {
     bool ASession::SendToClient(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
         auto vec = packet.Serialize();
+        DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(vec.size()));
         this->WriteToClient(vec);
         /* OLD CODE
         const std::size_t certitude_size = _certitudes.size();
 
-        /*
+        / *
          * Allocate the header +
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
@@ -208,7 +210,7 @@ namespace darwin {
             return false;
         }
 
-        /*
+        / *
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
          * /
@@ -251,7 +253,7 @@ namespace darwin {
 
         const std::size_t certitude_size = _certitudes.size();
 
-        /*
+        / *
          * Allocate the header +
          * the size of the certitude -
          * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
@@ -278,7 +280,7 @@ namespace darwin {
             return false;
         }
 
-        /*
+        / *
          * Initialisation of the structure for the padding bytes because of
          * missing __attribute__((packed)) in the protocol structure.
          * / 
@@ -330,7 +332,7 @@ namespace darwin {
             CloseFilterConnection();
         }
 
-        if(_header.response == DARWIN_RESPONSE_SEND_BOTH) {
+        if(_packet.response == DARWIN_RESPONSE_SEND_BOTH) {
             // TODO re handle this after re enabling sendtofilter
             // this->SendToClient();
         }
@@ -347,10 +349,10 @@ namespace darwin {
         snprintf(str,
                 37,
                 "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                _header.evt_id[0], _header.evt_id[1], _header.evt_id[2], _header.evt_id[3],
-                _header.evt_id[4], _header.evt_id[5], _header.evt_id[6], _header.evt_id[7],
-                _header.evt_id[8], _header.evt_id[9], _header.evt_id[10], _header.evt_id[11],
-                _header.evt_id[12], _header.evt_id[13], _header.evt_id[14], _header.evt_id[15]
+                _packet.evt_id[0], _packet.evt_id[1], _packet.evt_id[2], _packet.evt_id[3],
+                _packet.evt_id[4], _packet.evt_id[5], _packet.evt_id[6], _packet.evt_id[7],
+                _packet.evt_id[8], _packet.evt_id[9], _packet.evt_id[10], _packet.evt_id[11],
+                _packet.evt_id[12], _packet.evt_id[13], _packet.evt_id[14], _packet.evt_id[15]
         );
         std::string res(str);
         DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + res);
@@ -360,13 +362,11 @@ namespace darwin {
     
 
     void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
-        if (this->_header.response != DARWIN_RESPONSE_SEND_BACK && this->_header.response != DARWIN_RESPONSE_SEND_BOTH)
+        if (this->_packet.response != DARWIN_RESPONSE_SEND_BACK && this->_packet.response != DARWIN_RESPONSE_SEND_BOTH)
             return;
-        
-        // this->_response_body.clear();
-        // this->_response_body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
-        DarwinPacket p; //todo better
-        this->SendToClient(p);
+        _packet.body.clear();
+        _packet.body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
+        this->SendToClient(_packet);
     }
 
     void ASession::SetThreshold(std::size_t const& threshold) {

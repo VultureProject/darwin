@@ -132,8 +132,6 @@ namespace darwin {
 
         std::string JsonStringify(rapidjson::Document &json);
 
-        bool PreParseBody();
-
         /// Set the async read for the header.
         ///
         /// \return -1 on error, 0 on socket closed & sizeof(header) on success.
@@ -173,13 +171,11 @@ namespace darwin {
 
         // Accessible by children
     protected:
-        std::array<char, DARWIN_SESSION_BUFFER_SIZE> _buffer; //!< Reading buffer for the body.
+        std::vector<char> _header_buffer; //!< Reading buffer for the body.
+        std::array<char, DARWIN_SESSION_BUFFER_SIZE> _body_buffer; //!< Reading buffer for the body.
         Manager& _manager; //!< The associated connection manager.
         Generator& _generator; //!< The Task Generator.
         DarwinPacket _packet;
-        darwin_filter_packet_t _header; //!< Header received from the session.
-        rapidjson::Document _body; //!< Body received from session (if any).
-        std::string _raw_body; //!< Body received from session (if any), that will not be parsed.
         std::string _logs; //!< Represents data given in the logs by the Session
         bool _has_next_filter;
     };

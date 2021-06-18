@@ -1,6 +1,7 @@
 #include "DarwinPacket.hpp"
 #include <cstring>
-
+#include "../../toolkit/rapidjson/writer.h"
+#include "../../toolkit/rapidjson/stringbuffer.h"
 
 namespace darwin {
 
@@ -44,18 +45,13 @@ namespace darwin {
         return ret;
     }
 
-    DarwinPacket DarwinPacket::Parse(std::vector<unsigned char>& input) {
-        
-        size_t minimum_size = sizeof(type) + sizeof(response) + sizeof(filter_code)
-            + sizeof(size_t /* body size */) + sizeof(evt_id) + sizeof(size_t /* certitude list size */);
-        
+    DarwinPacket DarwinPacket::ParseHeader(std::vector<char>& input) {
+        size_t minimum_size = getMinimalSize();
         if(input.size() <= minimum_size){
             // error
         }
 
         DarwinPacket packet;
-
-        size_t body_size = 0, certitude_size = 0;
 
         auto pt = input.data();
 
@@ -68,22 +64,34 @@ namespace darwin {
         std::memcpy((void*)(&packet.filter_code), pt, sizeof(filter_code));
         pt += sizeof(filter_code);
 
-        std::memcpy((void*)(&body_size), pt, sizeof(body_size));
-        pt += sizeof(body_size);
+        std::memcpy((void*)(&packet.parsed_body_size), pt, sizeof(parsed_body_size));
+        pt += sizeof(parsed_body_size);
 
         std::memcpy((void*)(&packet.evt_id), pt, sizeof(evt_id));
         pt += sizeof(evt_id);
 
-        std::memcpy((void*)(&certitude_size), pt, sizeof(certitude_size));
-        pt += sizeof(certitude_size);
+        std::memcpy((void*)(&packet.parsed_certitude_size), pt, sizeof(parsed_certitude_size));
+        pt += sizeof(parsed_certitude_size);
 
-        if (input.size() != minimum_size + body_size + certitude_size) {
+        packet.certitude_list.reserve(packet.parsed_certitude_size);
+
+        packet.body.reserve(packet.parsed_body_size);
+        
+        return packet;
+    }
+
+
+    DarwinPacket DarwinPacket::Parse(std::vector<char>& input) {
+        DarwinPacket packet = ParseHeader(input);
+
+        if (input.size() != getMinimalSize() + packet.parsed_body_size + packet.parsed_certitude_size) {
             // error
         }
 
-        packet.certitude_list.reserve(certitude_size);
+        auto pt = input.data();
+        pt += getMinimalSize();
 
-        for(size_t i=0; i < certitude_size; i++) {
+        for(size_t i=0; i < packet.parsed_certitude_size; i++) {
             unsigned int cert = 0;
             std::memcpy((void*)(&cert), pt, sizeof(cert));
             pt += sizeof(cert);
@@ -91,8 +99,31 @@ namespace darwin {
             packet.certitude_list.push_back(cert);
         }
 
-        packet.body = std::string((char*)pt, body_size);
+        packet.body = std::string((char*)pt, packet.parsed_body_size);
 
         return packet;
+    }
+
+    void DarwinPacket::clear() {
+        this->type = DARWIN_PACKET_OTHER;
+        this->response = DARWIN_RESPONSE_SEND_NO;
+        this->filter_code = 0;
+        this->parsed_body_size = 0;
+        std::memset(this->evt_id, 0, sizeof(evt_id));
+        this->parsed_certitude_size = 0;
+        certitude_list.clear();
+        body.clear();
+    }
+
+    rapidjson::Document& DarwinPacket::JsonBody() {
+        if(this->_parsed_body == nullptr) {
+            this->_parsed_body = new rapidjson::Document();
+        }
+        this->_parsed_body->Parse(this->body.c_str());
+        return *(this->_parsed_body);
+    }
+
+    DarwinPacket::~DarwinPacket(){
+        delete this->_parsed_body;
     }
 }
