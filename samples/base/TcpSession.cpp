@@ -52,9 +52,9 @@ namespace darwin {
                                             boost::asio::placeholders::bytes_transferred));
     }
 
-    void TcpSession::WriteToClient(darwin_filter_packet_t* packet, size_t packet_size) {
+    void TcpSession::WriteToClient(std::vector<unsigned char>& packet) {
         boost::asio::async_write(_socket,
-                                boost::asio::buffer(packet, packet_size),
+                                boost::asio::buffer(packet),
                                 boost::bind(&TcpSession::SendToClientCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
