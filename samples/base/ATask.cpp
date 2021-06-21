@@ -18,10 +18,9 @@ namespace darwin {
     ATask::ATask(std::string name, 
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                 std::mutex& cache_mutex, session_ptr_t s,
-                DarwinPacket& packet,
-                std::string& logs) 
+                DarwinPacket& packet) 
             : _filter_name(name), _cache{cache}, _cache_mutex{cache_mutex}, _s{s},
-            _packet{std::move(packet)}, _logs{logs}, _threshold{_s->GetThreshold()}
+            _packet{std::move(packet)}, _threshold{_s->GetThreshold()}
     {
         ;
     }
@@ -91,10 +90,10 @@ namespace darwin {
 
     void ATask::run() {
         (*this)();
-        DarwinPacket p;
-
-        //TODO to re-wire
-        _s->SendNext(p);
+        auto body = _packet.GetMutableBody();
+        body.clear();
+        body.append(_response_body);
+        _s->SendNext(_packet);
     }
 
 }

@@ -56,7 +56,7 @@ namespace darwin {
             case config::output_type::NONE:
                 return "";
             case config::output_type::LOG:
-                return GetLogs();
+                return _packet.GetLogs();
         }
         return "";
     }
