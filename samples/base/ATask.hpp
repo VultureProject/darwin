@@ -20,8 +20,7 @@ namespace darwin {
             ATask(std::string name, 
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                 std::mutex& cache_mutex, session_ptr_t session,
-                DarwinPacket& packet,
-                std::string& logs);
+                DarwinPacket& packet);
 
             virtual ~ATask() = default;
 
@@ -90,9 +89,7 @@ namespace darwin {
 
             DarwinPacket _packet; //!< Ref to the Header received from the session.
             rapidjson::Document _body; //!< Ref to the Body received from session (if any).
-            std::string _logs; //!< Ref to the data given in the logs by the Session
             std::string _response_body; //!< Ref to the body to send back to the client
-            std::vector<unsigned int> _certitudes; //!< Ref to the Darwin results obtained.
 
             std::size_t _threshold; //!< Threshold, overriden at creation by the session
 
