@@ -15,7 +15,6 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
-#include "protocol.h"
 #include "ATask.hpp"
 #include "DarwinPacket.hpp"
 #include "ASession.fwd.hpp"
@@ -36,7 +35,6 @@ public:
                      std::mutex& cache_mutex,
                      darwin::session_ptr_t s,
                      darwin::DarwinPacket& packet,
-                     std::string& logs,
                      std::shared_ptr<tensorflow::Session> &session,
                      DarwinTfLiteInterpreterFactory& interpreter_factory,
                      faup_options_t *faup_options,
