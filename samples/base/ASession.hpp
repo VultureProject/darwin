@@ -9,7 +9,6 @@
 
 #include <memory>
 #include "config.hpp"
-#include "protocol.h"
 #include "Generator.hpp"
 #include "Manager.hpp"
 #include "DarwinPacket.hpp"
@@ -171,7 +170,7 @@ namespace darwin {
 
         // Accessible by children
     protected:
-        std::vector<char> _header_buffer; //!< Reading buffer for the body.
+        darwin_filter_packet_t _header; //!< Reading Header
         std::array<char, DARWIN_SESSION_BUFFER_SIZE> _body_buffer; //!< Reading buffer for the body.
         Manager& _manager; //!< The associated connection manager.
         Generator& _generator; //!< The Task Generator.

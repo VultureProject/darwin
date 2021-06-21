@@ -35,7 +35,7 @@ namespace darwin {
 
         DARWIN_LOG_DEBUG("ASession::ReadHeader:: Starting to read incoming header...");
         boost::asio::async_read(_socket,
-                                boost::asio::buffer(_header_buffer, DarwinPacket::getMinimalSize()),
+                                boost::asio::buffer(&_header, sizeof(_header)),
                                 boost::bind(&TcpSession::ReadHeaderCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));

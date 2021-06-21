@@ -38,7 +38,7 @@ namespace darwin {
 
     xxh::hash64_t ATask::GenerateHash() {
         // could be easily overridden in the children
-        return xxh::xxhash<64>(_packet.body);
+        return xxh::xxhash<64>(_packet.GetBody());
     }
 
     void ATask::SaveToCache(const xxh::hash64_t &hash, const unsigned int certitude) const {
@@ -75,7 +75,7 @@ namespace darwin {
     bool ATask::ParseBody() {
         DARWIN_LOGGER;
         try {
-            _body.Parse(_packet.body.c_str());
+            _body.Parse(_packet.GetBody().c_str());
 
             if (!_body.IsArray()) {
                 DARWIN_LOG_ERROR("ATask:: ParseBody: You must provide a list");
@@ -93,7 +93,7 @@ namespace darwin {
         (*this)();
         DarwinPacket p;
 
-        p.type = _packet.type;
+        //TODO to re-wire
         _s->SendNext(p);
     }
 
