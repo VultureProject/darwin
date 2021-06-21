@@ -50,7 +50,7 @@ namespace darwin {
     std::string ASession::GetDataToSendToFilter(){
         switch (GetOutputType()){
             case config::output_type::RAW:
-                return _packet.body;
+                return _packet.GetBody();
             case config::output_type::PARSED:
                 return JsonStringify(_packet.JsonBody());
             case config::output_type::NONE:
@@ -74,12 +74,12 @@ namespace darwin {
                 DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
-            _packet = DarwinPacket::ParseHeader(_header_buffer);
-            if (_packet.parsed_body_size == 0) {
+            _packet = DarwinPacket::ParseHeader(_header);
+            if (_packet.GetParsedBodySize() == 0) {
                 ExecuteFilter();
                 return;
             } // Else the ReadBodyCallback will call ExecuteFilter
-            ReadBody(_packet.parsed_body_size);
+            ReadBody(_packet.GetParsedBodySize());
             return;
         }
 
@@ -98,23 +98,23 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (!e) {
-            _packet.body.append(_body_buffer.data(), size);
+            _packet.GetMutableBody().append(_body_buffer.data(), size);
             DARWIN_LOG_DEBUG("ASession::ReadBodyCallback:: Body len (" +
-                             std::to_string(_packet.body.length()) +
+                             std::to_string(_packet.GetBody().length()) +
                              ") - Header body size (" +
-                             std::to_string(_packet.parsed_body_size) +
+                             std::to_string(_packet.GetParsedBodySize()) +
                              ")");
-            size_t bodyLength = _packet.body.length();
-            size_t totalBodyLength = _packet.parsed_body_size;
+            size_t bodyLength = _packet.GetBody().length();
+            size_t totalBodyLength = _packet.GetParsedBodySize();
             if (bodyLength < totalBodyLength) {
                 ReadBody(totalBodyLength - bodyLength);
             } else {
-                if (_packet.body.empty()) {
+                if (_packet.GetBody().empty()) {
                     DARWIN_LOG_WARNING("ASession::ReadBodyCallback Empty body retrieved");
                     this->SendErrorResponse("Error receiving body: Empty body retrieved", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
-                if (_packet.parsed_body_size <= 0) { //TODO useless branch
+                if (_packet.GetParsedBodySize() <= 0) { //TODO useless branch
                     DARWIN_LOG_ERROR(
                             "ASession::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
@@ -332,7 +332,7 @@ namespace darwin {
             CloseFilterConnection();
         }
 
-        if(_packet.response == DARWIN_RESPONSE_SEND_BOTH) {
+        if(_packet.GetResponse() == DARWIN_RESPONSE_SEND_BOTH) {
             // TODO re handle this after re enabling sendtofilter
             // this->SendToClient();
         }
@@ -345,14 +345,16 @@ namespace darwin {
 
     std::string ASession::Evt_idToString() {
         DARWIN_LOGGER;
+
+        const unsigned char * evt_id = _packet.GetEventId();
         char str[37] = {};
         snprintf(str,
                 37,
                 "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                _packet.evt_id[0], _packet.evt_id[1], _packet.evt_id[2], _packet.evt_id[3],
-                _packet.evt_id[4], _packet.evt_id[5], _packet.evt_id[6], _packet.evt_id[7],
-                _packet.evt_id[8], _packet.evt_id[9], _packet.evt_id[10], _packet.evt_id[11],
-                _packet.evt_id[12], _packet.evt_id[13], _packet.evt_id[14], _packet.evt_id[15]
+                evt_id[0], evt_id[1], evt_id[2], evt_id[3],
+                evt_id[4], evt_id[5], evt_id[6], evt_id[7],
+                evt_id[8], evt_id[9], evt_id[10], evt_id[11],
+                evt_id[12], evt_id[13], evt_id[14], evt_id[15]
         );
         std::string res(str);
         DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + res);
@@ -362,10 +364,10 @@ namespace darwin {
     
 
     void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
-        if (this->_packet.response != DARWIN_RESPONSE_SEND_BACK && this->_packet.response != DARWIN_RESPONSE_SEND_BOTH)
+        if (this->_packet.GetResponse() != DARWIN_RESPONSE_SEND_BACK && this->_packet.GetResponse() != DARWIN_RESPONSE_SEND_BOTH)
             return;
-        _packet.body.clear();
-        _packet.body += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
+        _packet.GetMutableBody().clear();
+        _packet.GetMutableBody() += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";
         this->SendToClient(_packet);
     }
 

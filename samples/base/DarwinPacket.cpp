@@ -6,6 +6,18 @@
 namespace darwin {
 
     std::vector<unsigned char> DarwinPacket::Serialize() const {
+        darwin_filter_packet_t header {
+            this->type,
+            this->response,
+            this->filter_code,
+            this->body.size(),
+            {0},
+            this->certitude_list.size(),
+            0
+        };
+        
+        std::copy(&this->evt_id[0], &this->evt_id[15], &header.evt_id[0]);
+
         size_t body_size = body.size(), certitude_size = certitude_list.size();
 
         size_t size = sizeof(type) + sizeof(response) + sizeof(filter_code)
@@ -16,23 +28,8 @@ namespace darwin {
         
         auto pt = ret.data();
 
-        std::memcpy(pt,(void*)(&type), sizeof(type));
-        pt += sizeof(type);
-
-        std::memcpy(pt,(void*)(&response), sizeof(response));
-        pt += sizeof(response);
-
-        std::memcpy(pt,(void*)(&filter_code), sizeof(filter_code));
-        pt += sizeof(filter_code);
-
-        std::memcpy(pt,(void*)(&body_size), sizeof(body_size));
-        pt += sizeof(body_size);
-
-        std::memcpy(pt,(void*)(&evt_id), sizeof(evt_id));
-        pt += sizeof(evt_id);
-
-        std::memcpy(pt,(void*)(&certitude_size), sizeof(certitude_size));
-        pt += sizeof(certitude_size);
+        std::memcpy(pt, &header, sizeof(header) - sizeof(unsigned int));
+        pt += sizeof(header) - sizeof(unsigned int);
 
         //certitudes
         for(auto certitude: certitude_list) {
@@ -45,62 +42,20 @@ namespace darwin {
         return ret;
     }
 
-    DarwinPacket DarwinPacket::ParseHeader(std::vector<char>& input) {
-        size_t minimum_size = getMinimalSize();
-        if(input.size() <= minimum_size){
-            // error
-        }
-
-        DarwinPacket packet;
-
-        auto pt = input.data();
-
-        std::memcpy((void*)(&packet.type), pt, sizeof(type));
-        pt += sizeof(type);
-
-        std::memcpy((void*)(&packet.response), pt, sizeof(response));
-        pt += sizeof(response);
-
-        std::memcpy((void*)(&packet.filter_code), pt, sizeof(filter_code));
-        pt += sizeof(filter_code);
-
-        std::memcpy((void*)(&packet.parsed_body_size), pt, sizeof(parsed_body_size));
-        pt += sizeof(parsed_body_size);
-
-        std::memcpy((void*)(&packet.evt_id), pt, sizeof(evt_id));
-        pt += sizeof(evt_id);
-
-        std::memcpy((void*)(&packet.parsed_certitude_size), pt, sizeof(parsed_certitude_size));
-        pt += sizeof(parsed_certitude_size);
-
-        packet.certitude_list.reserve(packet.parsed_certitude_size);
-
-        packet.body.reserve(packet.parsed_body_size);
+    DarwinPacket DarwinPacket::ParseHeader(darwin_filter_packet_t& input) {
         
-        return packet;
-    }
+        DarwinPacket packet;
+        
+        packet.type = input.type;
+        packet.response = input.response;
+        packet.filter_code = input.filter_code;
+        packet.parsed_body_size = input.body_size;
+        std::memcpy(packet.evt_id, input.evt_id, sizeof(packet.evt_id));
+        packet.parsed_certitude_size = input.certitude_size;
 
-
-    DarwinPacket DarwinPacket::Parse(std::vector<char>& input) {
-        DarwinPacket packet = ParseHeader(input);
-
-        if (input.size() != getMinimalSize() + packet.parsed_body_size + packet.parsed_certitude_size) {
-            // error
-        }
-
-        auto pt = input.data();
-        pt += getMinimalSize();
-
-        for(size_t i=0; i < packet.parsed_certitude_size; i++) {
-            unsigned int cert = 0;
-            std::memcpy((void*)(&cert), pt, sizeof(cert));
-            pt += sizeof(cert);
-
-            packet.certitude_list.push_back(cert);
-        }
-
-        packet.body = std::string((char*)pt, packet.parsed_body_size);
-
+        if(packet.parsed_certitude_size > 0)
+            packet.AddCertitude(input.certitude_list[0]);
+        
         return packet;
     }
 
@@ -125,5 +80,49 @@ namespace darwin {
 
     DarwinPacket::~DarwinPacket(){
         delete this->_parsed_body;
+    }
+
+    enum darwin_packet_type DarwinPacket::GetType() const {
+        return this->type;
+    }
+
+    enum darwin_filter_response_type DarwinPacket::GetResponse() const {
+        return this->response;
+    }
+
+    long DarwinPacket::GetFilterCode() const {
+        return this->filter_code;
+    }
+
+    const unsigned char * DarwinPacket::GetEventId() const {
+        return this->evt_id;
+    }
+
+    size_t DarwinPacket::GetEventIdSize() const {
+        return sizeof(this->evt_id);
+    }
+
+    size_t DarwinPacket::GetParsedCertitudeSize() const {
+        return this->parsed_certitude_size;
+    }
+
+    size_t DarwinPacket::GetParsedBodySize() const {
+        return this->parsed_body_size;
+    }
+
+    const std::string& DarwinPacket::GetBody() const {
+        return this->body;
+    }
+
+    std::string& DarwinPacket::GetMutableBody() {
+        return this->body;
+    }
+
+    const std::vector<unsigned int>& DarwinPacket::GetCertitudeList() const {
+        return this->certitude_list;
+    }
+
+    void DarwinPacket::AddCertitude(unsigned int certitude) {
+        this->certitude_list.push_back(certitude);
     }
 }

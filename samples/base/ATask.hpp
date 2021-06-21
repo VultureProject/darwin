@@ -11,7 +11,6 @@
 #include "ASession.fwd.hpp"
 #include "DarwinPacket.hpp"
 #include "config.hpp"
-#include "protocol.h"
 #include "Time.hpp"
 
 namespace darwin {
