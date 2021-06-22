@@ -89,6 +89,12 @@ namespace darwin {
     }
 
     void ATask::run() {
+        DARWIN_LOGGER;
+        if( ! this->ParseBody()) {
+            DARWIN_LOG_DEBUG("ASession::ReadBodyCallback Something went wrong while parsing the body");
+            _s->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
+            return;
+        }
         (*this)();
         auto body = _packet.GetMutableBody();
         body.clear();

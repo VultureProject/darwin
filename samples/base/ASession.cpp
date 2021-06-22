@@ -179,59 +179,6 @@ namespace darwin {
         auto vec = packet.Serialize();
         DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(vec.size()));
         this->WriteToClient(vec);
-        /* OLD CODE
-        const std::size_t certitude_size = _certitudes.size();
-
-        / *
-         * Allocate the header +
-         * the size of the certitude -
-         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         * /
-        std::size_t packet_size = 0, packet_size_wo_body = 0;
-        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
-            packet_size = sizeof(darwin_filter_packet_t) +
-                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
-        }
-
-        packet_size_wo_body = packet_size;
-
-        if (not _response_body.empty()) {
-            packet_size += _response_body.size();
-        }
-
-        DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(packet_size));
-
-        darwin_filter_packet_t* packet = reinterpret_cast<darwin_filter_packet_t*>(malloc(packet_size));
-
-        if (packet == nullptr) {
-            DARWIN_LOG_CRITICAL("ASession::SendToClient: Could not create a Darwin packet");
-            return false;
-        }
-
-        / *
-         * Initialisation of the structure for the padding bytes because of
-         * missing __attribute__((packed)) in the protocol structure.
-         * /
-        memset(packet, 0, packet_size);
-
-        for (std::size_t index = 0; index < certitude_size; ++index) {
-            packet->certitude_list[index] = _certitudes[index];
-        }
-
-        packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _send_header.response;
-        packet->certitude_size = certitude_size;
-        packet->filter_code = _generator.GetFilterCode();
-        packet->body_size = _response_body.size();
-        memcpy(packet->evt_id, _send_header.evt_id, 16);
-
-        memcpy((char*)(packet) + packet_size_wo_body, _response_body.c_str(), _response_body.size());
-
-        this->WriteToClient(packet, packet_size);
-
-        free(packet);*/
         return true;
     }
 
