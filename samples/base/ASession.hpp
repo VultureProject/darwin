@@ -161,6 +161,9 @@ namespace darwin {
         virtual void SendErrorResponse(const std::string& message, const unsigned int code) final;
 
         friend std::shared_ptr<darwin::ATask> Generator::CreateTask(std::shared_ptr<ASession> s) noexcept;
+
+        friend void ATask::run();
+
         // Not accessible by children
     private:
         std::string _filter_name; //!< name of the filter
