@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "data_pool.hpp"
 #include "AGenerator.hpp"
 #include "ContentInspectionTask.hpp"
@@ -19,13 +19,14 @@
 
 class Generator: public AGenerator {
 public:
-    Generator();
+    Generator(size_t nb_task_threads);
     ~Generator();
 
 public:
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept override final;
+    virtual std::shared_ptr<darwin::ATask>
+    CreateTask(darwin::session_ptr_t s) noexcept override final;
+
+    virtual long GetFilterCode() const override final;
 
 protected:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;

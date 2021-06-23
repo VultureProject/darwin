@@ -7,7 +7,6 @@
 
 #include <boost/tokenizer.hpp>
 #include <cmath>
-#include <protocol.h>
 #include <string.h>
 #include <thread>
 
@@ -16,20 +15,20 @@
 #include "../../toolkit/xxhash.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "Logger.hpp"
-#include "protocol.h"
-#include "tensorflow/core/framework/tensor.h"
 #include "UserAgentTask.hpp"
+#include "ASession.hpp"
+#include "tensorflow/core/framework/tensor.h"
 
 const std::vector<std::string> UserAgentTask::USER_AGENT_CLASSES({"Desktop", "Tool", "Libraries", "Good bot", "Bad bot", "Mail", "IOT", "Mobile"});
 
-UserAgentTask::UserAgentTask(boost::asio::local::stream_protocol::socket& socket,
-                             darwin::Manager& manager,
-                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+UserAgentTask::UserAgentTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                              std::mutex& cache_mutex,
+                             darwin::session_ptr_t s,
+                             darwin::DarwinPacket& packet,
                              std::shared_ptr<tensorflow::Session> &session,
                              std::map<std::string, unsigned int> &token_map,
                              const unsigned int max_tokens)
-        : Session{"user_agent", socket, manager, cache, cache_mutex}, _session{session}, _max_tokens{max_tokens}, _token_map{token_map} {
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet), _session{session}, _max_tokens{max_tokens}, _token_map{token_map} {
     _is_cache = _cache != nullptr;
 }
 
@@ -44,7 +43,7 @@ long UserAgentTask::GetFilterCode() noexcept {
 
 void UserAgentTask::operator()() {
     DARWIN_LOGGER;
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
+    bool is_log = _s->GetOutputType() == darwin::config::output_type::LOG;
 
     for (const std::string &user_agent : _user_agents) {
         SetStartingTime();
@@ -61,10 +60,10 @@ void UserAgentTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    _logs += R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
                 }
-                _certitudes.push_back(certitude);
+                _packet.AddCertitude(certitude);
                 DARWIN_LOG_DEBUG("UserAgentTask:: processed entry in "
                                  + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                 continue;
@@ -73,10 +72,10 @@ void UserAgentTask::operator()() {
 
         certitude = Predict(user_agent);
         if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+            _logs += R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
         }
-        _certitudes.push_back(certitude);
+        _packet.AddCertitude(certitude);
 
         if (_is_cache) {
             SaveToCache(hash, certitude);
@@ -183,7 +182,7 @@ bool UserAgentTask::ParseBody() {
 
     try {
         rapidjson::Document document;
-        document.Parse(body.c_str());
+        document.Parse(_packet.GetBody().c_str());
 
         if (!document.IsArray()) {
             DARWIN_LOG_ERROR("UserAgentTask:: ParseBody: You must provide a list");

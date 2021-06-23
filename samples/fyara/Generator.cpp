@@ -11,7 +11,14 @@
 #include "../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "YaraTask.hpp"
+#include "ASession.hpp"
 #include "Generator.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
@@ -114,9 +121,15 @@ bool Generator::ConfigureAlerting(const std::string& tags) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<YaraTask>(socket, manager, _cache, _cache_mutex, _yaraCompiler->GetEngine(_fastmode, _timeout)));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<YaraTask>(_cache, _cache_mutex, s, s->_packet, 
+            _yaraCompiler->GetEngine(_fastmode, _timeout)
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_YARA_SCAN;
 }

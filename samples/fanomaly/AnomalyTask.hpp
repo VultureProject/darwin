@@ -13,8 +13,9 @@
 #include <mlpack/methods/dbscan/dbscan.hpp>
 #include <mlpack/methods/neighbor_search/neighbor_search.hpp>
 
-#include "protocol.h"
-#include "Session.hpp"
+#include "DarwinPacket.hpp"
+#include "ATask.hpp"
+#include "ASession.fwd.hpp"
 
 #include "../../toolkit/lru_cache.hpp"
 
@@ -27,12 +28,12 @@
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class AnomalyTask: public darwin::Session {
+class AnomalyTask: public darwin::ATask {
 public:
-    explicit AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
-                           darwin::Manager& manager,
-                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                           std::mutex& cache_mutex);
+    explicit AnomalyTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
+                            darwin::session_ptr_t s,
+                            darwin::DarwinPacket& packet);
     ~AnomalyTask() override = default;
 
 public:

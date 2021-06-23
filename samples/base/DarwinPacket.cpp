@@ -19,6 +19,16 @@ namespace darwin {
 
     }
 
+    DarwinPacket::DarwinPacket(darwin_filter_packet_t& input) 
+        : _type{input.type}, _response{input.response}, _filter_code{input.filter_code},
+        _parsed_certitude_size{input.certitude_size}, _parsed_body_size{input.body_size} 
+    
+    {
+        std::copy(&input.evt_id[0], &input.evt_id[15], &this->_evt_id[0]);
+        if(input.certitude_size > 0)
+            AddCertitude(input.certitude_list[0]);
+    }
+
     std::vector<unsigned char> DarwinPacket::Serialize() const {
         darwin_filter_packet_t header {
             this->_type,
@@ -27,23 +37,20 @@ namespace darwin {
             this->_body.size(),
             {0},
             this->_certitude_list.size(),
-            0
+            {0}
         };
-        
+
         std::copy(&this->_evt_id[0], &this->_evt_id[15], &header.evt_id[0]);
 
-        size_t body_size = _body.size(), certitude_size = _certitude_list.size();
-
-        size_t size = sizeof(_type) + sizeof(_response) + sizeof(_filter_code)
-            + sizeof(body_size) + sizeof(_evt_id) + sizeof(certitude_size) + _certitude_list.size()
+        size_t size = sizeof(header) + _certitude_list.size()
             + _body.size();
         
         std::vector<unsigned char> ret(size, 0);
         
         auto pt = ret.data();
 
-        std::memcpy(pt, &header, sizeof(header) - sizeof(unsigned int));
-        pt += sizeof(header) - sizeof(unsigned int);
+        std::memcpy(pt, &header, sizeof(header));
+        pt += sizeof(header);
 
         //certitudes
         for(auto certitude: _certitude_list) {
@@ -55,22 +62,7 @@ namespace darwin {
         std::memcpy(pt, _body.data(), _body.length());
         return ret;
     }
-
-    DarwinPacket DarwinPacket::ParseHeader(darwin_filter_packet_t& input) {
-        
-        DarwinPacket packet{
-            input.type, input.response, 
-            input.filter_code, 
-            input.evt_id, 
-            input.certitude_size, input.body_size
-        };
-
-        if(packet._parsed_certitude_size > 0)
-            packet.AddCertitude(input.certitude_list[0]);
-        
-        return packet;
-    }
-
+    
     void DarwinPacket::clear() {
         this->_type = DARWIN_PACKET_OTHER;
         this->_response = DARWIN_RESPONSE_SEND_NO;

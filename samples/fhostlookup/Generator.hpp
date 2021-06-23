@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "AGenerator.hpp"
 #include "HostLookupTask.hpp"
 #include "tsl/hopscotch_map.h"
@@ -21,13 +21,13 @@
 
 class Generator: public AGenerator {
 public:
-    Generator() = default;
+    Generator(size_t nb_task_threads);
     ~Generator() = default;
 
-public:
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept override final;
+    virtual std::shared_ptr<darwin::ATask>
+    CreateTask(darwin::session_ptr_t s) noexcept override final;
+
+    virtual long GetFilterCode() const override final;
 
 protected:
     enum class db_type {

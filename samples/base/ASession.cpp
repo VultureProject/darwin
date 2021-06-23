@@ -70,11 +70,11 @@ namespace darwin {
 
         DARWIN_LOG_DEBUG("ASession::ReadHeaderCallback:: Reading header");
         if (!e) {
-            if (size != DarwinPacket::getMinimalSize()) {
+            if (size != sizeof(darwin_filter_packet_t)) {
                 DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
-            _packet = DarwinPacket::ParseHeader(_header);
+            _packet = DarwinPacket(_header);
             if (_packet.GetParsedBodySize() == 0) {
                 ExecuteFilter();
                 return;
@@ -121,13 +121,6 @@ namespace darwin {
                     this->SendErrorResponse("Error receiving body: Body is not empty, but the header appears to be invalid", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
-
-                /* TODO pushed to Task::ParseBody, check if parsing and error handling is done somewhere
-                if (!PreParseBody()) {
-                    DARWIN_LOG_DEBUG("ASession::ReadBodyCallback Something went wrong while parsing the body");
-                    this->SendErrorResponse("Error receiving body: Something went wrong while parsing the body", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
-                    return;
-                }*/
 
                 ExecuteFilter();
             }

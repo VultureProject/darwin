@@ -18,7 +18,7 @@
 
 class AGenerator {
 public:
-    AGenerator();
+    AGenerator(size_t nb_task_threads);
     virtual ~AGenerator() = default;
 
 
@@ -80,6 +80,8 @@ private:
     /// \return true if custom tags were found, false otherwise
     virtual bool ExtractCustomAlertingTags(const rapidjson::Document &configuration,
                                            std::string& tags);
+
+    static tp::ThreadPoolOptions GetThreadPoolOptions(size_t nb_task_threads);
 
 protected:
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; //!< The cache for already processed request

@@ -13,6 +13,13 @@
 #include "Generator.hpp"
 #include "tensorflow/core/framework/graph.pb.h"
 #include "UserAgentTask.hpp"
+#include "ASession.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
@@ -112,11 +119,17 @@ bool Generator::LoadModel(const std::string &model_path) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<UserAgentTask>(socket, manager, _cache, _cache_mutex, _session, _token_map, _max_tokens));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<UserAgentTask>(_cache, _cache_mutex, s, s->_packet, 
+            _session, _token_map, _max_tokens
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_USER_AGENT;
 }
 
 Generator::~Generator() {
