@@ -90,12 +90,38 @@ std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
     return parsed_repo_ids;
 }
 
+
+bool SessionTask::REDISResetExpire(const std::string &token, const std::string &repo_id) {
+    DARWIN_LOGGER;
+    long long int ttl;
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+
+    if (redis.Query(std::vector<std::string>{"TTL", token}, ttl, true) != REDIS_REPLY_INTEGER) {
+        DARWIN_LOG_WARNING("SessionTask::REDISResetExpire:: Did not get the expected result from querying "
+                            "Redis while getting TTL of cookie token " + token);
+        return false;
+    }
+
+    // if TTL == -2, key does not exist, -1 means it has no TTL (it shouldn't)
+    if (ttl > -2 and ttl < (long long int)_expiration) {
+        DARWIN_LOG_DEBUG("SessionTask::REDISResetExpire:: resetting expiration to " + std::to_string(_expiration));
+        if (redis.Query(std::vector<std::string>{"EXPIRE", token, std::to_string(_expiration)}, true)
+                != REDIS_REPLY_INTEGER) {
+            DARWIN_LOG_WARNING("SessionTask::REDISResetExpire:: could not reset the expiration of cookie token "
+                                + token);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 unsigned int SessionTask::REDISLookup(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
     DARWIN_LOGGER;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
-    unsigned int session_status = 0;
-    std::any result;
+    int redis_reply;
     std::vector<std::any> result_vector;
 
     if (repo_ids.empty()) {
@@ -103,66 +129,43 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
         return DARWIN_ERROR_RETURN;
     }
 
-    std::vector<std::string> arguments;
-    arguments.emplace_back("HMGET");
-    arguments.emplace_back(token);
-    arguments.insert(arguments.end(), repo_ids.begin(), repo_ids.end());
-    /*
-        KEY                 HMAP
-        sess_<SHA256>       login, authenticated
-    */
+    for (auto &repo_id : repo_ids) {
+        std::string result;
+        std::string key = token + "_" + repo_id;
+        std::vector<std::string> arguments;
+        arguments.emplace_back("GET");
+        arguments.emplace_back(key);
 
-   if(redis.Query(arguments, result, true) != REDIS_REPLY_ARRAY) {
-        DARWIN_LOG_ERROR("SessionTask::REDISLookup:: Something went wrong while querying Redis");
-        return DARWIN_ERROR_RETURN;
-    }
+        redis_reply = redis.Query(arguments, result, true);
 
-    try {
-        result_vector = std::any_cast<std::vector<std::any>>(result);
-        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: " + std::to_string(result_vector.size())
-                            + " element(s) retrieved");
-    }
-    catch(const std::bad_any_cast& error) {
-        DARWIN_LOG_ERROR("SessionTask::REDISLookup:: wrong answer format: " + std::string(error.what()));
-        return 0;
-    }
-
-    if(_expiration != 0) {
-        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: resetting token expiration to " + std::to_string(_expiration)
-                            + "s");
-        redis.Query(std::vector<std::string>{"EXPIRE", token, std::to_string(_expiration)}, true);
-    }
-
-    for(auto& object : result_vector) {
-        try {
-            std::string replyObject(std::any_cast<std::string>(object));
-            if(replyObject == "1") {
-                session_status = 1;
-                break;
+        if(redis_reply == REDIS_REPLY_STRING) {
+            // key exists, but still needs to check value
+            if (result != "1") {
+                DARWIN_LOG_INFO("SessionTask::REDISLookup:: got a valid key, but got '" + result + "' instead of '1'");
+                continue;
             }
+            DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie " + token + " authenticated on repository " +
+                            repo_id);
+            if (_expiration)
+                REDISResetExpire(token, repo_id);
+            return 1;
+        } else if (redis_reply == REDIS_REPLY_NIL) {
+            DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: no result for key " + key);
+            // key does not exist
+            continue;
+        } else {
+            // not the expected response
+            DARWIN_LOG_WARNING("SessionTask::REDISLookup:: Something went wrong while querying Redis");
+            continue;
         }
-        catch(const std::bad_any_cast&) {}
-
-        try {
-            int replyObject = std::any_cast<int>(object);
-            if(replyObject == 1) {
-                session_status = 1;
-                break;
-            }
-        }
-        catch(std::bad_any_cast&) {}
     }
 
-    DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie given " + token + " authenticated on repository IDs " +
-                    JoinRepoIDs(repo_ids) + " = " + std::to_string(session_status));
 
-    return session_status;
+    return 0;
 }
 
 bool SessionTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
-    unsigned long long expiration = 0;
-
     _expiration = 0;
 
     if(not line.IsArray()) {
@@ -208,16 +211,14 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
 
     if (values.Size() == 3) {
         if (values[2].IsString()) {
-            expiration = std::strtoll(values[2].GetString(), NULL, 10);
-            if (expiration != 0 and expiration != LONG_LONG_MAX) {
-                _expiration = expiration;
-            }
-            else {
-                DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration is not a valid number");
+            errno = 0;
+            _expiration = std::strtoll(values[2].GetString(), NULL, 10);
+            if (errno) {
+                DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration's value out of bounds'");
                 return false;
             }
         }
-        else if (values[2].IsUint()){
+        else if (values[2].IsUint64()){
             _expiration = values[2].GetUint64();
         }
         else {
