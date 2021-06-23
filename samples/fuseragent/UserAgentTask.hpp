@@ -13,8 +13,9 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 #include "tensorflow/core/public/session.h"
 
 #define DARWIN_FILTER_USER_AGENT 0x75736572
@@ -23,12 +24,12 @@
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class UserAgentTask : public darwin::Session {
+class UserAgentTask : public darwin::ATask {
 public:
-    explicit UserAgentTask(boost::asio::local::stream_protocol::socket& socket,
-                           darwin::Manager& manager,
-                           std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+    explicit UserAgentTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                            std::mutex& cache_mutex,
+                           darwin::session_ptr_t s,
+                           darwin::DarwinPacket& packet,
                            std::shared_ptr<tensorflow::Session> &session,
                            std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);
     ~UserAgentTask() override;

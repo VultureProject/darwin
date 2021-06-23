@@ -20,6 +20,8 @@ namespace darwin {
             unsigned char event_id[16],
             size_t certitude_size,
             size_t body_size);
+
+        DarwinPacket(darwin_filter_packet_t& input);
         
         DarwinPacket() = default;
 

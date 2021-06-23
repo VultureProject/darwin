@@ -12,12 +12,18 @@
 #include "base/Logger.hpp"
 #include "Generator.hpp"
 #include "HostLookupTask.hpp"
+#include "ASession.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "../toolkit/rapidjson/document.h"
 #include "../toolkit/rapidjson/istreamwrapper.h"
 #include "AlertManager.hpp"
 
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
@@ -224,9 +230,15 @@ bool Generator::LoadRsyslogEntry(const rapidjson::Value& entry) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<HostLookupTask>(socket, manager, _cache, _cache_mutex, _database, _feed_name));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<HostLookupTask>(_cache, _cache_mutex, s, s->_packet, 
+            _database, _feed_name
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_HOSTLOOKUP;
 }

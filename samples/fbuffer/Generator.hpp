@@ -10,7 +10,7 @@
 #include <string>
 
 #include "../toolkit/rapidjson/document.h"
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "AGenerator.hpp"
 #include "BufferThreadManager.hpp"
 #include "AConnector.hpp"
@@ -28,7 +28,7 @@ class Generator: public AGenerator {
     ///\brief Unique default constructor
     /// DOES NOT fill the attributes members.
     /// They are filled by ConfigureNetworkObject LoadConfig, LoadInputs and LoadOutputs
-    Generator() = default;
+    Generator(size_t nb_task_threads);
 
     ///\brief default destructor
     virtual ~Generator() = default;
@@ -40,9 +40,10 @@ class Generator: public AGenerator {
     ///\param manager Transfered to BufferTask constructor
     ///
     ///\return A shared ptr on the newly created BufferTask (in the form of a Session)
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept override final;
+    virtual std::shared_ptr<darwin::ATask>
+    CreateTask(darwin::session_ptr_t s) noexcept override final;
+
+    virtual long GetFilterCode() const override final;
 
     ///\brief Creates the Connectors depending on the _output_configs vector.
     ///

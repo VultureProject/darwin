@@ -13,11 +13,15 @@
 #include "AGenerator.hpp"
 #include "AlertManager.hpp"
 
-AGenerator::AGenerator()
+AGenerator::AGenerator(size_t nb_task_threads): _threadPool{GetThreadPoolOptions(nb_task_threads)}
 {
+    ;
+}
+
+tp::ThreadPoolOptions AGenerator::GetThreadPoolOptions(size_t nb_task_threads){
     auto opts = tp::ThreadPoolOptions();
-    opts.setThreadCount(2);
-    _threadPool = tp::ThreadPool(opts);
+    opts.setThreadCount(nb_task_threads);
+    return opts;
 }
 
 bool AGenerator::Configure(std::string const& configFile, const std::size_t cache_size) {
