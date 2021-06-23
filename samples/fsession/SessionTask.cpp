@@ -75,7 +75,7 @@ bool SessionTask::ReadFromSession(const std::string &token, const std::vector<st
         return false;
     }
 
-    return REDISLookup(token, repo_ids);
+    return REDISLookup(token, repo_ids) == 1;
 }
 
 std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
