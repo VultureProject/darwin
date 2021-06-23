@@ -23,8 +23,7 @@ namespace darwin {
 
     Core::Core()
             : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0},
-              _threadpool{}, daemon{true} {}
+              _pidPath{}, _nbThread{0}, daemon{true} {}
 
     int Core::run() {
         DARWIN_LOGGER;
@@ -37,7 +36,7 @@ namespace darwin {
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
-            Generator gen{};
+            Generator gen{_nbThread};
             if (not gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
                 raise(SIGTERM);
@@ -55,17 +54,10 @@ namespace darwin {
                 }
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
-                DARWIN_LOG_DEBUG("Core::run:: Creating threads...");
-                // Starting from 1 because the current process will run
-                // the io_context too.
-                for (std::size_t i = 1; i < _nbThread; ++i) {
-                    _threadpool.CreateThread(
-                        std::bind(&AServer::Run, std::ref(server))
-                    );
-                }
+                DARWIN_LOG_DEBUG("Core::run:: Launching server...");
                 server.Run();
                 DARWIN_LOG_DEBUG("Core::run:: Joining threads...");
-                _threadpool.JoinAll();
+
                 server.Clean();
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());

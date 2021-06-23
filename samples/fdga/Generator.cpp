@@ -18,6 +18,12 @@
 #include "AlertManager.hpp"
 #include "tensorflow/core/framework/graph.pb.h"
 
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
+
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
 

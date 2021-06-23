@@ -18,7 +18,7 @@
 
 class Generator: public AGenerator {
 public:
-    Generator() = default;
+    Generator(size_t nb_task_threads);
     ~Generator();
 
 public:

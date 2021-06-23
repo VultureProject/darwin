@@ -19,8 +19,9 @@ extern "C" {
 #include <vector>
 #include <any>
 
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/RedisManager.hpp"
 
@@ -34,12 +35,12 @@ extern "C" {
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class SessionTask : public darwin::Session {
+class SessionTask : public darwin::ATask {
 public:
-    explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
-                         darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex);
+    explicit SessionTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
+                            darwin::session_ptr_t s,
+                            darwin::DarwinPacket& packet);
     ~SessionTask() override = default;
 
 

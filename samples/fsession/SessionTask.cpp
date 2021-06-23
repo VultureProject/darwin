@@ -23,14 +23,14 @@ extern "C" {
 #include "Logger.hpp"
 #include "Stats.hpp"
 #include "SessionTask.hpp"
-#include "protocol.h"
+#include "ASession.hpp"
 
 
-SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
-                         darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex)
-        : Session{"session", socket, manager, cache, cache_mutex}{
+SessionTask::SessionTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                        std::mutex& cache_mutex,
+                        darwin::session_ptr_t s,
+                        darwin::DarwinPacket& packet)
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet){
 }
 
 long SessionTask::GetFilterCode() noexcept {
@@ -52,14 +52,14 @@ void SessionTask::operator()() {
             certitude = ReadFromSession(_token, _repo_ids);
             if(certitude)
                 STAT_MATCH_INC;
-            _certitudes.push_back(certitude);
+            _packet.AddCertitude(certitude);
 
             DARWIN_LOG_DEBUG("SessionTask:: processed entry in "
                             + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
     }
 }
