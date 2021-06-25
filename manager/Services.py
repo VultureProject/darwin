@@ -50,9 +50,10 @@ class Services:
                     self.stop_one(filter, no_lock=True)
                     self.clean_one(filter, no_lock=True)
                 else:
-                    logger.debug("Linking UNIX sockets...")
-                    filter['status'] = psutil.STATUS_RUNNING
-                    call(['ln', '-s', filter['socket'], filter['socket_link']])
+                    if filter['network']['socket_type'] == 'UNIX':
+                        logger.debug("Linking UNIX sockets...")
+                        filter['status'] = psutil.STATUS_RUNNING
+                        call(['ln', '-s', filter['socket'], filter['socket_link']])
 
     def rotate_logs_all(self):
         """
@@ -99,10 +100,13 @@ class Services:
                 cmd.append(filt['log_level'])
         except KeyError:
             pass
-
+        
+        if filt['network']['socket_type'] == 'UDP':
+            cmd.append('-u')
+                
         cmd += [
             filt['name'],
-            filt['socket'],
+            filt['network']['address_path'],
             filt['config_file'],
             filt['monitoring'],
             filt['pid_file'],
