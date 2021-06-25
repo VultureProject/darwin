@@ -42,15 +42,20 @@ namespace darwin {
 
         std::copy(&this->_evt_id[0], &this->_evt_id[15], &header.evt_id[0]);
 
-        size_t size = sizeof(header) + _certitude_list.size()
-            + _body.size();
+        size_t size = sizeof(header) + _body.size();
+        
+        if( ! _certitude_list.empty()) {
+            // From the packet format, at least one certitude is always allocated
+            size += (_certitude_list.size() - 1) * sizeof(unsigned int);
+        }
+            
         
         std::vector<unsigned char> ret(size, 0);
         
         auto pt = ret.data();
 
-        std::memcpy(pt, &header, sizeof(header));
-        pt += sizeof(header);
+        std::memcpy(pt, &header, sizeof(header) - sizeof(unsigned int));
+        pt += sizeof(header) - sizeof(unsigned int);
 
         //certitudes
         for(auto certitude: _certitude_list) {

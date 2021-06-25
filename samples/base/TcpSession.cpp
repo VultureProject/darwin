@@ -83,7 +83,7 @@ namespace darwin {
                              std::to_string(_next_filter_port));
             try {
                 _filter_socket.connect(
-                        boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), _next_filter_port));
+                        boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), _next_filter_port));
                 _connected = true;
             } catch (std::exception const& e) {
                 DARWIN_LOG_ERROR(std::string("TcpSession::SendToFilter:: "

@@ -19,12 +19,22 @@
 /// \namespace darwin
 namespace darwin {
 
+    enum NetworkSocketType {
+        Unix,
+        Tcp,
+        Udp
+    };
+
     /// Singleton. The main class of the program.
     ///
     /// \class Core
     class Core {
     private:
         Core();
+
+        bool ParseSocketAddress(const std::string& pathOrAddress);
+
+        bool ParsePort(const char* pathOrAddress);
 
     public:
         ~Core() = default;
@@ -89,6 +99,9 @@ namespace darwin {
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
+
+        enum NetworkSocketType _net_type;
+        int _net_port;
 
     public:
         // TODO Maybe a getter is a better idea...

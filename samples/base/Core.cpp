@@ -16,8 +16,10 @@
 #include "Generator.hpp"
 #include "Logger.hpp"
 #include "UnixServer.hpp"
+#include "TcpServer.hpp"
 #include "Core.hpp"
 #include "Stats.hpp"
+#include "StringUtils.hpp"
 
 namespace darwin {
 
@@ -30,6 +32,8 @@ namespace darwin {
         int ret{0};
 
         SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::starting);
+
+        std::unique_ptr<AServer> server;
 
         try {
             Monitor monitor{_monSocketPath};
@@ -45,9 +49,27 @@ namespace darwin {
             }
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
+            switch(_net_type) {
+                case NetworkSocketType::Unix:
+                    DARWIN_LOG_DEBUG("Core::run:: Unix socket configured on path " + _socketPath);
+                    server = std::make_unique<UnixServer>(_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen);
+                    break;
+                case NetworkSocketType::Tcp:
+                    DARWIN_LOG_DEBUG("Core::run:: TCP configured on port " + std::to_string(_net_port));
+                    server = std::make_unique<TcpServer>(_net_port, 0 /* Next filter port */, _nextFilterUnixSocketPath, _threshold, gen);
+                    break;
+                case NetworkSocketType::Udp:
+                    //not yet implemented
+                    DARWIN_LOG_CRITICAL("Core:: Run:: UDP Not implemented");
+                default:
+                    DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
+                    raise(SIGTERM);
+                    t.join();
+                    return 1;
+            }
+
             try {
-                UnixServer server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
-                if (not gen.ConfigureNetworkObject(server.GetIOContext())) {
+                if (not gen.ConfigureNetworkObject(server->GetIOContext())) {
                     raise(SIGTERM);
                     t.join();
                     return 1;
@@ -55,10 +77,10 @@ namespace darwin {
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
                 DARWIN_LOG_DEBUG("Core::run:: Launching server...");
-                server.Run();
+                server->Run();
                 DARWIN_LOG_DEBUG("Core::run:: Joining threads...");
 
-                server.Clean();
+                server->Clean();
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
                 ret = 1;
@@ -135,7 +157,8 @@ namespace darwin {
         // MANDATORY ARGUMENTS
         log.setName(av[optind]);
         _name = av[optind];
-        _socketPath = av[optind + 1];
+        if (! this->ParseSocketAddress(std::string(av[optind + 1]))) 
+            return false;
         _modConfigPath = av[optind + 2];
         _monSocketPath = av[optind + 3];
         _pidPath = av[optind + 4];
@@ -237,6 +260,41 @@ namespace darwin {
 
     const std::string& Core::GetFilterName() {
         return this->_name;
+    }
+
+    bool Core::ParsePort(const char* pathOrAddress) {
+        DARWIN_LOGGER;
+
+        long port = 0;
+        if(!darwin::strings::StrToLong(pathOrAddress, port)){
+            DARWIN_LOG_ERROR("Core::ParseSocketAddress:: Error while parsing the port number, unrecognized number: '" + std::string(pathOrAddress) + "'");
+            return false;
+        }
+
+        if (port < 0 || port > 65353) {
+            DARWIN_LOG_ERROR("Core::ParseSocketAddress:: Error while parsing the port number : out of bounds [0; 65353]: '" + std::string(pathOrAddress) + "'");
+            return false;
+        }
+
+        _net_port = static_cast<int>(port);
+
+        return true;
+    }
+
+    bool Core::ParseSocketAddress(const std::string& pathOrAddress) {
+        if(pathOrAddress.find("tcp:", 0) == 0){
+            _net_type = NetworkSocketType::Tcp;
+            return ParsePort(&pathOrAddress.c_str()[4]);
+
+        } else if (pathOrAddress.find("udp:", 0) == 0) {
+            _net_type = NetworkSocketType::Udp;
+            return ParsePort(&pathOrAddress.c_str()[4]);
+
+        } else {
+            _net_type = NetworkSocketType::Unix;
+            _socketPath = pathOrAddress;
+            return true;
+        }
     }
 
 }
