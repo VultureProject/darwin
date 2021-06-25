@@ -24,7 +24,7 @@ namespace darwin {
                    Generator& generator)
             : AServer(output, threshold, generator), 
               _port_nb{port_nb}, _port_nb_next{next_filter_port},
-              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port_nb)},
+              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), port_nb)},
               _new_connection{_io_context} {
 
         this->InitSignalsAndStart();
