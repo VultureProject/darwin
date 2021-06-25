@@ -17,14 +17,16 @@
 
 namespace darwin {
 
-    TcpServer::TcpServer(int port_nb,
+    TcpServer::TcpServer(boost::asio::ip::address const& address,
+                   int port_nb,
                    int next_filter_port,
                    std::string const& output,
                    std::size_t threshold,
                    Generator& generator)
             : AServer(output, threshold, generator), 
-              _port_nb{port_nb}, _port_nb_next{next_filter_port},
-              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), port_nb)},
+              _address{address}, _port_nb{port_nb}, 
+              _port_nb_next{next_filter_port},
+              _acceptor{_io_context, boost::asio::ip::tcp::endpoint(_address, port_nb)},
               _new_connection{_io_context} {
 
         this->InitSignalsAndStart();

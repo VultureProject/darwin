@@ -12,6 +12,8 @@
 #include "Monitor.hpp"
 #include "ThreadGroup.hpp"
 
+#include <boost/asio.hpp>
+
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
 #endif // !PID_PATH
@@ -32,7 +34,7 @@ namespace darwin {
     private:
         Core();
 
-        bool ParseSocketAddress(const std::string& pathOrAddress);
+        bool ParseSocketAddress(const std::string& pathOrAddress, bool isUdp);
 
         bool ParsePort(const char* pathOrAddress);
 
@@ -88,9 +90,10 @@ namespace darwin {
         /// \return true on success, false otherwise.
         bool SetLogLevel(std::string level);
 
+        bool IsDaemon() const;
+
     private:
         std::string _name;
-        std::string _socketPath;
         std::string _modConfigPath;
         std::string _monSocketPath;
         std::string _pidPath;
@@ -101,10 +104,10 @@ namespace darwin {
         std::size_t _threshold;
 
         enum NetworkSocketType _net_type;
+        std::string _socketPath;
+        boost::asio::ip::address _net_address;
         int _net_port;
 
-    public:
-        // TODO Maybe a getter is a better idea...
         bool daemon;
     };
 }
