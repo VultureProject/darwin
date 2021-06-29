@@ -96,7 +96,7 @@ namespace darwin {
             return;
         }
         (*this)();
-        auto body = _packet.GetMutableBody();
+        auto& body = _packet.GetMutableBody();
         body.clear();
         body.append(_response_body);
         _s->SendNext(_packet);

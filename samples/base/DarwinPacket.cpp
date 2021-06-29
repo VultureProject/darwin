@@ -1,5 +1,7 @@
 #include "DarwinPacket.hpp"
 #include <cstring>
+#include <iostream>
+#include <iomanip>
 #include "../../toolkit/rapidjson/writer.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"
 
@@ -47,18 +49,20 @@ namespace darwin {
         if( ! _certitude_list.empty()) {
             // From the packet format, at least one certitude is always allocated
             size += (_certitude_list.size() - 1) * sizeof(unsigned int);
+            header.certitude_list[0] = _certitude_list[0];
         }
             
         
         std::vector<unsigned char> ret(size, 0);
         
-        auto pt = ret.data();
+        unsigned char * pt = ret.data();
 
-        std::memcpy(pt, &header, sizeof(header) - sizeof(unsigned int));
-        pt += sizeof(header) - sizeof(unsigned int);
+        std::memcpy(pt, &header, sizeof(header));
+        pt += sizeof(header) - sizeof(int);
 
         //certitudes
-        for(auto certitude: _certitude_list) {
+        for(size_t i=1; i < _certitude_list.size(); i++) {
+            auto certitude = _certitude_list[i];
             std::memcpy(pt,(void*)(&certitude), sizeof(certitude));
             pt += sizeof(certitude);
         }
