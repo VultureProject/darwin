@@ -69,34 +69,5 @@ namespace darwin {
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
     }
-
-    void UnixSession::WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) {
-        boost::asio::async_write(_filter_socket,
-                            boost::asio::buffer(packet, packet_size),
-                            boost::bind(&UnixSession::SendToFilterCallback, this,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
-
-    }
-
-    bool UnixSession::ConnectToNextFilter() {
-        DARWIN_LOGGER;
-        if (!_connected) {
-            DARWIN_LOG_DEBUG("UnixSession::SendToFilter:: Trying to connect to: " +
-                             _next_filter_path);
-            try {
-                _filter_socket.connect(
-                        boost::asio::local::stream_protocol::endpoint(
-                                _next_filter_path.c_str()));
-                _connected = true;
-            } catch (std::exception const& e) {
-                DARWIN_LOG_ERROR(std::string("UnixSession::SendToFilter:: "
-                                             "Unable to connect to next filter: ") +
-                                 e.what());
-                _connected = false;
-            }
-        }
-        return _connected;
-    }
 }
 

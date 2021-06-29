@@ -60,39 +60,11 @@ namespace darwin {
                                             boost::asio::placeholders::bytes_transferred));
     }
 
-    void TcpSession::WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) {
-        boost::asio::async_write(_filter_socket,
-                            boost::asio::buffer(packet, packet_size),
-                            boost::bind(&TcpSession::SendToFilterCallback, this,
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::bytes_transferred));
-
-    }
-
     void TcpSession::SetNextFilterPort(int port){
         if(port > 0 && port < 65536) {
             _next_filter_port = port;
             _has_next_filter = true;
         }
-    }
-
-    bool TcpSession::ConnectToNextFilter() {
-        DARWIN_LOGGER;
-        if (!_connected) {
-            DARWIN_LOG_DEBUG("TcpSession::SendToFilter:: Trying to connect to: " +
-                             std::to_string(_next_filter_port));
-            try {
-                _filter_socket.connect(
-                        boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), _next_filter_port));
-                _connected = true;
-            } catch (std::exception const& e) {
-                DARWIN_LOG_ERROR(std::string("TcpSession::SendToFilter:: "
-                                             "Unable to connect to next filter: ") +
-                                 e.what());
-                _connected = false;
-            }
-        }
-        return _connected;
     }
 }
 

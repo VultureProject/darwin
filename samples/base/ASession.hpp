@@ -96,10 +96,6 @@ namespace darwin {
 
         virtual void WriteToClient(std::vector<unsigned char>& packet) = 0;
 
-        virtual bool ConnectToNextFilter() = 0;
-
-        virtual void WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) = 0;
-
         virtual void CloseFilterConnection() = 0;
 
         /// Send result to the client.
@@ -110,7 +106,7 @@ namespace darwin {
         /// Send result to next filter.
         ///
         /// \return false if the function could not send the data, true otherwise.
-        virtual bool SendToFilter() noexcept;
+        virtual bool SendToFilter(DarwinPacket& packet) noexcept;
 
         /// Called when data is sent using Send() method.
         /// Terminate the session on failure.
@@ -119,15 +115,6 @@ namespace darwin {
         virtual void
         SendToClientCallback(const boost::system::error_code& e,
                      std::size_t size);
-
-        /// Called when data is sent using SendToFilter() method.
-        /// Terminate the filter session on failure.
-        ///
-        /// \param size The number of byte sent.
-        virtual void
-        SendToFilterCallback(const boost::system::error_code& e,
-                             std::size_t size);
-
 
         std::string JsonStringify(rapidjson::Document &json);
 

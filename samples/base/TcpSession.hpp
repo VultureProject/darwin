@@ -32,13 +32,6 @@ namespace darwin {
         /// 
         virtual void WriteToClient(std::vector<unsigned char>& packet) override final;
 
-        ///
-        virtual void WriteToFilter(darwin_filter_packet_t* packet, size_t packet_size) override final;
-
-
-        ///
-        virtual bool ConnectToNextFilter() override final;
-
         virtual void CloseFilterConnection() override final;
 
     private:

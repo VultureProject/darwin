@@ -18,6 +18,13 @@ extern "C" {
 namespace darwin {
     /// \namespace network
     namespace network {
+
+        enum NetworkSocketType {
+            Unix,
+            Tcp,
+            Udp
+        };
+
         /// Get the IP address type.
         ///
         /// \param ip_address_string The IP address to get the type from.
@@ -46,5 +53,10 @@ namespace darwin {
         ///
         /// \param sa The in6_addr structure to be stringified.
         std::string GetStringAddrFromSockAddrIn6(const in6_addr &addr);
+
+        bool ParseSocketAddress(const std::string& path_address, bool is_udp, 
+            NetworkSocketType& out_net_type, boost::asio::ip::address& out_net_address, int& out_port, std::string& out_unix_path);
+
+        bool ParsePort(const char* path_address, int& out_port);
     }
 }
