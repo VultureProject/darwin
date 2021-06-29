@@ -17,6 +17,7 @@
 #include "Generator.hpp"
 #include "ASession.hpp"
 #include "errors.hpp"
+#include "Core.hpp"
 
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/xxhash.h"
@@ -139,22 +140,19 @@ namespace darwin {
     }
 
     void ASession::SendNext(DarwinPacket& packet) {
-        
-        if(! this->SendToClient(packet)) 
-            Start();
-        // Ignoring Sending to filter for now
-        /*switch(_header.response) {
+        // TODO : Unsure of the logic behind the if's and and the Start calls
+        switch(packet.GetResponse()) {
             case DARWIN_RESPONSE_SEND_BOTH:
-                if(this->SendToFilter()) break;
+                this->SendToFilter(packet);
             case DARWIN_RESPONSE_SEND_BACK:
-                if(not this->SendToClient()) Start();
+                if(not this->SendToClient(packet)) Start();
                 break;
             case DARWIN_RESPONSE_SEND_DARWIN:
-                if(not this->SendToFilter()) Start();
+                if(not this->SendToFilter(packet)) Start();
                 break;
             default:
                 Start();
-        }*/
+        }
     }
 
 
@@ -175,7 +173,7 @@ namespace darwin {
         return true;
     }
 
-    bool ASession::SendToFilter() noexcept {
+    bool ASession::SendToFilter(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
 
         if (!_has_next_filter) {
@@ -183,69 +181,9 @@ namespace darwin {
             return false;
         }
 
-        if( ! ConnectToNextFilter()) {
-            return false;
-        }
-        /* OLD CODE
-        std::string data = GetDataToSendToFilter();
-        DARWIN_LOG_DEBUG("ASession::SendToFilter:: data to send: " + data);
-        DARWIN_LOG_DEBUG("ASession::SendToFilter:: data size: " + std::to_string(data.size()));
+        NextFilterConnector& c = Core::instance().GetNextFilterconnector();
 
-        const std::size_t certitude_size = _certitudes.size();
-
-        / *
-         * Allocate the header +
-         * the size of the certitude -
-         * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
-         * /
-        std::size_t packet_size = 0, packet_size_wo_data = 0;
-        if (certitude_size > DEFAULT_CERTITUDE_LIST_SIZE) {
-            packet_size = sizeof(darwin_filter_packet_t) +
-                (certitude_size - DEFAULT_CERTITUDE_LIST_SIZE) * sizeof(unsigned int);
-        } else {
-            packet_size = sizeof(darwin_filter_packet_t);
-        }
-
-        packet_size_wo_data = packet_size;
-
-        packet_size += data.size();
-
-        DARWIN_LOG_DEBUG("ASession::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
-
-        darwin_filter_packet_t* packet;
-        packet = (darwin_filter_packet_t *) malloc(packet_size);
-
-        if (!packet) {
-            DARWIN_LOG_CRITICAL("ASession:: SendToFilter:: Could not create a Darwin packet");
-            return false;
-        }
-
-        / *
-         * Initialisation of the structure for the padding bytes because of
-         * missing __attribute__((packed)) in the protocol structure.
-         * / 
-        memset(packet, 0, packet_size);
-
-        for (std::size_t index = 0; index < certitude_size; ++index) {
-            packet->certitude_list[index] = _certitudes[index];
-        }
-
-        if(data.size() != 0) {
-            // TODO: set a proper pointer in protocol.h for the body
-            // Yes We Hack...
-            memcpy((char *)(packet) + packet_size_wo_data, data.c_str(), data.size());
-        }
-
-        packet->type = DARWIN_PACKET_FILTER;
-        packet->response = _send_header.response == DARWIN_RESPONSE_SEND_BOTH ? DARWIN_RESPONSE_SEND_DARWIN : _header.response;
-        packet->certitude_size = certitude_size;
-        packet->filter_code = _generator.GetFilterCode();
-        packet->body_size = data.size();
-        memcpy(packet->evt_id, _send_header.evt_id, 16);
-
-        DARWIN_LOG_DEBUG("ASession:: SendToFilter:: Sending header + data");
-        this->WriteToFilter(packet, packet_size);
-        free(packet);*/
+        c.Send(packet);
         return true;
     }
 
@@ -262,26 +200,6 @@ namespace darwin {
 
         Start();
     }
-
-    void ASession::SendToFilterCallback(const boost::system::error_code& e,
-                                       std::size_t size __attribute__((unused))) {
-        DARWIN_LOGGER;
-
-        if (e) {
-            DARWIN_LOG_ERROR("ASession::SendToFilterCallback:: " + e.message());
-            CloseFilterConnection();
-        }
-
-        if(_packet.GetResponse() == DARWIN_RESPONSE_SEND_BOTH) {
-            // TODO re handle this after re enabling sendtofilter
-            // this->SendToClient();
-        }
-        else {
-            Start();
-        }
-    }
-
-    
 
     std::string ASession::Evt_idToString() {
         DARWIN_LOGGER;

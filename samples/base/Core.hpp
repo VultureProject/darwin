@@ -11,6 +11,8 @@
 #include <atomic>
 #include "Monitor.hpp"
 #include "ThreadGroup.hpp"
+#include "Network.hpp"
+#include "NextFilterConnector.hpp"
 
 #include <boost/asio.hpp>
 
@@ -21,22 +23,12 @@
 /// \namespace darwin
 namespace darwin {
 
-    enum NetworkSocketType {
-        Unix,
-        Tcp,
-        Udp
-    };
-
     /// Singleton. The main class of the program.
     ///
     /// \class Core
     class Core {
     private:
         Core();
-
-        bool ParseSocketAddress(const std::string& pathOrAddress, bool isUdp);
-
-        bool ParsePort(const char* pathOrAddress);
 
     public:
         ~Core() = default;
@@ -92,6 +84,8 @@ namespace darwin {
 
         bool IsDaemon() const;
 
+        NextFilterConnector& GetNextFilterconnector() noexcept;
+
     private:
         std::string _name;
         std::string _modConfigPath;
@@ -103,7 +97,9 @@ namespace darwin {
         std::size_t _cacheSize;
         std::size_t _threshold;
 
-        enum NetworkSocketType _net_type;
+        std::optional<NextFilterConnector> _next_filter_connector;
+
+        network::NetworkSocketType _net_type;
         std::string _socketPath;
         boost::asio::ip::address _net_address;
         int _net_port;

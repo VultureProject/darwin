@@ -98,6 +98,7 @@ set(
         samples/base/AlertManager.cpp samples/base/AlertManager.hpp
 
         samples/base/DarwinPacket.cpp samples/base/DarwinPacket.hpp
+        samples/base/NextFilterConnector.cpp samples/base/NextFilterConnector.hpp
 
         samples/base/AServer.cpp samples/base/AServer.hpp
         samples/base/UnixServer.cpp samples/base/UnixServer.hpp

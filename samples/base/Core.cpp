@@ -40,27 +40,29 @@ namespace darwin {
         try {
             Monitor monitor{_monSocketPath};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
+            std::thread t_nextfilter{std::bind(&NextFilterConnector::Run, std::ref(GetNextFilterconnector()))};
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
             Generator gen{_nbThread};
             if (not gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
                 raise(SIGTERM);
+                t_nextfilter.join();
                 t.join();
                 return 1;
             }
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
             switch(_net_type) {
-                case NetworkSocketType::Unix:
+                case network::NetworkSocketType::Unix:
                     DARWIN_LOG_DEBUG("Core::run:: Unix socket configured on path " + _socketPath);
                     server = std::make_unique<UnixServer>(_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen);
                     break;
-                case NetworkSocketType::Tcp:
+                case network::NetworkSocketType::Tcp:
                     DARWIN_LOG_DEBUG("Core::run:: TCP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
                     server = std::make_unique<TcpServer>(_net_address, _net_port, 0 /* Next filter port */, _nextFilterUnixSocketPath, _threshold, gen);
                     break;
-                case NetworkSocketType::Udp:
+                case network::NetworkSocketType::Udp:
                     //not yet implemented
                     DARWIN_LOG_DEBUG("Core::run:: UDP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
                     DARWIN_LOG_CRITICAL("Core:: Run:: UDP Not implemented");
@@ -68,6 +70,7 @@ namespace darwin {
                 default:
                     DARWIN_LOG_CRITICAL("Core:: Run:: Network Configuration problem");
                     raise(SIGTERM);
+                    t_nextfilter.join();
                     t.join();
                     return 1;
             }
@@ -75,6 +78,7 @@ namespace darwin {
             try {
                 if (not gen.ConfigureNetworkObject(server->GetIOContext())) {
                     raise(SIGTERM);
+                    t_nextfilter.join();
                     t.join();
                     return 1;
                 }
@@ -91,6 +95,7 @@ namespace darwin {
                 raise(SIGTERM);
             }
             DARWIN_LOG_DEBUG("Core::run:: Joining monitoring thread...");
+           t_nextfilter.join();
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {
@@ -166,7 +171,7 @@ namespace darwin {
         // MANDATORY ARGUMENTS
         log.setName(av[optind]);
         _name = av[optind];
-        if (! this->ParseSocketAddress(std::string(av[optind + 1]), is_udp))
+        if (! network::ParseSocketAddress(std::string(av[optind + 1]), is_udp, _net_type, _net_address, _net_port, _socketPath))
             return false;
         _modConfigPath = av[optind + 2];
         _monSocketPath = av[optind + 3];
@@ -271,58 +276,16 @@ namespace darwin {
         return this->_name;
     }
 
-    bool Core::ParsePort(const char* pathOrAddress) {
-        DARWIN_LOGGER;
-
-        long port = 0;
-        if(!darwin::strings::StrToLong(pathOrAddress, port)){
-            DARWIN_LOG_ERROR("Core::ParseSocketAddress:: Error while parsing the port number, unrecognized number: '" + std::string(pathOrAddress) + "'");
-            return false;
-        }
-
-        if (port < 0 || port > 65353) {
-            DARWIN_LOG_ERROR("Core::ParseSocketAddress:: Error while parsing the port number : out of bounds [0; 65353]: '" + std::string(pathOrAddress) + "'");
-            return false;
-        }
-
-        _net_port = static_cast<int>(port);
-
-        return true;
-    }
-
-    bool Core::ParseSocketAddress(const std::string& pathOrAddress, bool isUdp) {
-        DARWIN_LOGGER;
-        size_t colon = pathOrAddress.rfind(':');
-        if (colon != std::string::npos) {
-            boost::system::error_code e;
-            auto addr = pathOrAddress.substr(0, colon);
-            if(addr.find('[') != std::string::npos && addr.rfind(']') != std::string::npos) {
-                addr.pop_back();
-                addr.erase(0, 1);
-            }
-            auto port = pathOrAddress.substr(colon+1, pathOrAddress.length()-1);
-            bool portRes = ParsePort(port.c_str());
-
-            _net_address = boost::asio::ip::make_address(addr, e); 
-            if( ! portRes || e.failed()) {
-                DARWIN_LOG_CRITICAL("Error while parsing the ip address: " + pathOrAddress);
-                return false;
-            }
-
-            if(isUdp) {
-                _net_type = NetworkSocketType::Udp;
-            } else {
-                _net_type = NetworkSocketType::Tcp;
-            }
-        } else {
-            _net_type = NetworkSocketType::Unix;
-            _socketPath = pathOrAddress;
-        }
-        return true;
-    }
-
     bool Core::IsDaemon() const {
         return this->daemon;
+    }
+
+    NextFilterConnector& Core::GetNextFilterconnector() noexcept {
+        if(!_next_filter_connector){
+            _next_filter_connector.emplace(_nextFilterUnixSocketPath, false);
+        }
+
+        return *_next_filter_connector;
     }
 
 }
