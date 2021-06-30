@@ -20,6 +20,8 @@
 #include "Core.hpp"
 #include "Stats.hpp"
 #include "StringUtils.hpp"
+#include "UnixNextFilterConnector.hpp"
+#include "TcpNextFilterConnector.hpp"
 
 #include <boost/asio.hpp>
 
@@ -40,7 +42,7 @@ namespace darwin {
         try {
             Monitor monitor{_monSocketPath};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
-            std::thread t_nextfilter{std::bind(&NextFilterConnector::Run, std::ref(GetNextFilterconnector()))};
+            std::thread t_nextfilter{std::bind(&ANextFilterConnector::Run, std::ref(GetNextFilterconnector()))};
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
             Generator gen{_nbThread};
@@ -56,11 +58,11 @@ namespace darwin {
             switch(_net_type) {
                 case network::NetworkSocketType::Unix:
                     DARWIN_LOG_DEBUG("Core::run:: Unix socket configured on path " + _socketPath);
-                    server = std::make_unique<UnixServer>(_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen);
+                    server = std::make_unique<UnixServer>(_socketPath, _output, _threshold, gen);
                     break;
                 case network::NetworkSocketType::Tcp:
                     DARWIN_LOG_DEBUG("Core::run:: TCP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
-                    server = std::make_unique<TcpServer>(_net_address, _net_port, 0 /* Next filter port */, _nextFilterUnixSocketPath, _threshold, gen);
+                    server = std::make_unique<TcpServer>(_net_address, _net_port, _output, _threshold, gen);
                     break;
                 case network::NetworkSocketType::Udp:
                     //not yet implemented
@@ -177,7 +179,9 @@ namespace darwin {
         _monSocketPath = av[optind + 3];
         _pidPath = av[optind + 4];
         _output = av[optind + 5];
-        _nextFilterUnixSocketPath = av[optind + 6];
+
+        if (!SetNextFilterConnector(std::string(av[optind + 6]), is_udp))
+            return false;
         if (!GetULArg(_nbThread, av[optind + 7]))
             return false;
         if (!GetULArg(_cacheSize, av[optind + 8]))
@@ -186,6 +190,32 @@ namespace darwin {
             return false;
 
         return true;
+    }
+
+    bool Core::SetNextFilterConnector(std::string const& path_address, bool is_udp) {
+        DARWIN_LOGGER;
+        network::NetworkSocketType net_type;
+        std::string path;
+        int port;
+        boost::asio::ip::address addr;
+        if (! network::ParseSocketAddress(path_address, is_udp, net_type, addr, port, path))
+            return false;
+
+        switch(net_type) {
+            case network::NetworkSocketType::Unix:
+                _next_filter_connector = std::make_unique<UnixNextFilterConnector>(path);
+                return true;
+            case network::NetworkSocketType::Tcp:
+                _next_filter_connector = std::make_unique<TcpNextFilterConnector>(addr, port);
+                return true;
+            case network::NetworkSocketType::Udp:
+                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: UDP Not implemented");
+                return false;
+            default:
+                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: Next Filter Configuration error");
+                return false;
+        }
+        return false;
     }
 
     void Core::Usage() {
@@ -280,11 +310,12 @@ namespace darwin {
         return this->daemon;
     }
 
-    NextFilterConnector& Core::GetNextFilterconnector() noexcept {
-        if(!_next_filter_connector){
-            _next_filter_connector.emplace(_nextFilterUnixSocketPath, false);
+    ANextFilterConnector& Core::GetNextFilterconnector() {
+        if(!_next_filter_connector) {
+            DARWIN_LOGGER;
+            DARWIN_LOG_CRITICAL("Core::GetNextFilterConnector :: Configure must be called before GetNextFilterConnector");
+            throw std::logic_error("Core:: Configure must be called before GetNextFilterConnector()");
         }
-
         return *_next_filter_connector;
     }
 

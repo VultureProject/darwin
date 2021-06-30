@@ -181,7 +181,7 @@ namespace darwin {
             return false;
         }
 
-        NextFilterConnector& c = Core::instance().GetNextFilterconnector();
+        ANextFilterConnector& c = Core::instance().GetNextFilterconnector();
 
         c.Send(packet);
         return true;

@@ -19,13 +19,11 @@ namespace darwin {
 
     TcpServer::TcpServer(boost::asio::ip::address const& address,
                    int port_nb,
-                   int next_filter_port,
                    std::string const& output,
                    std::size_t threshold,
                    Generator& generator)
             : AServer(output, threshold, generator), 
               _address{address}, _port_nb{port_nb}, 
-              _port_nb_next{next_filter_port},
               _acceptor{_io_context, boost::asio::ip::tcp::endpoint(_address, port_nb)},
               _new_connection{_io_context} {
 
@@ -70,7 +68,6 @@ namespace darwin {
         if (!e) {
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
             auto sess = std::make_shared<TcpSession>(_new_connection, _manager, _generator);
-            sess->SetNextFilterPort(_port_nb_next);
             sess->SetOutputType(_output);
             sess->SetThreshold(_threshold);
             _manager.Start(sess);

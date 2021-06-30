@@ -28,7 +28,6 @@ namespace darwin {
         /// \param threshold Threshold at which the filter will raise a log.
         UnixServer(std::string const& socket_path,
                std::string const& output,
-               std::string const& next_filter_socket,
                std::size_t threshold,
                Generator& generator);
 
@@ -53,7 +52,6 @@ namespace darwin {
 
     private:
         std::string _socket_path; //!< Path to the UNIX socket to listen on.
-        std::string _socket_next; //!< Path to the next filter's UNIX socket.
         boost::asio::local::stream_protocol::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::local::stream_protocol::socket _new_connection; //!< Socket used to accept a new connection.
     };

@@ -12,7 +12,7 @@
 #include "Monitor.hpp"
 #include "ThreadGroup.hpp"
 #include "Network.hpp"
-#include "NextFilterConnector.hpp"
+#include "ANextFilterConnector.hpp"
 
 #include <boost/asio.hpp>
 
@@ -84,20 +84,21 @@ namespace darwin {
 
         bool IsDaemon() const;
 
-        NextFilterConnector& GetNextFilterconnector() noexcept;
+        bool SetNextFilterConnector(std::string const& path_address, bool is_udp);
+
+        ANextFilterConnector& GetNextFilterconnector();
 
     private:
         std::string _name;
         std::string _modConfigPath;
         std::string _monSocketPath;
         std::string _pidPath;
-        std::string _nextFilterUnixSocketPath;
         std::string _output;
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
 
-        std::optional<NextFilterConnector> _next_filter_connector;
+        std::unique_ptr<ANextFilterConnector> _next_filter_connector;
 
         network::NetworkSocketType _net_type;
         std::string _socketPath;
