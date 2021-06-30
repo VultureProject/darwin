@@ -25,7 +25,7 @@ namespace darwin {
         return true;
     }
 
-    void UnixNextFilterConnector::Send(boost::asio::const_buffer const& packet) {
+    void UnixNextFilterConnector::Send(std::shared_ptr<boost::asio::const_buffer> packet) {
         DARWIN_LOGGER;
         if(_nb_attempts > _max_attempts){
             DARWIN_LOG_ERROR("NextFilterConnector::Send:: Maximal number of attempts reached");
@@ -35,7 +35,7 @@ namespace darwin {
             std::this_thread::sleep_for(_attempts_delay_ms);
         }
 
-        boost::asio::async_write(_socket, packet, boost::bind(&UnixNextFilterConnector::SendCallback, this, 
+        boost::asio::async_write(_socket, *packet, boost::bind(&UnixNextFilterConnector::SendCallback, this, 
                                                             boost::asio::placeholders::error, 
                                                             boost::asio::placeholders::bytes_transferred,
                                                             packet));

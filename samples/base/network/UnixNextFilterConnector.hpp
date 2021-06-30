@@ -20,7 +20,7 @@ namespace darwin {
 
     private:
 
-        virtual void Send(boost::asio::const_buffer const& packet);
+        virtual void Send(std::shared_ptr<boost::asio::const_buffer> packet);
 
         std::string _socket_path;
         boost::asio::local::stream_protocol::socket _socket;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <list>
+#include <set>
 #include <chrono>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -23,12 +23,12 @@ namespace darwin {
 
     protected:
 
-        virtual void Send(boost::asio::const_buffer const& packet) = 0;
+        virtual void Send(std::shared_ptr<boost::asio::const_buffer> packet) = 0;
 
-        virtual /*?*/ void SendCallback(const boost::system::error_code& e, size_t size, boost::asio::const_buffer const& buffer);
+        virtual /*?*/ void SendCallback(const boost::system::error_code& e, size_t size, std::shared_ptr<boost::asio::const_buffer> buffer);
 
         boost::asio::io_context _io_context;
-        std::list<boost::asio::const_buffer> _buffer_list;
+        std::set<std::shared_ptr<boost::asio::const_buffer>> _buffer_set;
 
         size_t _max_attempts;
         size_t _nb_attempts;
