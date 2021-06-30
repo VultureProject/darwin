@@ -29,7 +29,6 @@ namespace darwin {
         /// \param threshold Threshold at which the filter will raise a log.
         TcpServer(boost::asio::ip::address const& address, 
                 int port,
-                int next_filter_port,
                 std::string const& output,
                 std::size_t threshold,
                 Generator& generator);
@@ -56,7 +55,6 @@ namespace darwin {
     private:
         boost::asio::ip::address _address;
         int _port_nb; //!< Path to the Tcp socket to listen on.
-        int _port_nb_next; //!< Path to the next filter's Tcp socket.
         boost::asio::ip::tcp::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::ip::tcp::socket _new_connection; //!< Socket used to accept a new connection.
     };
