@@ -16,17 +16,19 @@ namespace darwin {
     }
 
     void ANextFilterConnector::Send(DarwinPacket& packet) {
-        auto b = _buffer_list.insert(_buffer_list.end(), std::move(boost::asio::buffer(packet.Serialize())));
-        this->Send(*b);
+        std::vector<unsigned char> v = packet.Serialize();
+        std::shared_ptr<boost::asio::const_buffer> buf_ptr = std::make_shared<boost::asio::const_buffer>(v.data(), v.size());
+        _buffer_set.insert(buf_ptr);
+        this->Send(buf_ptr);
     }
 
-    void ANextFilterConnector::SendCallback(const boost::system::error_code& ec, size_t bytes_transferred, boost::asio::const_buffer const& buffer) {
+    void ANextFilterConnector::SendCallback(const boost::system::error_code& ec, size_t bytes_transferred, std::shared_ptr<boost::asio::const_buffer> buffer) {
         if(ec) {
             Send(buffer);
             return;
         }
 
-        //TODO  _buffer_list.remove(buffer); (remove buffer)
+        _buffer_set.erase(buffer);
         _nb_attempts = 0;
     }
 }
