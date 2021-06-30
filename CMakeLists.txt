@@ -74,6 +74,7 @@ include_directories(
         toolkit
         toolkit/thread-pool-cpp/include/
         samples/base
+        samples/base/network
         samples/
 	${HIREDIS_INCLUDE_DIRS}
 	${Boost_INCLUDE_DIRS}
@@ -98,17 +99,17 @@ set(
         samples/base/AlertManager.cpp samples/base/AlertManager.hpp
 
         samples/base/DarwinPacket.cpp samples/base/DarwinPacket.hpp
-        samples/base/ANextFilterConnector.cpp samples/base/ANextFilterConnector.hpp
-        samples/base/UnixNextFilterConnector.cpp samples/base/UnixNextFilterConnector.hpp
-        samples/base/TcpNextFilterConnector.cpp samples/base/TcpNextFilterConnector.hpp
+        samples/base/network/ANextFilterConnector.cpp samples/base/network/ANextFilterConnector.hpp
+        samples/base/network/UnixNextFilterConnector.cpp samples/base/network/UnixNextFilterConnector.hpp
+        samples/base/network/TcpNextFilterConnector.cpp samples/base/network/TcpNextFilterConnector.hpp
 
-        samples/base/AServer.cpp samples/base/AServer.hpp
-        samples/base/UnixServer.cpp samples/base/UnixServer.hpp
-        samples/base/TcpServer.cpp samples/base/TcpServer.hpp
+        samples/base/network/AServer.cpp samples/base/network/AServer.hpp
+        samples/base/network/UnixServer.cpp samples/base/network/UnixServer.hpp
+        samples/base/network/TcpServer.cpp samples/base/network/TcpServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
-        samples/base/ASession.cpp samples/base/ASession.hpp
-        samples/base/UnixSession.cpp samples/base/UnixSession.hpp
-        samples/base/TcpSession.cpp samples/base/TcpSession.hpp
+        samples/base/network/ASession.cpp samples/base/network/ASession.hpp
+        samples/base/network/UnixSession.cpp samples/base/network/UnixSession.hpp
+        samples/base/network/TcpSession.cpp samples/base/network/TcpSession.hpp
         samples/base/ATask.cpp samples/base/ATask.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp
