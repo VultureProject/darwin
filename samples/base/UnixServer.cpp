@@ -17,11 +17,10 @@ namespace darwin {
 
     UnixServer::UnixServer(std::string const& socket_path,
                    std::string const& output,
-                   std::string const& next_filter_socket,
                    std::size_t threshold,
                    Generator& generator)
             : AServer(output, threshold, generator), 
-              _socket_path{socket_path}, _socket_next{next_filter_socket},
+              _socket_path{socket_path},
               _acceptor{_io_context, boost::asio::local::stream_protocol::endpoint(
                                 socket_path)},
               _new_connection{_io_context} {
@@ -66,7 +65,6 @@ namespace darwin {
         if (!e) {
             DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
             auto sess = std::make_shared<UnixSession>(_new_connection, _manager, _generator);
-            sess->SetNextFilterSocketPath(_socket_next);
             sess->SetOutputType(_output);
             sess->SetThreshold(_threshold);
             _manager.Start(sess);
