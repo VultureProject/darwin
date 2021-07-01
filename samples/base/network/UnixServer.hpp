@@ -31,7 +31,7 @@ namespace darwin {
                std::size_t threshold,
                Generator& generator);
 
-        ~UnixServer() = default;
+        virtual ~UnixServer() = default;
 
         // Make the UnixServer non copyable & non movable
         UnixServer(UnixServer const&) = delete;

@@ -33,7 +33,7 @@ namespace darwin {
                 std::size_t threshold,
                 Generator& generator);
 
-        ~TcpServer() = default;
+        virtual ~TcpServer() = default;
 
         // Make the TcpServer non copyable & non movable
         TcpServer(TcpServer const&) = delete;

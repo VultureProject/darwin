@@ -9,6 +9,7 @@
 #include <chrono>
 #include <vector>
 #include <ctime>
+#include <iomanip>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -205,18 +206,19 @@ namespace darwin {
         DARWIN_LOGGER;
 
         const unsigned char * evt_id = _packet.GetEventId();
-        char str[37] = {};
-        snprintf(str,
-                37,
-                "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                evt_id[0], evt_id[1], evt_id[2], evt_id[3],
-                evt_id[4], evt_id[5], evt_id[6], evt_id[7],
-                evt_id[8], evt_id[9], evt_id[10], evt_id[11],
-                evt_id[12], evt_id[13], evt_id[14], evt_id[15]
-        );
-        std::string res(str);
-        DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + res);
-        return res;
+        
+        std::ostringstream oss;
+        auto default_flags = oss.flags();
+
+        for(size_t i=0; i<16;i++){
+            if(i==4 || i==6 || i==8 || i==10){
+                oss.flags(default_flags);
+                oss << '-';
+            }
+            oss << std::hex << std::setw(2) << static_cast<unsigned int>(evt_id[i]);
+        }
+        DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + oss.str());
+        return oss.str();
     }
 
     
