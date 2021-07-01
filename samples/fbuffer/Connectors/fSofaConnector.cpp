@@ -11,26 +11,25 @@ fSofaConnector::fSofaConnector(boost::asio::io_context &context, std::string &fi
                     AConnector(context, darwin::SOFA, filter_socket_path, interval, redis_lists, minLogLen) {}
 
 bool fSofaConnector::ParseInputForRedis(std::map<std::string, std::string> &input_line) {
-    this->_input_line = input_line;
-    this->_entry.clear();
+    std::string entry;
 
-    std::string source = this->GetSource();
+    std::string source = this->GetSource(input_line);
 
-    if (not this->ParseData("ip"))
+    if (not this->ParseData(input_line, "ip", entry))
         return false;
-    if (not this->ParseData("hostname"))
+    if (not this->ParseData(input_line, "hostname", entry))
         return false;
-    if (not this->ParseData("os"))
+    if (not this->ParseData(input_line, "os", entry))
         return false;
-    if (not this->ParseData("proto"))
+    if (not this->ParseData(input_line, "proto", entry))
         return false;
-    if (not this->ParseData("port"))
+    if (not this->ParseData(input_line, "port", entry))
         return false;
 
     for (const auto &redis_config : this->_redis_lists) {
         // If the source in the input is equal to the source in the redis list, or the redis list's source is ""
         if (not redis_config.first.compare(source) or redis_config.first.empty())
-                this->REDISAddEntry(this->_entry, redis_config.second);
+                this->REDISAddEntry(entry, redis_config.second);
     }
     return true;
 }
