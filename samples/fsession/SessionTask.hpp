@@ -61,6 +61,13 @@ private:
     /// \return true on success, false otherwise.
     bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
 
+    /// Reset the expiration of key(s) in Redis depending on cases
+    /// will reset the expiration of key(s) <token>_<repo_id> with _expiration
+    /// will reset the expiration of the key <token> with _expiration if current TTL is lower
+    ///
+    /// \return true on success, false otherwise
+    bool REDISResetExpire(const std::string &token, const std::string &repo_ids);
+
     /// Read a session number (from Cookie or HTTP header) from the session and
     /// perform a redis lookup.
     ///
@@ -79,4 +86,5 @@ private:
     // Session_status in Redis
     std::string _token; // The token to check
     std::vector<std::string> _repo_ids; // The associated repository IDs to check
+    uint64_t _expiration = 0; // The expiration to set
 };
