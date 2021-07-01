@@ -19,7 +19,7 @@ namespace darwin {
             /// \param threshold Threshold at which the filter will raise a log.
             // AServer() = default;
 
-            ~AServer() = default;
+            virtual ~AServer() = default;
 
             // Make the server non copyable & non movable
             AServer(AServer const&) = delete;
