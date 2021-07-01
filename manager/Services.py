@@ -373,6 +373,8 @@ class Services:
                     prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
+                
+                new[n]['network']['address_path'] = new[n]['socket']
 
                 new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
                     prefix=prefix, suffix=suffix,
