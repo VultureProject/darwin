@@ -17,7 +17,7 @@ namespace darwin {
         : _type{type}, _response{response}, _filter_code{filter_code},
         _parsed_certitude_size{certitude_size}, _parsed_body_size{body_size} 
     {
-        std::copy(&event_id[0], &event_id[15], &this->_evt_id[0]);
+        std::memcpy(this->_evt_id, event_id, 16);
 
     }
 
@@ -26,7 +26,7 @@ namespace darwin {
         _parsed_certitude_size{input.certitude_size}, _parsed_body_size{input.body_size} 
     
     {
-        std::copy(&input.evt_id[0], &input.evt_id[15], &this->_evt_id[0]);
+        std::memcpy(this->_evt_id, input.evt_id, 16);
         if(input.certitude_size > 0)
             AddCertitude(input.certitude_list[0]);
     }
@@ -42,7 +42,7 @@ namespace darwin {
             {0}
         };
 
-        std::copy(&this->_evt_id[0], &this->_evt_id[15], &header.evt_id[0]);
+        std::memcpy(header.evt_id, this->_evt_id, 16);
 
         size_t size = sizeof(header) + _body.size();
         
