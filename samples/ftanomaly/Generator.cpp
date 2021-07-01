@@ -34,22 +34,52 @@ bool Generator::ConfigureAlerting(const std::string& tags) {
 bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("TAnomaly:: Generator:: Loading configuration...");
+    
+    std::string redis_socket_path, redis_ip;
+    unsigned int redis_port = 6379;
 
     _redis_internal = darwin::Core::instance().GetFilterName() + REDIS_INTERNAL_LIST; // Generating name for the internaly used redis set
     bool start_detection_thread = false;  //whether to start the anomaly thread
     unsigned int detection_frequency = 300; //detection thread launching frequency in seconds
-    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if(not configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("TAnomaly::Generator:: 'redis_socket_path' parameter missing, mandatory");
+    if(configuration.HasMember("redis_socket_path")) {
+        if (not configuration["redis_socket_path"].IsString()) {
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_socket_path' needs to be a string");
+            return false;
+        } else {
+            redis_socket_path = configuration["redis_socket_path"].GetString();
+        }
+    }
+
+    if(configuration.HasMember("redis_ip")) {
+        if (not configuration["redis_ip"].IsString()) {
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_ip' needs to be a string");
+            return false;
+        } else {
+            redis_ip = configuration["redis_ip"].GetString();
+        }
+    }
+
+    if(configuration.HasMember("redis_port")) {
+        if (not configuration["redis_port"].IsUint()) {
+            DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_port' needs to be an unsigned integer");
+            return false;
+        } else {
+            redis_port = configuration["redis_port"].GetUint();
+        }
+    }
+
+    darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+    // Done in AlertManager before arriving here, but will allow better transition from redis singleton
+    if (not redis_socket_path.empty()) {
+        redis.SetUnixConnection(redis_socket_path);
+    } else if (not redis_ip.empty()) {
+        redis.SetIpConnection(redis_ip, redis_port);
+    } else {
+        DARWIN_LOG_ERROR("TAnomaly:: Generator:: no valid way to connect to Redis, "
+                            "please set 'redis_socket_path' or 'redis_ip' (and optionally 'redis_port').");
         return false;
     }
-    if (not configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: 'redis_socket_path' needs to be a string");
-        return false;
-    }
-    std::string redis_socket_path = configuration["redis_socket_path"].GetString();
-    redis.SetUnixConnection(redis_socket_path);
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
     if(not redis.FindAndConnect()) {
         DARWIN_LOG_CRITICAL("TAnomaly:: Generator:: Could not connect to a redis!");
@@ -57,7 +87,10 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     // start detection thread if the local redis server is a master
-    if(darwin::toolkit::RedisManager::TestIsMaster(redis_socket_path)) {
+    if(not redis_socket_path.empty() and darwin::toolkit::RedisManager::TestIsMaster(redis_socket_path)) {
+        DARWIN_LOG_INFO("TAnomaly::Generator:: direct connection to redis master found, detection thread will be started");
+        start_detection_thread = true;
+    } else if (not redis_ip.empty() and darwin::toolkit::RedisManager::TestIsMaster(redis_ip, redis_port)) {
         DARWIN_LOG_INFO("TAnomaly::Generator:: direct connection to redis master found, detection thread will be started");
         start_detection_thread = true;
     }

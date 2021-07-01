@@ -32,7 +32,7 @@ protected:
     virtual bool ConfigureAlerting(const std::string& tags) override final;
 
 private:
-    bool ConfigRedis(std::string redis_socket_path);
+    bool ConfigRedis(const std::string& redis_socket_path, const std::string& redis_ip, unsigned int redis_port);
 
     std::string _redis_list_name;
     std::string _redis_channel_name;
