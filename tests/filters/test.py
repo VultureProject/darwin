@@ -8,6 +8,7 @@ import filters.fyara as fyara
 import filters.fbuffer as fbuffer
 import filters.fvast as fvast
 import filters.fvaml as fvaml
+import filters.fsession as fsession
 
 from tools.output import print_results
 
@@ -25,6 +26,7 @@ def run():
     fbuffer.run()
     fvast.run()
     fvaml.run()
+    fsession.run()
 
     print()
     print()
