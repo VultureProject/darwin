@@ -20,7 +20,7 @@ public:
     Generator(size_t nb_task_threads);
     ~Generator() = default;
 
-    virtual long GetFilterCode() const override final;
+    virtual long GetFilterCode() const;
 
 public:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;

@@ -209,8 +209,7 @@ def redis_test(test_name, data, expected_data):
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = tanomaly_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         data,
@@ -353,8 +352,7 @@ def thread_working_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = tanomaly_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         [
@@ -413,8 +411,7 @@ def alert_in_redis_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = tanomaly_filter.get_darwin_api()
 
     data = tanomaly_filter.get_test_data()
     darwin_api.bulk_call(
@@ -466,9 +463,7 @@ def alert_published_test():
     if not tanomaly_filter.valgrind_start():
         return False
     # SEND TEST
-
-    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = tanomaly_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         tanomaly_filter.get_test_data(),
@@ -536,8 +531,7 @@ def alert_in_file_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=tanomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = tanomaly_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         tanomaly_filter.get_test_data(),
