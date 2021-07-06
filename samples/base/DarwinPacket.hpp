@@ -46,7 +46,11 @@ namespace darwin {
 
         enum darwin_filter_response_type GetResponse() const;
 
+        void SetResponse(enum darwin_filter_response_type);
+
         long GetFilterCode() const;
+
+        void SetFilterCode(long filter_code);
 
         const unsigned char * GetEventId() const;
         
@@ -61,6 +65,8 @@ namespace darwin {
         std::string& GetMutableBody();
 
         const std::vector<unsigned int>& GetCertitudeList() const;
+
+        std::vector<unsigned int>& GetMutableCertitudeList();
 
         inline void AddCertitude(unsigned int certitude) {
             this->_certitude_list.push_back(certitude);
