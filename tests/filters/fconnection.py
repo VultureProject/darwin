@@ -65,8 +65,7 @@ def new_connection_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=connection_filter.socket,
-                           socket_type="unix", )
+    darwin_api = connection_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [
@@ -125,8 +124,7 @@ def known_connection_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=connection_filter.socket,
-                           socket_type="unix", )
+    darwin_api = connection_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [
@@ -184,8 +182,7 @@ def new_connection_to_known_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=connection_filter.socket,
-                           socket_type="unix", )
+    darwin_api = connection_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         [
