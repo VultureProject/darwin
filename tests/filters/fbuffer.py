@@ -132,8 +132,7 @@ def redis_test(test_name, data, expectations, config=None, bulk=True):
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=buffer_filter.socket,
-                           socket_type="unix", )
+    darwin_api = buffer_filter.get_darwin_api()
 
     if bulk:
         darwin_api.bulk_call(
@@ -413,7 +412,7 @@ def thread_working_test():
     buffer_filter = Buffer()
     buffer_filter.configure(config_buffer)
 
-    test_filter = Filter(filter_name="anomaly", socket_path="/tmp/anomaly.sock")
+    test_filter = Filter(filter_name="anomaly", socket_path="/tmp/anomaly.sock", socket_type='unix')
     test_filter.configure(config_test)
 
 
@@ -426,8 +425,7 @@ def thread_working_test():
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=buffer_filter.socket,
-                           socket_type="unix", )
+    darwin_api = buffer_filter.get_darwin_api()
 
     data = buffer_filter.get_test_data()
 
@@ -539,7 +537,7 @@ def fanomaly_connector_and_send_test():
     buffer_filter = Buffer()
     buffer_filter.configure(config_buffer)
 
-    test_filter = Filter(filter_name="anomaly", socket_path="/tmp/anomaly.sock")
+    test_filter = Filter(filter_name="anomaly", socket_path="/tmp/anomaly.sock", socket_type='unix')
     test_filter.configure(config_test)
 
     # START FILTER
@@ -554,8 +552,7 @@ def fanomaly_connector_and_send_test():
     # SEND TEST
     data = buffer_filter.get_test_data()
 
-    darwin_api = DarwinApi(socket_path=buffer_filter.socket,
-                           socket_type="unix")
+    darwin_api = buffer_filter.get_darwin_api()
 
     darwin_api.bulk_call(
         data,
@@ -654,7 +651,7 @@ def sum_tests(test_name, values=[], required_log_lines=0, expected_alert=1, init
     buffer_filter = Buffer()
     buffer_filter.configure(config_buffer)
 
-    test_filter = Filter(filter_name="test", socket_path="/tmp/test.sock")
+    test_filter = Filter(filter_name="test", socket_path="/tmp/test.sock", socket_type='unix')
     test_filter.configure(config_test)
 
     # Potentially add init data to redis
@@ -677,8 +674,7 @@ def sum_tests(test_name, values=[], required_log_lines=0, expected_alert=1, init
 
 
         # SEND values
-        darwin_api = DarwinApi(socket_path=buffer_filter.socket,
-                            socket_type="unix")
+        darwin_api = buffer_filter.get_darwin_api()
         for test_value in values:
             darwin_api.call(
                 ["", test_value],

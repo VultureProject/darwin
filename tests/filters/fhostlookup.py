@@ -92,8 +92,7 @@ def test(test_name, init_data, data, expected_certitudes, db_type="json"):
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=hostlookup_filter.socket,
-                           socket_type="unix", )
+    darwin_api = hostlookup_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         data,

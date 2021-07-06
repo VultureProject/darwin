@@ -5,7 +5,7 @@ import os.path
 import uuid
 import subprocess
 
-from conf import DEFAULT_FILTER_PATH, VALGRIND_MEMCHECK, TEST_FILES_DIR
+from conf import DEFAULT_FILTER_PATH, VALGRIND_MEMCHECK, TEST_FILES_DIR, DEFAULT_PROTOCOL, DEFAULT_ADDRESS
 from darwin import DarwinApi
 from time import sleep
 from tools.redis_utils import RedisServer
@@ -18,9 +18,15 @@ REDIS_CHANNEL_NAME = "darwin.tests"
 
 class Filter():
 
-    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", log_filepath=None):
+    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", socket_type=DEFAULT_PROTOCOL, log_filepath=None):
         self.filter_name = filter_name
-        self.socket = socket_path if socket_path else "{}/{}.sock".format(TEST_FILES_DIR, filter_name)
+        self.socket_type = socket_type
+        if socket_type == 'unix':
+            self.socket = socket_path if socket_path else "{}/{}.sock".format(TEST_FILES_DIR, filter_name)
+        elif socket_type == 'tcp':
+            self.socket = socket_path if socket_path else DEFAULT_ADDRESS
+            self.host = self.socket.split(':')[0]
+            self.port = int(self.socket.split(':')[1])
         self.config = config_file if config_file else "{}/{}.conf".format(TEST_FILES_DIR, filter_name)
         self.path = path if path else "{}darwin_{}".format(DEFAULT_FILTER_PATH, filter_name)
         self.monitor = monitoring_socket_path if monitoring_socket_path else "{}/{}_mon.sock".format(TEST_FILES_DIR, filter_name)
@@ -36,6 +42,15 @@ class Filter():
         self.next_filter_socket_path = next_filter_socket_path
         self.log_filepath = log_filepath
         self.prepare_log_file()
+
+    def get_darwin_api(self):
+        return DarwinApi(socket_type=self.socket_type, socket_path=self.socket, socket_host=self.host, socket_port=self.port)
+        if self.socket_type == 'unix':
+            api = DarwinApi(socket_type='unix', socket_path=self.socket)
+        elif self.socket_type == 'tcp':
+            api = DarwinApi(socket_type='tcp', socket_host=self.socket.split(':')[0], socket_port=int(self.socket.split(':')[1]))
+        else:
+            return None
 
     def prepare_log_file(self):
         filepath = self.log_filepath if self.log_filepath else DEFAULT_LOG_FILE
@@ -179,7 +194,7 @@ class Filter():
         """
         Send a single line.
         """
-        api = DarwinApi(socket_type="unix", socket_path=self.socket)
+        api = self.get_darwin_api()
         ret = api.call(line, response_type="back")
 
         api.close()
