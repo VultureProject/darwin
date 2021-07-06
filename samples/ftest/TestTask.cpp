@@ -66,7 +66,14 @@ void TestTask::operator()() {
                     _packet.AddCertitude(DARWIN_ERROR_RETURN);
                 }
             }
-            else {
+            else if (_line == "load_test") {
+                DARWIN_LOG_DEBUG("TestTask:: load_test triggered, doing work for some times (2 000 000 mults)");
+                int n = _line.size();
+                for(int i=0; i< 2000000;i++){
+                    n *=i;
+                }
+                _packet.AddCertitude(n & 1);
+            } else {
                 DARWIN_LOG_DEBUG("TestTask:: not triggered specific action, generating alert by default");
                 DARWIN_ALERT_MANAGER.Alert(_line, 100, _s->Evt_idToString());
                 _packet.AddCertitude(0);

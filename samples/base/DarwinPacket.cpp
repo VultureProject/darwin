@@ -103,8 +103,16 @@ namespace darwin {
         return this->_response;
     }
 
+    void DarwinPacket::SetResponse(enum darwin_filter_response_type response) {
+        this->_response = response; 
+    }
+
     long DarwinPacket::GetFilterCode() const {
         return this->_filter_code;
+    }
+
+    void DarwinPacket::SetFilterCode(long filter_code) {
+        this->_filter_code = filter_code;
     }
 
     const unsigned char * DarwinPacket::GetEventId() const {
@@ -132,6 +140,10 @@ namespace darwin {
     }
 
     const std::vector<unsigned int>& DarwinPacket::GetCertitudeList() const {
+        return this->_certitude_list;
+    }
+
+    std::vector<unsigned int>& DarwinPacket::GetMutableCertitudeList() {
         return this->_certitude_list;
     }
 

@@ -60,8 +60,6 @@ public:
     Configure(std::string const& configFile,
               const std::size_t cache_size) final;
 
-    virtual long GetFilterCode() const = 0;
-
     virtual tp::ThreadPool& GetTaskThreadPool() final;
 
 private:

@@ -96,6 +96,8 @@ namespace darwin {
             return;
         }
         (*this)();
+        
+        _packet.SetFilterCode(this->GetFilterCode());
         auto& body = _packet.GetMutableBody();
         body.clear();
         body.append(_response_body);

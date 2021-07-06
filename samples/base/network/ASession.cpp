@@ -168,9 +168,9 @@ namespace darwin {
 
     bool ASession::SendToClient(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
-        auto vec = packet.Serialize();
-        DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(vec.size()));
-        this->WriteToClient(vec);
+        std::vector<unsigned char> serialized_packet = std::move(packet.Serialize());
+        DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(serialized_packet.size()));
+        this->WriteToClient(serialized_packet);
         return true;
     }
 
