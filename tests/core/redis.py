@@ -82,13 +82,13 @@ def master_replica():
     message = master.channel_get_message()
 
     if message is '':
-        logging.error("master_replica: expected to get a message in channel {} " +
-                        "but got nothing".format(REDIS_CHANNEL_NAME))
+        logging.error(("master_replica: expected to get a message in channel {} " +
+                        "but got nothing").format(REDIS_CHANNEL_NAME))
         return False
 
     if message != REDIS_CHANNEL_TRIGGER:
-        logging.error("master_replica: expected to get a message in channel {} saying '{}' " +
-                        "but got '{}' instead".format(REDIS_CHANNEL_NAME, REDIS_CHANNEL_TRIGGER, message))
+        logging.error(("master_replica: expected to get a message in channel {} saying '{}' " +
+                        "but got '{}' instead").format(REDIS_CHANNEL_NAME, REDIS_CHANNEL_TRIGGER, message))
         return False
 
     return True
@@ -143,8 +143,8 @@ def master_replica_master_temp_fail():
         num_list_entries = master_connection.llen(REDIS_LIST_NAME)
 
     if num_list_entries != 1:
-        logging.error("master_replica_master_temp_fail: wrong number of entries in the redis list {}: " +
-                        "expected 1 but got {}".format(REDIS_LIST_NAME, num_list_entries))
+        logging.error(("master_replica_master_temp_fail: wrong number of entries in the redis list {}: " +
+                        "expected 1 but got {}").format(REDIS_LIST_NAME, num_list_entries))
         return False
 
     return True
@@ -271,7 +271,7 @@ def multi_thread_master():
 
     thread_list = []
     def thread_brute(filter, count_log):
-        for count in range(0, count_log):
+        for _ in range(0, count_log):
             try:
                 filter.send_single(REDIS_LIST_TRIGGER)
             except:
@@ -279,7 +279,7 @@ def multi_thread_master():
         return True
 
 
-    for num in range(0, 5):
+    for _ in range(0, 5):
         thread_list.append(threading.Thread(target=thread_brute, args=(filter, 500)))
 
     for thread in thread_list:
@@ -294,7 +294,7 @@ def multi_thread_master():
 
     # 6 threads : 5 task threads  + the main thread for configuring the redis socket
     if number != 6:
-        logging.error("multi_thread_master: wrong number of active connections: expected 5 but got " + str(number))
+        logging.error("multi_thread_master: wrong number of active connections: expected 6 but got {}".format(number))
         return False
 
     return True
@@ -313,7 +313,7 @@ def master_replica_discovery_rate_limiting():
         # success
         filter.send_single(REDIS_LIST_TRIGGER)
     except Exception as e:
-        logging.error("master_replica_discovery_rate_limiting: Could not connect to test filter: {}".format(function_name, e))
+        logging.error("master_replica_discovery_rate_limiting: Could not connect to test filter: {}".format(e))
         return False
 
     # master shuts down
@@ -333,7 +333,7 @@ def master_replica_discovery_rate_limiting():
 
     thread_list = []
 
-    for num in range(0, 5):
+    for _ in range(0, 5):
         thread_list.append(threading.Thread(target=thread_brute_time, args=(filter, 9)))
 
     # ought to crash if command fails
