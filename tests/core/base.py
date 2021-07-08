@@ -14,8 +14,12 @@ def run():
     tests = [
         check_start_stop,
         check_pid_file,
-        check_socket_create_delete,
-        check_socket_connection,
+        check_unix_socket_create_delete,
+        check_unix_socket_connection,
+        check_tcp_socket_create_delete,
+        check_tcp_socket_connection,
+        check_tcp6_socket_create_delete,
+        check_tcp6_socket_connection,
         check_socket_monitor_create_delete,
         check_socket_monitor_connection,
         check_start_wrong_conf,
@@ -78,39 +82,129 @@ def check_pid_file():
     return True
 
 
-def check_socket_create_delete():
-    filter = Filter(filter_name="test")
-    pid = -1
+def check_unix_socket_create_delete():
+    filter = Filter(filter_name="test", socket_type='unix')
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
 
     if not access(filter.socket, F_OK):
-        logging.error("check_socket_create_delete: Socket file not accesible")
+        logging.error("check_unix_socket_create_delete: Socket file not accesible")
         return False
 
     filter.stop()
 
     if access(filter.socket, F_OK):
-        logging.error("check_socket_create_delete: Socket file not deleted")
+        logging.error("check_unix_socket_create_delete: Socket file not deleted")
         return False
 
     return True
 
 
-def check_socket_connection():
-    filter = Filter(filter_name="test")
-    pid = -1
+def check_unix_socket_connection():
+    filter = Filter(filter_name="test", socket_type='unix')
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
 
     try:
-        api = DarwinApi(socket_path=filter.socket, socket_type="unix")
+        api = filter.get_darwin_api()
         api.call("test\n", filter_code=0x74657374, response_type="back")
         api.close()
     except Exception as e:
-        logging.error("check_socket_connection_back: Error connecting to socket: {}".format(e))
+        logging.error("check_unix_socket_connection: Error connecting to socket: {}".format(e))
+        return False
+
+    filter.stop()
+    return True
+
+
+def check_tcp_socket_create_delete():
+    filter = Filter(filter_name="test", socket_type='tcp', socket_path='127.0.0.1:12323')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+    with socket.socket(socket.AF_INET) as s:
+        s.settimeout(2)
+        res = s.connect_ex(('127.0.0.1',12323))
+        s.close()
+
+    if res != 0:
+        logging.error("check_tcp_socket_create_delete: Socket file not accesible")
+        return False
+    filter.stop()
+
+    with socket.socket(socket.AF_INET) as s:
+        s.settimeout(2)
+        res = s.connect_ex(('127.0.0.1',12323))
+        s.close()
+    
+    if res == 0:
+        logging.error("check_tcp_socket_create_delete: Socket file not deleted")
+        return False
+
+    return True
+
+
+def check_tcp_socket_connection(): #todo
+    filter = Filter(filter_name="test", socket_type='tcp', socket_path='127.0.0.1:12123')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+
+    try:
+        api = filter.get_darwin_api()
+        api.call("test\n", filter_code=0x74657374, response_type="back")
+        api.close()
+    except Exception as e:
+        logging.error("check_tcp_socket_connection: Error connecting to socket: {}".format(e))
+        return False
+
+    filter.stop()
+    return True
+
+
+def check_tcp6_socket_create_delete():
+    filter = Filter(filter_name="test", socket_type='tcp', socket_path='[::1]:12123')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+
+    with socket.socket(socket.AF_INET6) as s:
+        s.settimeout(2)
+        res = s.connect_ex(('::1',12123))
+        s.close()
+
+    if res != 0:
+        logging.error("check_tcp6_socket_create_delete: Socket file not accesible")
+        return False
+
+    filter.stop()
+
+    with socket.socket(socket.AF_INET6) as s:
+        s.settimeout(2)
+        res = s.connect_ex(('::1',12123))
+        s.close()
+    
+    if res == 0:
+        logging.error("check_tcp6_socket_create_delete: Socket file not deleted")
+        return False
+
+    return True
+
+
+def check_tcp6_socket_connection():
+    filter = Filter(filter_name="test", socket_type='tcp', socket_path='[::1]:1111')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+
+    try:
+        api = filter.get_darwin_api()
+        api.call("test\n", filter_code=0x74657374, response_type="back")
+        api.close()
+    except Exception as e:
+        logging.error("check_tcp6_socket_connection: Error connecting to socket: {}".format(e))
         return False
 
     filter.stop()
@@ -119,7 +213,6 @@ def check_socket_connection():
 
 def check_socket_monitor_create_delete():
     filter = Filter(filter_name="test")
-    pid = -1
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
@@ -139,7 +232,6 @@ def check_socket_monitor_create_delete():
 
 def check_socket_monitor_connection():
     filter = Filter(filter_name="test")
-    pid = -1
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()

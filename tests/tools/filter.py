@@ -19,13 +19,7 @@ class Filter():
 
     def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", socket_type=DEFAULT_PROTOCOL):
         self.filter_name = filter_name
-        self.socket_type = socket_type
-        if socket_type == 'unix':
-            self.socket = socket_path if socket_path else "{}/{}.sock".format(TEST_FILES_DIR, filter_name)
-        elif socket_type == 'tcp':
-            self.socket = socket_path if socket_path else DEFAULT_ADDRESS
-            self.host = self.socket.split(':')[0]
-            self.port = int(self.socket.split(':')[1])
+        self.set_socket_info(socket_type, socket_path)
         self.config = config_file if config_file else "{}/{}.conf".format(TEST_FILES_DIR, filter_name)
         self.path = path if path else "{}darwin_{}".format(DEFAULT_FILTER_PATH, filter_name)
         self.monitor = monitoring_socket_path if monitoring_socket_path else "{}/{}_mon.sock".format(TEST_FILES_DIR, filter_name)
@@ -36,14 +30,24 @@ class Filter():
         self.pubsub = None
         self.prepare_log_file()
 
+    def set_socket_info(self, socket_type, socket_path_address):
+        self.socket_type = socket_type
+        if socket_type == 'unix':
+            self.socket = socket_path_address if socket_path_address else "{}/{}.sock".format(TEST_FILES_DIR, self.filter_name)
+            self.host = None
+            self.port = -1
+        elif socket_type == 'tcp':
+            self.socket = socket_path_address if socket_path_address else default_address
+            splitted_address = self.socket.rsplit(':', 1)
+            if '[' in splitted_address[0]: # ipv6 address
+                self.socket_type = 'tcp6'
+                self.host = splitted_address[0][1:-1]
+            else:
+                self.host = splitted_address[0]
+            self.port = int(splitted_address[1])
+
     def get_darwin_api(self):
         return DarwinApi(socket_type=self.socket_type, socket_path=self.socket, socket_host=self.host, socket_port=self.port)
-        if self.socket_type == 'unix':
-            api = DarwinApi(socket_type='unix', socket_path=self.socket)
-        elif self.socket_type == 'tcp':
-            api = DarwinApi(socket_type='tcp', socket_host=self.socket.split(':')[0], socket_port=int(self.socket.split(':')[1]))
-        else:
-            return None
 
     def prepare_log_file(self):
         # TODO variabilize once path can be changed
