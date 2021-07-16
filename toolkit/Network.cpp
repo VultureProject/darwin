@@ -120,25 +120,20 @@ namespace darwin {
             size_t colon = path_address.rfind(':');
             if (colon != std::string::npos) {
                 boost::system::error_code e;
-                auto addr = path_address.substr(0, colon);
+                std::string addr = path_address.substr(0, colon);
                 if(addr.find('[') != std::string::npos && addr.rfind(']') != std::string::npos) {
                     addr.pop_back();
                     addr.erase(0, 1);
                 }
-                auto port = path_address.substr(colon+1, path_address.length()-1);
+                std::string port = path_address.substr(colon+1, path_address.length()-1);
                 bool portRes = ParsePort(port.c_str(), out_port);
 
-                out_net_address = boost::asio::ip::make_address(addr, e); 
                 if( ! portRes || e.failed()) {
                     DARWIN_LOG_CRITICAL("Network::ParseSocketAddress::Error while parsing the ip address: " + path_address);
                     return false;
                 }
-
-                if(is_udp) {
-                    out_net_type = NetworkSocketType::Udp;
-                } else {
-                    out_net_type = NetworkSocketType::Tcp;
-                }
+                out_net_address = boost::asio::ip::make_address(addr, e); 
+                out_net_type= is_udp ? NetworkSocketType::Udp : NetworkSocketType::Tcp;
             } else {
                 out_net_type = NetworkSocketType::Unix;
                 out_unix_path = path_address;

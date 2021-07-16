@@ -17,11 +17,13 @@
 #include "Logger.hpp"
 #include "UnixServer.hpp"
 #include "TcpServer.hpp"
+#include "UdpServer.hpp"
 #include "Core.hpp"
 #include "Stats.hpp"
 #include "StringUtils.hpp"
 #include "UnixNextFilterConnector.hpp"
 #include "TcpNextFilterConnector.hpp"
+#include "UdpNextFilterConnector.hpp"
 
 #include <boost/asio.hpp>
 
@@ -65,10 +67,9 @@ namespace darwin {
                     server = std::make_unique<TcpServer>(_net_address, _net_port, _output, _threshold, gen);
                     break;
                 case network::NetworkSocketType::Udp:
-                    //not yet implemented
                     DARWIN_LOG_DEBUG("Core::run:: UDP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
-                    DARWIN_LOG_CRITICAL("Core:: Run:: UDP Not implemented");
-                    __attribute__((fallthrough));
+                    server = std::make_unique<UdpServer>(_net_address, _net_port, _output, _threshold, gen);
+                    break;
                 default:
                     DARWIN_LOG_CRITICAL("Core:: Run:: Network Configuration problem");
                     raise(SIGTERM);
@@ -97,7 +98,7 @@ namespace darwin {
                 raise(SIGTERM);
             }
             DARWIN_LOG_DEBUG("Core::run:: Joining monitoring thread...");
-           t_nextfilter.join();
+            t_nextfilter.join();
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {
@@ -127,11 +128,11 @@ namespace darwin {
         std::string log_level;
 
         bool is_udp = false;
-
+        bool is_next_filter_udp = false;
         // OPTIONS
         log.setLevel(logger::Warning); // Log level by default
         opt = -1;
-        while((opt = getopt(ac, av, ":l:hu")) != -1)
+        while((opt = getopt(ac, av, ":l:huv")) != -1)
         {
             DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
             DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
@@ -160,6 +161,9 @@ namespace darwin {
                 case 'u':
                     is_udp = true;
                     break;
+                case 'v':
+                    is_next_filter_udp = true;
+                    break;
             }
         }
 
@@ -180,7 +184,7 @@ namespace darwin {
         _pidPath = av[optind + 4];
         _output = av[optind + 5];
 
-        if (!SetNextFilterConnector(std::string(av[optind + 6]), is_udp))
+        if (!SetNextFilterConnector(std::string(av[optind + 6]), is_next_filter_udp))
             return false;
         if (!GetULArg(_nbThread, av[optind + 7]))
             return false;
@@ -209,10 +213,10 @@ namespace darwin {
                 _next_filter_connector = std::make_unique<TcpNextFilterConnector>(addr, port);
                 return true;
             case network::NetworkSocketType::Udp:
-                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: UDP Not implemented");
-                return false;
+                _next_filter_connector = std::make_unique<UdpNextFilterConnector>(addr, port);
+                return true;
             default:
-                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: Next Filter Configuration error");
+                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: Next Filter Configuration error : unrecognized type");
                 return false;
         }
         return false;

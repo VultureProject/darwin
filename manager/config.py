@@ -190,6 +190,17 @@ conf_v2_schema = {
                         "default": "NONE"
                         },
                     "next_filter": {"type": "string"},
+                    "next_filter_network": {
+                        "type": "object",
+                        "properties": {
+                            "socket_type":{
+                                "type":"string",
+                                "enum": ["UNIX", "TCP", "UDP"],
+                                "default":"UNIX"
+                                },
+                            "address_path": {"type": "string"}
+                            }
+                        },
                     "threshold": {
                         "type": "integer",
                         "default": 100
@@ -287,6 +298,10 @@ def complete_filters_conf(prefix, suffix):
                 prefix=prefix, suffix=suffix,
                 next_filter=filter['next_filter']
             )
+            if 'next_filter_network' not in filter:
+                filter['next_filter_network'] = { "socket_type":"UNIX", "address_path":filter['next_filter_unix_socket'] }
+            elif filter['next_filter_network']['socket_type'] == "UNIX":
+                filter['next_filter_network']['address_path'] = filter['next_filter_unix_socket']
 
         filter['socket'] = '{prefix}/sockets{suffix}/{filter}{extension}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
         filter['socket_link'] = '{prefix}/sockets{suffix}/{filter}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'])

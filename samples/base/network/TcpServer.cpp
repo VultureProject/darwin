@@ -33,10 +33,8 @@ namespace darwin {
 
     void TcpServer::Clean() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
+        DARWIN_LOG_DEBUG("TcpServer::Clean:: Cleaning server...");
         _manager.StopAll();
-        //todo: can't work, to be changed
-        // unlink? what? why?
     }
 
     void TcpServer::HandleStop(boost::system::error_code const& error __attribute__((unused)), int sig __attribute__((unused))) {
@@ -46,7 +44,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::stopping);
-        DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
+        DARWIN_LOG_DEBUG("TcpServer::Handle:: Closing acceptor");
         _acceptor.close();
         _io_context.stop();
     }
@@ -61,19 +59,19 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (!_acceptor.is_open()) {
-            DARWIN_LOG_INFO("Server::HandleAccept:: Acceptor closed, closing server...");
+            DARWIN_LOG_INFO("TcpServer::HandleAccept:: Acceptor closed, closing server...");
             return;
         }
 
         if (!e) {
-            DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
+            DARWIN_LOG_DEBUG("TcpServer::HandleAccept:: New connection accepted");
             auto sess = std::make_shared<TcpSession>(_new_connection, _manager, _generator);
             sess->SetOutputType(_output);
             sess->SetThreshold(_threshold);
             _manager.Start(sess);
             Accept();
         } else {
-            DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
+            DARWIN_LOG_ERROR("TcpServer::HandleAccept:: Error accepting connection, no longer accepting");
         }
     }
     

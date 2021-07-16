@@ -2,10 +2,11 @@ import json
 import logging
 import os
 import os.path
-import uuid
 import subprocess
 
-from conf import DEFAULT_FILTER_PATH, VALGRIND_MEMCHECK, TEST_FILES_DIR, DEFAULT_PROTOCOL, DEFAULT_ADDRESS
+# `conf` is imported whole because variables inside 
+# may be modified by the command line
+import conf
 from darwin import DarwinApi
 from time import sleep
 from tools.redis_utils import RedisServer
@@ -17,34 +18,38 @@ REDIS_CHANNEL_NAME = "darwin.tests"
 
 class Filter():
 
-    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", socket_type=DEFAULT_PROTOCOL):
+    def __init__(self, path=None, config_file=None, filter_name="filter", socket_path=None, monitoring_socket_path=None, pid_file=None, output="NONE", next_filter_socket_path="no", nb_threads=1, cache_size=0, threshold=101, log_level="DEVELOPER", socket_type=None):
         self.filter_name = filter_name
-        self.set_socket_info(socket_type, socket_path)
-        self.config = config_file if config_file else "{}/{}.conf".format(TEST_FILES_DIR, filter_name)
-        self.path = path if path else "{}darwin_{}".format(DEFAULT_FILTER_PATH, filter_name)
-        self.monitor = monitoring_socket_path if monitoring_socket_path else "{}/{}_mon.sock".format(TEST_FILES_DIR, filter_name)
-        self.pid = pid_file if pid_file else "{}/{}.pid".format(TEST_FILES_DIR, filter_name)
-        self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_threads), str(cache_size), str(threshold)]
         self.process = None
+        self.set_socket_info(socket_type, socket_path)
+        self.config = config_file if config_file else "{}/{}.conf".format(conf.TEST_FILES_DIR, filter_name)
+        self.path = path if path else "{}darwin_{}".format(conf.DEFAULT_FILTER_PATH, filter_name)
+        self.monitor = monitoring_socket_path if monitoring_socket_path else "{}/{}_mon.sock".format(conf.TEST_FILES_DIR, filter_name)
+        self.pid = pid_file if pid_file else "{}/{}.pid".format(conf.TEST_FILES_DIR, filter_name)
+        self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_threads), str(cache_size), str(threshold)]
+        if self.socket_type.startswith('udp'):
+            self.cmd += ['-u']
         self.error_code = 99 # For valgrind testing
         self.pubsub = None
         self.prepare_log_file()
 
     def set_socket_info(self, socket_type, socket_path_address):
-        self.socket_type = socket_type
-        if socket_type == 'unix':
-            self.socket = socket_path_address if socket_path_address else "{}/{}.sock".format(TEST_FILES_DIR, self.filter_name)
+        self.socket_type = socket_type if socket_type else conf.DEFAULT_PROTOCOL
+        if self.socket_type == 'unix':
+            self.socket = socket_path_address if socket_path_address else "{}/{}.sock".format(conf.TEST_FILES_DIR, self.filter_name)
             self.host = None
             self.port = -1
-        elif socket_type == 'tcp':
-            self.socket = socket_path_address if socket_path_address else default_address
+        elif self.socket_type == 'tcp' or self.socket_type == 'udp':
+            self.socket = socket_path_address if socket_path_address else conf.DEFAULT_ADDRESS
             splitted_address = self.socket.rsplit(':', 1)
             if '[' in splitted_address[0]: # ipv6 address
-                self.socket_type = 'tcp6'
+                self.socket_type += '6'
                 self.host = splitted_address[0][1:-1]
             else:
                 self.host = splitted_address[0]
             self.port = int(splitted_address[1])
+        else:
+            raise NotImplementedError("Unrecognized protocol : '{}'".format(self.socket_type))
 
     def get_darwin_api(self):
         return DarwinApi(socket_type=self.socket_type, socket_path=self.socket, socket_host=self.host, socket_port=self.port)
@@ -58,7 +63,7 @@ class Filter():
 
     def __del__(self):
         if self.process and self.process.poll() is None:
-            if VALGRIND_MEMCHECK is False:
+            if conf.VALGRIND_MEMCHECK is False:
                 self.stop()
             else:
                 self.valgrind_stop()
@@ -108,7 +113,7 @@ class Filter():
         return self.check_stop()
 
     def valgrind_start(self):
-        if VALGRIND_MEMCHECK is False:
+        if conf.VALGRIND_MEMCHECK is False:
             return self.start()
         command = ['valgrind',
                    '--tool=memcheck',
@@ -123,7 +128,7 @@ class Filter():
         return self.check_start()
 
     def valgrind_stop(self):
-        if VALGRIND_MEMCHECK is False:
+        if conf.VALGRIND_MEMCHECK is False:
             return self.stop()
         self.process.terminate()
         try:

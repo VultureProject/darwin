@@ -33,7 +33,7 @@ def create_dirs(dirs, prefix, suffix):
     for d in dirs:
         path = '{}/{}{}'.format(prefix, d, suffix)
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path, exist_ok=True)
 
 # Argparse
 parser = argparse.ArgumentParser()
