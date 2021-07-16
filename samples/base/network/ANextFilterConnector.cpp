@@ -23,7 +23,7 @@ namespace darwin {
     }
 
     void ANextFilterConnector::SendCallback(const boost::system::error_code& ec, size_t bytes_transferred, std::shared_ptr<boost::asio::const_buffer> buffer) {
-        if(ec) {
+        if(ec || bytes_transferred != buffer->size()) {
             Send(buffer);
             return;
         }

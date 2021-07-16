@@ -31,6 +31,7 @@ if (NOT DEFINED FILTER)
         YARA
         PCR
         NSIGMA
+        TEST
     )
 else (NOT DEFINED FILTER)
     set(
@@ -82,6 +83,7 @@ include_directories(
 	${Boost_INCLUDE_DIRS}
 )
 
+add_compile_options(-Wno-unknown-pragmas)
 
 ####################
 #   CORE SOURCES   #
@@ -104,14 +106,17 @@ set(
         samples/base/network/ANextFilterConnector.cpp samples/base/network/ANextFilterConnector.hpp
         samples/base/network/UnixNextFilterConnector.cpp samples/base/network/UnixNextFilterConnector.hpp
         samples/base/network/TcpNextFilterConnector.cpp samples/base/network/TcpNextFilterConnector.hpp
+        samples/base/network/UdpNextFilterConnector.cpp samples/base/network/UdpNextFilterConnector.hpp
 
         samples/base/network/AServer.cpp samples/base/network/AServer.hpp
         samples/base/network/UnixServer.cpp samples/base/network/UnixServer.hpp
         samples/base/network/TcpServer.cpp samples/base/network/TcpServer.hpp
+        samples/base/network/UdpServer.cpp samples/base/network/UdpServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
         samples/base/network/ASession.cpp samples/base/network/ASession.hpp
         samples/base/network/UnixSession.cpp samples/base/network/UnixSession.hpp
         samples/base/network/TcpSession.cpp samples/base/network/TcpSession.hpp
+        samples/base/network/UdpSession.cpp samples/base/network/UdpSession.hpp
         samples/base/ATask.cpp samples/base/ATask.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp

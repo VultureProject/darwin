@@ -7,7 +7,6 @@ from tools.filter import Filter, DEFAULT_LOG_FILE, DEFAULT_ALERTS_FILE
 from tools.output import print_result
 from tools.darwin_utils import count_file_lines
 from core.utils import DEFAULT_PATH, FTEST_CONFIG, FTEST_CONFIG_NO_ALERT_LOG, RESP_MON_STATUS_RUNNING
-from darwin import DarwinApi
 
 
 
@@ -22,6 +21,8 @@ def run():
         check_tcp_socket_connection,
         check_tcp6_socket_create_delete,
         check_tcp6_socket_connection,
+        check_udp_socket_connection,
+        check_udp6_socket_connection,
         check_socket_monitor_create_delete,
         check_socket_monitor_connection,
         check_start_wrong_conf,
@@ -154,7 +155,7 @@ def check_tcp_socket_create_delete():
     return True
 
 
-def check_tcp_socket_connection(): #todo
+def check_tcp_socket_connection():
     filter = Filter(filter_name="test", socket_type='tcp', socket_path='127.0.0.1:12123')
 
     filter.configure(FTEST_CONFIG)
@@ -213,6 +214,59 @@ def check_tcp6_socket_connection():
         api.close()
     except Exception as e:
         logging.error("check_tcp6_socket_connection: Error connecting to socket: {}".format(e))
+        return False
+
+    filter.stop()
+    return True
+
+
+# These tests are not done as there is no reliable way to check if a udp socket is open and listening
+# unreliable ways include listening for a icmp packet back but it depends on the 
+# system and if the packet is blocked by firewalls
+
+# def check_udp_socket_create_delete()
+# def check_udp6_socket_create_delete()
+
+def check_udp_socket_connection():
+    filter = Filter(filter_name="test", socket_type='udp', socket_path='127.0.0.1:12123')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+
+    try:
+        api = filter.get_darwin_api()
+        api.call("udp test", filter_code=0x74657374, response_type="no")
+        # sleep to let the filter process the call
+        #TODO check alert
+        api.call("udp test2", filter_code=0x74657374, response_type="no")
+        api.call("udp test3", filter_code=0x74657374, response_type="no")
+        api.call("udp test4", filter_code=0x74657374, response_type="no")
+        api.call("udp test5", filter_code=0x74657374, response_type="no")
+        sleep(2)
+
+        api.close()
+    except Exception as e:
+        logging.error("check_udp_socket_connection: Error connecting to socket: {}".format(e))
+        return False
+
+    filter.stop()
+    return True
+
+
+def check_udp6_socket_connection():
+    filter = Filter(filter_name="test", socket_type='udp', socket_path='[::1]:1111')
+
+    filter.configure(FTEST_CONFIG)
+    filter.valgrind_start()
+
+    try:
+        api = filter.get_darwin_api()
+        api.call("test\n", filter_code=0x74657374, response_type="no")
+        sleep(1) #let filter process
+        # todo check alert
+        api.close()
+    except Exception as e:
+        logging.error("check_udp6_socket_connection: Error connecting to socket: {}".format(e))
         return False
 
     filter.stop()
