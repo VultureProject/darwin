@@ -103,7 +103,10 @@ class Services:
         
         if filt['network']['socket_type'] == 'UDP':
             cmd.append('-u')
-                
+        
+        if filt['next_filter_unix_socket']['socket_type'] == 'UDP':
+            cmd.append('-v')
+        
         cmd += [
             filt['name'],
             filt['network']['address_path'],
@@ -111,7 +114,7 @@ class Services:
             filt['monitoring'],
             filt['pid_file'],
             filt['output'],
-            filt['next_filter_unix_socket'],
+            filt['next_filter_network']['address_path'],
             str(filt['nb_thread']),
             str(filt['cache_size']),
             str(filt['threshold']),

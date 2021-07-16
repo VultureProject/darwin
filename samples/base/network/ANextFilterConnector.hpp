@@ -33,6 +33,5 @@ namespace darwin {
         size_t _max_attempts;
         size_t _nb_attempts;
         std::chrono::milliseconds _attempts_delay_ms;
-        bool _address_path_parsing;
     };
 }

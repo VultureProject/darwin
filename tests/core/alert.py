@@ -43,7 +43,7 @@ class TestFilter(Filter):
             pass
 
     def send(self, data):
-        api = DarwinApi(socket_type="unix", socket_path=self.socket)
+        api = self.get_darwin_api()
         api.call([data], response_type='no')
 
     def get_redis_alerts(self):
