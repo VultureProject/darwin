@@ -14,11 +14,21 @@ extern "C" {
 #include <mutex>
 #include <thread>
 #include <string>
+// Used for unordered_map
+#include <unordered_map>
 
 #include "Session.hpp"
 #include "../../toolkit/RedisManager.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "AGenerator.hpp"
+
+
+
+struct id_timeout {
+    std::string app_id;
+    uint64_t timeout;
+};
+
 
 class Generator: public AGenerator {
 public:
@@ -33,4 +43,5 @@ public:
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
     virtual bool ConfigureAlerting(const std::string& tags) override final;
+	std::unordered_map<std::string, std::unordered_map<std::string, id_timeout>> _applications;
 };

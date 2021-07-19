@@ -46,6 +46,47 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         return false;
     }
 
+    if (!configuration.HasMember("applications")) {
+        DARWIN_LOG_CRITICAL("Session:: Generator:: Missing parameter: 'applications'");
+        return false;
+    }
+    if (!configuration["applications"].IsArray()) {
+        DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' needs to be an array");
+        return false;
+    }
+
+    int cpt=0;
+    for (auto &app_tmp : configuration["applications"].GetArray()) {
+        if (!app_tmp.IsArray()) {
+            DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' sub-elements must be array");
+            return false;
+        }
+        if (!app_tmp[0].IsString()) {
+            DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' sub-elements first element must be a string");
+            return false;
+        }
+        if (!app_tmp[1].IsString()) {
+            DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' sub-elements second element must be a string");
+            return false;
+        }
+        if (!app_tmp[2].IsString()) {
+            DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' sub-elements third element must be a string");
+            return false;
+        }
+        if (!app_tmp[3].IsUint64()) {
+            DARWIN_LOG_CRITICAL("Session:: Generator:: 'applications' sub-elements fourth element must be an integer");
+            return false;
+        }
+        // applications[domain][path] = id_timeout{app_id, timeout}
+        this->_applications[app_tmp[0].GetString()].insert(std::make_pair(app_tmp[1].GetString(),
+                                                                          id_timeout{app_tmp[2].GetString(),
+                                                                                     app_tmp[3].GetUint64()}));
+        DARWIN_LOG_DEBUG("Session:: Generator:: Application "+std::to_string(cpt)+" configuration : ["+
+                         app_tmp[0].GetString() + "," + app_tmp[1].GetString() +
+                         "] => [" + app_tmp[2].GetString() + "," + std::to_string(app_tmp[3].GetUint64()) + "]");
+        cpt++;
+    }
+
     redis_socket_path = configuration["redis_socket_path"].GetString();
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
@@ -57,5 +98,5 @@ darwin::session_ptr_t
 Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<SessionTask>(socket, manager, _cache, _cache_mutex));
+            std::make_shared<SessionTask>(socket, manager, _cache, _cache_mutex, _applications));
 }

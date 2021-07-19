@@ -21,6 +21,7 @@ extern "C" {
 
 #include "protocol.h"
 #include "Session.hpp"
+#include "Generator.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/RedisManager.hpp"
 
@@ -39,7 +40,8 @@ public:
     explicit SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex);
+                         std::mutex& cache_mutex,
+                         std::unordered_map<std::string, std::unordered_map<std::string, id_timeout>> &applications);
     ~SessionTask() override = default;
 
 
@@ -59,25 +61,20 @@ private:
     /// call the method appropriate to the data type received.
     ///
     /// \return true on success, false otherwise.
-    bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
+    bool ReadFromSession() noexcept;
 
     /// Reset the expiration of key(s) in Redis depending on cases
     /// will reset the expiration of key(s) <token>_<repo_id> with _expiration
     /// will reset the expiration of the key <token> with _expiration if current TTL is lower
     ///
     /// \return true on success, false otherwise
-    bool REDISResetExpire(const std::string &token, const std::string &repo_ids);
+    bool REDISResetExpire(const uint64_t expiration);
 
     /// Read a session number (from Cookie or HTTP header) from the session and
     /// perform a redis lookup.
     ///
     /// \return true on success, false otherwise.
-    unsigned int REDISLookup(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
-
-    /// Concatenates our repository IDs into a string, separated with spaces.
-    ///
-    /// \return The concatenated string.
-    std::string JoinRepoIDs(const std::vector<std::string> &repo_ids);
+    unsigned int REDISLookup(const id_timeout &id_t) noexcept;
 
     /// Parse a line of the body.
     bool ParseLine(rapidjson::Value &line) final;
@@ -85,6 +82,7 @@ private:
 private:
     // Session_status in Redis
     std::string _token; // The token to check
-    std::vector<std::string> _repo_ids; // The associated repository IDs to check
-    uint64_t _expiration = 0; // The expiration to set
+    std::string _domain; // The domain to retrieve
+    std::string _path; // The path to retrieve
+    std::unordered_map<std::string, std::unordered_map<std::string, id_timeout>> &_applications;
 };

@@ -29,8 +29,9 @@ extern "C" {
 SessionTask::SessionTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex)
-        : Session{"session", socket, manager, cache, cache_mutex}{
+                         std::mutex& cache_mutex,
+                         std::unordered_map<std::string, std::unordered_map<std::string, id_timeout>> &applications)
+        : Session{"session", socket, manager, cache, cache_mutex}, _applications{applications} {
 }
 
 long SessionTask::GetFilterCode() noexcept {
@@ -49,7 +50,7 @@ void SessionTask::operator()() {
             SetStartingTime();
             unsigned int certitude;
 
-            certitude = ReadFromSession(_token, _repo_ids);
+            certitude = ReadFromSession();
             if(certitude)
                 STAT_MATCH_INC;
             _certitudes.push_back(certitude);
@@ -64,51 +65,60 @@ void SessionTask::operator()() {
     }
 }
 
-bool SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
+bool SessionTask::ReadFromSession() noexcept {
     DARWIN_LOGGER;
 
     //Check that the session value has the expected length
-    if (token.size() != TOKEN_SIZE) {
-        DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Invalid token size: " + std::to_string(token.size()) +
+    if (_token.size() != TOKEN_SIZE) {
+        DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Invalid token size: " + std::to_string(_token.size()) +
                          ". Expected size: " + std::to_string(TOKEN_SIZE));
 
         return false;
     }
+    // Retrieve ID and timeout associated
+    // .find returns a generator
+	auto it_paths = _applications.find(_domain);
+	if(it_paths == _applications.end()){
+		DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Cannot find application having domain='" + _domain +
+				                 "' in configuration");
+	} else {
+		/** Master rustine by TCA !
+		 * Loop over paths and find the one beginning by _path (ex: /toto/ < /toto/tutu)
+		 * :return iterator
+		**/
+		auto it_found_path = std::find_if(it_paths->second.begin(), it_paths->second.end(),
+		                                  [this](const auto& f){return this->_path.rfind(f.first,0)==0;});
+		// If iterator returns empty
+		if(it_found_path == it_paths->second.end()) {
+			DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Cannot find application having domain='" + _domain +
+			                 "', path='" + _path + "' in configuration");
+		} else {
+			// it_found_path->first contains the key (path), and it_found_path->second contains value (struct id_timeout)
+			return REDISLookup(it_found_path->second) == 1;
+		}
+	}
 
-    return REDISLookup(token, repo_ids) == 1;
+	return false;
 }
 
-std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
-    std::string parsed_repo_ids;
-
-    for (auto it = repo_ids.begin(); it != repo_ids.end(); ++it) {
-        parsed_repo_ids += *it;
-
-        if (it != repo_ids.end() - 1) parsed_repo_ids += " ";
-    }
-
-    return parsed_repo_ids;
-}
-
-
-bool SessionTask::REDISResetExpire(const std::string &token, const std::string &repo_id) {
+bool SessionTask::REDISResetExpire(const uint64_t expiration) {
     DARWIN_LOGGER;
     long long int ttl;
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
-    if (redis.Query(std::vector<std::string>{"TTL", token}, ttl, true) != REDIS_REPLY_INTEGER) {
+    if (redis.Query(std::vector<std::string>{"TTL", _token}, ttl, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_WARNING("SessionTask::REDISResetExpire:: Did not get the expected result from querying "
-                            "Redis while getting TTL of cookie token " + token);
+                            "Redis while getting TTL of cookie token " + _token);
         return false;
     }
 
     // if TTL == -2, key does not exist, -1 means it has no TTL (it shouldn't)
-    if (ttl > -2 and ttl < (long long int)_expiration) {
-        DARWIN_LOG_DEBUG("SessionTask::REDISResetExpire:: resetting expiration to " + std::to_string(_expiration));
-        if (redis.Query(std::vector<std::string>{"EXPIRE", token, std::to_string(_expiration)}, true)
+    if (ttl > -2 and ttl < (long long int)expiration) {
+        DARWIN_LOG_DEBUG("SessionTask::REDISResetExpire:: resetting expiration to " + std::to_string(expiration));
+        if (redis.Query(std::vector<std::string>{"EXPIRE", _token, std::to_string(expiration)}, true)
                 != REDIS_REPLY_INTEGER) {
             DARWIN_LOG_WARNING("SessionTask::REDISResetExpire:: could not reset the expiration of cookie token "
-                                + token);
+                                + _token);
             return false;
         }
     }
@@ -117,56 +127,48 @@ bool SessionTask::REDISResetExpire(const std::string &token, const std::string &
 }
 
 
-unsigned int SessionTask::REDISLookup(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
+unsigned int SessionTask::REDISLookup(const id_timeout &id_t) noexcept {
     DARWIN_LOGGER;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     int redis_reply;
     std::vector<std::any> result_vector;
 
-    if (repo_ids.empty()) {
-        DARWIN_LOG_ERROR("SessionTask::REDISLookup:: No repository ID given");
-        return DARWIN_ERROR_RETURN;
-    }
+    std::string app_id = id_t.app_id;
+    uint64_t expiration = id_t.timeout;
 
-    for (auto &repo_id : repo_ids) {
-        std::string result;
-        std::string key = token + "_" + repo_id;
-        std::vector<std::string> arguments;
-        arguments.emplace_back("GET");
-        arguments.emplace_back(key);
+    std::string result;
+    std::string key = _token + "_" + app_id;
+    std::vector<std::string> arguments;
+    arguments.emplace_back("GET");
+    arguments.emplace_back(key);
 
-        redis_reply = redis.Query(arguments, result, true);
+    redis_reply = redis.Query(arguments, result, true);
 
-        if(redis_reply == REDIS_REPLY_STRING) {
-            // key exists, but still needs to check value
-            if (result != "1") {
-                DARWIN_LOG_INFO("SessionTask::REDISLookup:: got a valid key, but got '" + result + "' instead of '1'");
-                continue;
-            }
-            DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie " + token + " authenticated on repository " +
-                            repo_id);
-            if (_expiration)
-                REDISResetExpire(token, repo_id);
-            return 1;
-        } else if (redis_reply == REDIS_REPLY_NIL) {
-            DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: no result for key " + key);
-            // key does not exist
-            continue;
-        } else {
-            // not the expected response
-            DARWIN_LOG_WARNING("SessionTask::REDISLookup:: Something went wrong while querying Redis");
-            continue;
+    if(redis_reply == REDIS_REPLY_STRING) {
+        // key exists, but still needs to check value
+        if (result != "1") {
+            DARWIN_LOG_INFO("SessionTask::REDISLookup:: got a valid key, but got '" + result + "' instead of '1'");
         }
-    }
+        DARWIN_LOG_INFO("SessionTask::REDISLookup:: Cookie " + _token + " authenticated on repository " +
+                        app_id);
+        if (expiration)
+            REDISResetExpire(expiration);
+        return 1;
 
+    } else if (redis_reply == REDIS_REPLY_NIL) {
+        DARWIN_LOG_DEBUG("SessionTask::REDISLookup:: no result for key " + key);
+
+    } else {
+        // not the expected response
+        DARWIN_LOG_WARNING("SessionTask::REDISLookup:: Something went wrong while querying Redis");
+    }
 
     return 0;
 }
 
 bool SessionTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
-    _expiration = 0;
 
     if(not line.IsArray()) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The input line is not an array");
@@ -174,25 +176,16 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
     }
 
     _token.clear();
-    _repo_ids.clear();
     auto values = line.GetArray();
 
     if (values.Size() <= 0) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The list provided is empty");
         return false;
     }
-    else if (values.Size() < 2) {
+    else if (values.Size() != 3) {
         DARWIN_LOG_ERROR(
-                "SessionTask:: ParseBody: You must provide at least two arguments per request: the token and"
-                " repository ID"
-        );
-
-        return false;
-    }
-    else if (values.Size() > 3) {
-        DARWIN_LOG_ERROR(
-                "SessionTask:: ParseBody: You must provide at most three arguments per request: the token, "
-                "the repository ID and the expiration value to set to the token key"
+                "SessionTask:: ParseBody: You must provide three arguments per request: the token, "
+                "the domain and the path"
         );
 
         return false;
@@ -204,34 +197,20 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
     }
 
     if (!values[1].IsString()) {
-        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The repository IDs sent must be a string in the following "
-                            "format: REPOSITORY1;REPOSITORY2;...");
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The domain must be a string");
         return false;
     }
 
-    if (values.Size() == 3) {
-        if (values[2].IsString()) {
-            errno = 0;
-            _expiration = std::strtoll(values[2].GetString(), NULL, 10);
-            if (errno) {
-                DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration's value out of bounds'");
-                return false;
-            }
-        }
-        else if (values[2].IsUint64()){
-            _expiration = values[2].GetUint64();
-        }
-        else {
-            DARWIN_LOG_WARNING("SessionTask:: ParseBody: expiration should be a valid positive number");
-            return false;
-        }
-    }
+	if (!values[2].IsString()) {
+		DARWIN_LOG_ERROR("SessionTask:: ParseBody: The path must be a string");
+		return false;
+	}
 
     _token = values[0].GetString();
-    std::string raw_repo_ids = values[1].GetString();
-    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';});
+	_domain = values[1].GetString();
+	_path = values[2].GetString();
 
-    DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + _token + " | " + raw_repo_ids);
+    DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + _token + " | " + _domain + " | " + _path);
 
     return true;
 }
