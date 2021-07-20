@@ -139,7 +139,7 @@ namespace darwin {
                          std::size_t size) final;
 
         /// Execute the filter and
-        virtual void ExecuteFilter() final;
+        virtual void ExecuteFilter();
 
         /// Sends a response with a body containing an error message
         ///
