@@ -1,10 +1,14 @@
-/// \file     Session.hpp
-/// \authors  hsoszynski
-/// \version  1.0
-/// \date     05/07/18
-/// \license  GPLv3
-/// \brief    Copyright (c) 2018 Advens. All rights reserved.
-
+///
+/// \file ASession.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Abstract Session to be extended for different protocols
+///        It is created by Servers and managed by a Manager
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include <memory>
@@ -30,6 +34,12 @@ namespace darwin {
 
     class ASession : public std::enable_shared_from_this<ASession> {
     public:
+        ///
+        /// \brief Construct a new ASession object
+        /// 
+        /// \param manager reference to the manager that will manage this session
+        /// \param generator referece to the task generator
+        ///
         ASession(Manager& manager,
                 Generator& generator);
 
@@ -95,8 +105,6 @@ namespace darwin {
         std::string GetDataToSendToFilter();
 
         virtual void WriteToClient(std::vector<unsigned char>& packet) = 0;
-
-        virtual void CloseFilterConnection() = 0;
 
         /// Send result to the client.
         ///

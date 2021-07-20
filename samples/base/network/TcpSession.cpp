@@ -9,9 +9,7 @@ namespace darwin {
     TcpSession::TcpSession(
         boost::asio::ip::tcp::socket& socket,
         Manager& manager, Generator& generator) 
-        : ASession(manager, generator), _connected{false}, 
-            _socket{std::move(socket)},
-            _filter_socket{socket.get_executor()}, _next_filter_port{0}
+        : ASession(manager, generator), _socket{std::move(socket)}
     {
         ;
     }
@@ -20,14 +18,6 @@ namespace darwin {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("TcpSession::Stop::");
         _socket.close();
-        CloseFilterConnection();
-    }
-
-    void TcpSession::CloseFilterConnection() {
-        if(_connected){
-            _filter_socket.close();
-            _connected = false;
-        }
     }
 
     void TcpSession::ReadHeader() {
@@ -58,13 +48,6 @@ namespace darwin {
                                 boost::bind(&TcpSession::SendToClientCallback, this,
                                             boost::asio::placeholders::error,
                                             boost::asio::placeholders::bytes_transferred));
-    }
-
-    void TcpSession::SetNextFilterPort(int port){
-        if(port > 0 && port < 65536) {
-            _next_filter_port = port;
-            _has_next_filter = true;
-        }
     }
 }
 

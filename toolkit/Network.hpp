@@ -54,9 +54,27 @@ namespace darwin {
         /// \param sa The in6_addr structure to be stringified.
         std::string GetStringAddrFromSockAddrIn6(const in6_addr &addr);
 
+        ///
+        /// \brief Parse a string to get the socket path if any or the ipv4/v6 address
+        /// 
+        /// \param path_address the string to parse
+        /// \param is_udp true if we should use udp instead of tcp (it is not used)
+        /// \param out_net_type type of address/path parsed
+        /// \param out_net_address ip address to fill when parsed
+        /// \param out_port ip port to fill when parsed
+        /// \param out_unix_path unix sock path to fill when parsed
+        /// \return true if the parsing was successful
+        ///
         bool ParseSocketAddress(const std::string& path_address, bool is_udp, 
             NetworkSocketType& out_net_type, boost::asio::ip::address& out_net_address, int& out_port, std::string& out_unix_path);
 
-        bool ParsePort(const char* path_address, int& out_port);
+        ///
+        /// \brief parse an ip port, returns early if there is an error while parsing or if the port is not a valid port number
+        /// 
+        /// \param str_port port to parse
+        /// \param out_port port to fill with the port
+        /// \return true if the parsing was successful
+        ///
+        bool ParsePort(const std::string& str_port, int& out_port);
     }
 }

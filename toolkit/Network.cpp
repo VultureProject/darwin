@@ -94,17 +94,17 @@ namespace darwin {
             return str;
         }
 
-        bool ParsePort(const char* path_address, int& out_port) {
+        bool ParsePort(const std::string& str_port, int& out_port) {
             DARWIN_LOGGER;
 
             long port = 0;
-            if(!darwin::strings::StrToLong(path_address, port)){
-                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number, unrecognized number: '" + std::string(path_address) + "'");
+            if(!darwin::strings::StrToLong(str_port.c_str(), port)){
+                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number, unrecognized number: '" + str_port+ "'");
                 return false;
             }
 
             if (port < 0 || port > 65353) {
-                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number : out of bounds [0; 65353]: '" + std::string(path_address) + "'");
+                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number : out of bounds [0; 65353]: '" + str_port + "'");
                 return false;
             }
 
