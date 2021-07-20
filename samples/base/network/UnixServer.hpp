@@ -1,9 +1,9 @@
-/// \file     Server.hpp
+/// \file     UnixServer.hpp
 /// \authors  hsoszynski
-/// \version  1.0
+/// \version  2.0
 /// \date     02/07/18
 /// \license  GPLv3
-/// \brief    Copyright (c) 2018 Advens. All rights reserved.
+/// \brief    Copyright (c) 2018-2021 Advens. All rights reserved.
 
 #pragma once
 
@@ -19,13 +19,14 @@ namespace darwin {
 
     class UnixServer : public AServer {
     public:
-        /// Create an async UNIX stream socket server.
-        /// The server runs on nb_threads thread.
         ///
-        /// \param socket_path Path of the UNIX socket to listen on.
+        /// \brief Construct a new Unix Server object
+        /// 
+        /// \param socket_path Path of the UNIX socket to listen on
         /// \param output Filters' output type
-        /// \param next_filter_socket Path of the UNIX socket of the filter to send data to.
         /// \param threshold Threshold at which the filter will raise a log.
+        /// \param generator ref to the task generator
+        ///
         UnixServer(std::string const& socket_path,
                std::string const& output,
                std::size_t threshold,

@@ -16,10 +16,6 @@ namespace darwin {
     void UdpSession::Stop() {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("UdpSession::Stop::");
-        CloseFilterConnection();
-    }
-
-    void UdpSession::CloseFilterConnection() {
     }
 
     void UdpSession::ReadHeader() {
@@ -51,16 +47,8 @@ namespace darwin {
         this->ExecuteFilter();
     }
 
-    void UdpSession::WriteToClient(std::vector<unsigned char>& packet) {
+    void UdpSession::WriteToClient(std::vector<unsigned char>& packet __attribute((unused))) {
         return;
-    }
-
-    void UdpSession::ExecuteFilter() {
-        ASession::ExecuteFilter();
-        // ASession::Start();
-    }
-
-    void UdpSession::SetNextFilterPort(int port){
     }
 }
 

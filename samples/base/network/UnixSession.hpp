@@ -1,3 +1,13 @@
+///
+/// \file UnixSession.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Session for Unix Socket Protocol
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include "ASession.hpp"
@@ -6,6 +16,13 @@ namespace darwin {
 
     class UnixSession: public ASession {
     public:
+        ///
+        /// \brief Construct a new Unix Session object
+        /// 
+        /// \param socket ref to the unix socket, it will be moved to the object
+        /// \param manager ref to the sessions' manager
+        /// \param generator ref to the task generator
+        ///
         UnixSession(boost::asio::local::stream_protocol::socket& socket,
             Manager& manager,
             Generator& generator);
@@ -35,16 +52,8 @@ namespace darwin {
         /// 
         virtual void WriteToClient(std::vector<unsigned char>& packet) override final;
 
-        virtual void CloseFilterConnection() override final;
-
     private:
-
-        bool _connected; //!< True if the socket to the next filter is connected.
-
         boost::asio::local::stream_protocol::socket _socket; //!< Session's socket.
-        boost::asio::local::stream_protocol::socket _filter_socket; //!< Filter's socket.
-        std::string _next_filter_path; //!< The socket path to the next filter.
-
     };
 
 }

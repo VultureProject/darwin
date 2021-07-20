@@ -1,3 +1,13 @@
+///
+/// \file AServer.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Abstract Server to be extended or different protocols
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include <boost/asio.hpp>
@@ -10,15 +20,6 @@ namespace darwin {
 
     class AServer {
         public:
-            /// Create an async UNIX stream socket server.
-            /// The server runs on nb_threads thread.
-            ///
-            /// \param socket_path Path of the UNIX socket to listen on.
-            /// \param output Filters' output type
-            /// \param next_filter_socket Path of the UNIX socket of the filter to send data to.
-            /// \param threshold Threshold at which the filter will raise a log.
-            // AServer() = default;
-
             virtual ~AServer() = default;
 
             // Make the server non copyable & non movable
@@ -41,6 +42,13 @@ namespace darwin {
 
         protected:
             
+            ///
+            /// \brief Construct a new AServer object
+            /// 
+            /// \param output Filter's output type
+            /// \param threshold Threshold at which the filter will raise a log
+            /// \param generator Reference to the Task Generator
+            ///
             AServer(std::string const& output,
                std::size_t threshold,
                Generator& generator);

@@ -1,3 +1,13 @@
+///
+/// \file ATask.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Abstract Task to be extended by filter's tasks
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include <memory>
@@ -17,6 +27,15 @@ namespace darwin {
 
     class ATask : public std::enable_shared_from_this<ATask> {
         public:
+            ///
+            /// \brief Construct a new ATask object
+            /// 
+            /// \param name name of the filter
+            /// \param cache shared pointer to the cache to use
+            /// \param cache_mutex mutex of the cache
+            /// \param session shared pointer to the session spawning the task
+            /// \param packet DarwinPacket parsed from the session, moved to the task
+            ///
             ATask(std::string name, 
                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                 std::mutex& cache_mutex, session_ptr_t session,
