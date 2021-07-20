@@ -12,9 +12,16 @@
 #include "base/Logger.hpp"
 #include "Generator.hpp"
 #include "TestTask.hpp"
+#include "ASession.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 #include "AlertManager.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
@@ -79,9 +86,15 @@ bool Generator::ConfigRedis(std::string redis_socket_path) {
     return redis.FindAndConnect();
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<TestTask>(socket, manager, _cache, _cache_mutex, _redis_list_name, _redis_channel_name));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<TestTask>(_cache, _cache_mutex, s, s->_packet, 
+            _redis_list_name, _redis_channel_name
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_TEST;
 }

@@ -45,8 +45,7 @@ def test(test_name, data, expected_certitudes, expected_certitudes_size):
         return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=anomaly_filter.socket,
-                           socket_type="unix", )
+    darwin_api = anomaly_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         data,

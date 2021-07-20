@@ -13,17 +13,17 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "../../toolkit/lru_cache.hpp"
 #include "TAnomalyTask.hpp"
+#include "ASession.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
 
-AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
-                             darwin::Manager& manager,
-                             std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+AnomalyTask::AnomalyTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                              std::mutex& cache_mutex,
+                             darwin::session_ptr_t s,
+                             darwin::DarwinPacket& packet,
                              std::shared_ptr<AnomalyThreadManager> vat,
                              std::string redis_list_name)
-        : Session{"tanomaly", socket, manager, cache, cache_mutex}, _redis_list_name{std::move(redis_list_name)},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet), _redis_list_name{std::move(redis_list_name)},
         _anomaly_thread_manager{std::move(vat)}
 {
 }
@@ -43,11 +43,11 @@ void AnomalyTask::operator()() {
         STAT_INPUT_INC;
         if(ParseLine(line)) {
             REDISAddEntry();
-            _certitudes.push_back(0);
+            _packet.AddCertitude(0);
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
     }
 }

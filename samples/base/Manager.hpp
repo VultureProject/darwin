@@ -9,7 +9,7 @@
 
 #include <set>
 #include <thread>
-#include "Session.hpp"
+#include "ASession.fwd.hpp"
 
 namespace darwin {
     class Manager {

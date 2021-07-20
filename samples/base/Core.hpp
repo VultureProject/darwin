@@ -11,6 +11,10 @@
 #include <atomic>
 #include "Monitor.hpp"
 #include "ThreadGroup.hpp"
+#include "Network.hpp"
+#include "ANextFilterConnector.hpp"
+
+#include <boost/asio.hpp>
 
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
@@ -78,22 +82,29 @@ namespace darwin {
         /// \return true on success, false otherwise.
         bool SetLogLevel(std::string level);
 
+        bool IsDaemon() const;
+
+        bool SetNextFilterConnector(std::string const& path_address, bool is_udp);
+
+        ANextFilterConnector& GetNextFilterconnector();
+
     private:
         std::string _name;
-        std::string _socketPath;
         std::string _modConfigPath;
         std::string _monSocketPath;
         std::string _pidPath;
-        std::string _nextFilterUnixSocketPath;
         std::string _output;
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
-        ThreadGroup _threadpool;
 
+        std::unique_ptr<ANextFilterConnector> _next_filter_connector;
 
-    public:
-        // TODO Maybe a getter is a better idea...
+        network::NetworkSocketType _net_type;
+        std::string _socketPath;
+        boost::asio::ip::address _net_address;
+        int _net_port;
+
         bool daemon;
     };
 }

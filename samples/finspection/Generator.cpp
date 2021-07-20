@@ -12,9 +12,13 @@
 #include "../../toolkit/rapidjson/document.h"
 #include "base/Logger.hpp"
 #include "Generator.hpp"
+#include "ContentInspectionTask.hpp"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
 
-Generator::Generator() {
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
     poolStorage = initPoolStorage();
     _configurations.flowCnf = (FlowCnf *)calloc(1, sizeof(FlowCnf));
     _configurations.streamsCnf = (StreamsCnf *)calloc(1, sizeof(StreamsCnf));
@@ -168,12 +172,19 @@ bool Generator::LoadConfig(const rapidjson::Document &config) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<ContentInspectionTask>(socket, manager, _cache, _cache_mutex, _configurations));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<ContentInspectionTask>(_cache, _cache_mutex, s, s->_packet, 
+            _configurations
+            )
+        );
 }
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_CONTENT_INSPECTION;
+}
+
 
 Generator::~Generator() {
     destroyTCPPools();

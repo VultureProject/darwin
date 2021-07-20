@@ -9,8 +9,15 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "base/Logger.hpp"
 #include "BufferTask.hpp"
+#include "ASession.hpp"
 #include "Generator.hpp"
 #include "Connectors.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags __attribute__((unused))) {
     return true;
@@ -246,11 +253,15 @@ std::vector<std::pair<std::string, std::string>> Generator::FormatRedisListVecto
     return vector;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    DARWIN_LOGGER;
-    DARWIN_LOG_DEBUG("Generator::CreateTask:: Creating a new task");
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<BufferTask>(socket, manager, _cache, _cache_mutex, this->_inputs, this->_outputs));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<BufferTask>(_cache, _cache_mutex, s, s->_packet, 
+            this->_inputs, this->_outputs
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_BUFFER;
 }

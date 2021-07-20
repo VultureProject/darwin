@@ -11,17 +11,18 @@
 #include <boost/algorithm/string.hpp>
 
 #include "YaraTask.hpp"
+#include "ASession.hpp"
 #include "Stats.hpp"
 #include "Logger.hpp"
 #include "AlertManager.hpp"
 
 
-YaraTask::YaraTask(boost::asio::local::stream_protocol::socket& socket,
-                               darwin::Manager& manager,
-                               std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+YaraTask::YaraTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
+                               darwin::session_ptr_t s,
+                               darwin::DarwinPacket& packet,
                                std::shared_ptr<darwin::toolkit::YaraEngine> yaraEngine)
-        : Session{"yara", socket, manager, cache, cache_mutex},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet),
         _yaraEngine{yaraEngine} {
     _is_cache = _cache != nullptr;
 }
@@ -36,7 +37,8 @@ long YaraTask::GetFilterCode() noexcept {
 
 void YaraTask::operator()() {
     DARWIN_LOGGER;
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
+    bool is_log = _s->GetOutputType() == darwin::config::output_type::LOG;
+    auto logs = _packet.GetMutableLogs();
 
     // Should not fail, as the Session body parser MUST check for validity !
     auto array = _body.GetArray();
@@ -57,16 +59,16 @@ void YaraTask::operator()() {
                     if (certitude>=_threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
 
-                        DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString());
+                        DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _s->Evt_idToString());
 
                         if (is_log) {
-                            std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                                 "}\n";
-                            _logs += alert_log + '\n';
+                            logs += alert_log + '\n';
                         }
                     }
-                    _certitudes.push_back(certitude);
+                    _packet.AddCertitude(certitude);
                     DARWIN_LOG_DEBUG("YaraTask:: processed entry in "
                                     + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                     continue;
@@ -78,7 +80,7 @@ void YaraTask::operator()() {
 
             if(_yaraEngine->ScanData(data, certitude) == -1) {
                 DARWIN_LOG_WARNING("YaraTask:: error while scanning, ignoring chunk");
-                _certitudes.push_back(DARWIN_ERROR_RETURN);
+                _packet.AddCertitude(DARWIN_ERROR_RETURN);
                 continue;
             }
 
@@ -90,16 +92,16 @@ void YaraTask::operator()() {
                 std::string tagListJson = YaraTask::GetJsonListFromSet(results.tags);
                 std::string details = "{\"rules\": " + ruleListJson + "}";
 
-                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(),  details, tagListJson);
+                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _s->Evt_idToString(),  details, tagListJson);
 
                 if (is_log) {
-                    std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                             R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson + "}\n";
-                    _logs += alert_log + '\n';
+                    logs += alert_log + '\n';
                 }
             }
-            _certitudes.push_back(certitude);
+            _packet.AddCertitude(certitude);
 
             if (_is_cache) {
                 SaveToCache(hash, certitude);
@@ -107,11 +109,11 @@ void YaraTask::operator()() {
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
 
         DARWIN_LOG_DEBUG("YaraTask:: processed entry in "
-                        + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
+                        + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_packet.GetCertitudeList().back()));
     }
 }
 

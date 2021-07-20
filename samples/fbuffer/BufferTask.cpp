@@ -12,18 +12,18 @@
 #include "../../toolkit/Validators.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "BufferTask.hpp"
+#include "ASession.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
 #include "AlertManager.hpp"
 
-BufferTask::BufferTask(boost::asio::local::stream_protocol::socket& socket,
-                 darwin::Manager& manager,
-                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                 std::mutex& cache_mutex,
+BufferTask::BufferTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                std::mutex& cache_mutex,
+                darwin::session_ptr_t s,
+                darwin::DarwinPacket& packet,
                  std::vector<std::pair<std::string, darwin::valueType>> &inputs,
                  std::vector<std::shared_ptr<AConnector>> &connectors)
-        : Session{"buffer", socket, manager, cache, cache_mutex},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet),
             _inputs_format(inputs),
             _connectors(connectors) {
 }
@@ -41,11 +41,11 @@ void BufferTask::operator()() {
     for (rapidjson::Value &line : array) {
         STAT_INPUT_INC;
         if (ParseLine(line)) {
-            this->_certitudes.push_back(0);
+            this->_packet.AddCertitude(0);
             this->AddEntries();
         } else {
             STAT_PARSE_ERROR_INC;
-            this->_certitudes.push_back(DARWIN_ERROR_RETURN);
+            this->_packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
         DARWIN_LOG_DEBUG("BufferTask:: processed entry in " + std::to_string(GetDurationMs()) + "ms");
     }

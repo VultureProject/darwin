@@ -14,18 +14,18 @@
 #include "../../toolkit/xxhash.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "HostLookupTask.hpp"
+#include "ASession.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
 #include "AlertManager.hpp"
 
-HostLookupTask::HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
-                               darwin::Manager& manager,
-                               std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+HostLookupTask::HostLookupTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
+                               darwin::session_ptr_t s,
+                               darwin::DarwinPacket& packet,
                                tsl::hopscotch_map<std::string, std::pair<std::string, int>>& db,
                                const std::string& feed_name)
-        : Session{"hostlookup", socket, manager, cache, cache_mutex}, _database{db},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet), _database{db},
         _feed_name{feed_name} {
     _is_cache = _cache != nullptr;
 }
@@ -40,8 +40,8 @@ long HostLookupTask::GetFilterCode() noexcept {
 
 void HostLookupTask::operator()() {
     DARWIN_LOGGER;
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
-
+    bool is_log = _s->GetOutputType() == darwin::config::output_type::LOG;
+    auto logs = _packet.GetMutableLogs();
     // Should not fail, as the Session body parser MUST check for validity !
     auto array = _body.GetArray();
 
@@ -58,13 +58,13 @@ void HostLookupTask::operator()() {
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                         STAT_MATCH_INC;
-                        DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails());
+                        DARWIN_ALERT_MANAGER.Alert(_host, certitude, _s->Evt_idToString(), this->AlertDetails());
                         if (is_log) {
                             std::string alert_log = this->BuildAlert(_host, certitude);
-                            _logs += alert_log + "\n";
+                            logs += alert_log + "\n";
                         }
                     }
-                    _certitudes.push_back(certitude);
+                    _packet.AddCertitude(certitude);
                     DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
                                     + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                     continue;
@@ -75,24 +75,24 @@ void HostLookupTask::operator()() {
             certitude = DBLookup(description);
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN) {
                 STAT_MATCH_INC;
-                DARWIN_ALERT_MANAGER.Alert(_host, certitude, Evt_idToString(), this->AlertDetails(description));
+                DARWIN_ALERT_MANAGER.Alert(_host, certitude, _s->Evt_idToString(), this->AlertDetails(description));
                 if (is_log){
                     std::string alert_log = this->BuildAlert(_host, certitude);
-                    _logs += alert_log + "\n";
+                    logs += alert_log + "\n";
                 }
             }
-            _certitudes.push_back(certitude);
+            _packet.AddCertitude(certitude);
 
             if (_is_cache)
                 SaveToCache(hash, certitude);
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
 
         DARWIN_LOG_DEBUG("HostLookupTask:: processed entry in "
-                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_certitudes.back()));
+                         + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(_packet.GetCertitudeList().back()));
     }
 }
 
@@ -110,7 +110,7 @@ const std::string HostLookupTask::AlertDetails(std::string const& description) {
 const std::string HostLookupTask::BuildAlert(const std::string& host,
                                              unsigned int certitude) {
     std::string alert_log =
-        R"({"evt_id": ")" + Evt_idToString() +
+        R"({"evt_id": ")" + _s->Evt_idToString() +
         R"(", "time": ")" + darwin::time_utils::GetTime() +
         R"(", "filter": ")" + GetFilterName() +
         R"(", "entry": ")" + host +

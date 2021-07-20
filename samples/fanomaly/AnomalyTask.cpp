@@ -14,14 +14,14 @@
 #include "AnomalyTask.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
 
-AnomalyTask::AnomalyTask(boost::asio::local::stream_protocol::socket& socket,
-                         darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex)
-        : Session{"anomaly", socket, manager, cache, cache_mutex}{}
+AnomalyTask::AnomalyTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                               std::mutex& cache_mutex,
+                               darwin::session_ptr_t s,
+                               darwin::DarwinPacket& packet)
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet){}
 
 void AnomalyTask::operator()() {
     DARWIN_LOGGER;
@@ -40,7 +40,7 @@ void AnomalyTask::operator()() {
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
     }
 
@@ -77,7 +77,7 @@ bool AnomalyTask::Detection(){
     index_anomalies = arma::find(assignments == SIZE_MAX); // index of noises find by the clustering in the _matrix
     if (index_anomalies.is_empty()){
         DARWIN_LOG_DEBUG("AnomalyTask::Detection:: No anomalies found");
-        _certitudes.push_back(0);
+        _packet.AddCertitude(0);
         return false;
     }
     no_anomalies.shed_cols(index_anomalies); // suppress noisy columns, keep only normals data
@@ -94,10 +94,10 @@ bool AnomalyTask::Detection(){
     alerts.insert_rows(DISTANCE, distances);
 
     STAT_MATCH_INC;
-    _certitudes.push_back(100);
+    _packet.AddCertitude(100);
 
     GenerateAlerts(_ips, index_anomalies, alerts);
-    if(GetOutputType() == darwin::config::output_type::LOG){
+    if(_s->GetOutputType() == darwin::config::output_type::LOG){
         GenerateLogs(_ips, index_anomalies, alerts);
     }
     return true;
@@ -114,15 +114,15 @@ void AnomalyTask::GenerateAlerts(std::vector<std::string> ips, arma::uvec index_
         details += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
         details += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
         details += "}";
-        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, Evt_idToString(), details);
+        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, _s->Evt_idToString(), details);
     }
 }
 
 void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_anomalies, arma::mat alerts){
-
+    auto logs = _packet.GetMutableLogs();
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
         std::string alert_log;
-        alert_log = R"({"evt_id": ")" + Evt_idToString();
+        alert_log = R"({"evt_id": ")" + _s->Evt_idToString();
         alert_log += R"(", "time": ")" + darwin::time_utils::GetTime();
         alert_log += R"(", "filter": ")" + GetFilterName();
         alert_log += R"(", "anomaly": {)";
@@ -134,7 +134,7 @@ void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_an
         alert_log += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
         alert_log += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
         alert_log += "}}";
-        _logs += alert_log + '\n';
+        logs += alert_log + '\n';
     }
 };
 

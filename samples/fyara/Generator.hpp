@@ -11,7 +11,7 @@
 #include <iostream>
 #include <string>
 
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "AGenerator.hpp"
 #include "AlertManager.hpp"
 #include "../../toolkit/rapidjson/document.h"
@@ -19,13 +19,14 @@
 
 class Generator : public AGenerator {
 public:
-    Generator() = default;
+    Generator(size_t nb_task_threads);
     ~Generator() = default;
 
 public:
-    darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept override final;
+    virtual std::shared_ptr<darwin::ATask>
+    CreateTask(darwin::session_ptr_t s) noexcept override final;
+
+    virtual long GetFilterCode() const;
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;

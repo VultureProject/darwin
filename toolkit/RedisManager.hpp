@@ -40,6 +40,7 @@ namespace darwin {
             redisContext* _redisContext = nullptr;
             time_t _redisLastUse = 0;
             time_t _lastDiscovery = 0;
+            size_t _retryAttempts = 0;
         };
 
         struct RedisConnectionInfo {
@@ -112,6 +113,7 @@ namespace darwin {
             // default values
             static constexpr int HEALTH_CHECK_INTERVAL = 8;  // more than 8 seconds without calling redis will trigger a health check
             static constexpr int CONNECTION_TIMEOUT = 5;  // 5 seconds for connections' timeout
+            static constexpr size_t MAX_RETRY_ATTEMPTS = 2;
 
         public:
             RedisManager(const RedisManager&) = delete;
@@ -331,6 +333,7 @@ namespace darwin {
         private:
             time_t _healthCheckInterval = HEALTH_CHECK_INTERVAL; // will execute a HealthCheck if the connection wasn't used for x seconds
             time_t _connectTimeout = 0; // timeout when trying to connect
+            size_t _maxRetryAttempts = MAX_RETRY_ATTEMPTS;
             std::set<std::shared_ptr<ThreadData>> _threadSet; // set containing each thread's own context
             std::mutex _threadSetMut; // set mutex
             RedisConnectionInfo _activeConnection; // current active connection

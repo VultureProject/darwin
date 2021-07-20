@@ -31,7 +31,7 @@ int main(int ac, char**av) {
         return 1;
     DARWIN_LOG_INFO("Configured");
 
-    if (core.daemon) {
+    if (core.IsDaemon()) {
         daemon(1, 0);
     }
 
