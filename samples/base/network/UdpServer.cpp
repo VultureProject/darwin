@@ -76,7 +76,7 @@ namespace darwin {
         Accept();
     }
 
-    void UdpServer::HandleAccept(boost::system::error_code const& e) {
+    void UdpServer::HandleAccept(boost::system::error_code const& e __attribute__((unused))) {
         return;
     }
 

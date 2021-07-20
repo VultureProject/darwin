@@ -9,35 +9,15 @@ namespace darwin {
     UnixSession::UnixSession(
         boost::asio::local::stream_protocol::socket& socket,
         Manager& manager, Generator& generator) 
-        : ASession(manager, generator), _connected{false}, 
-            _socket{std::move(socket)},
-            _filter_socket{socket.get_executor()} 
+        : ASession(manager, generator), _socket{std::move(socket)}
     {
         ;
-    }
-
-    void UnixSession::SetNextFilterSocketPath(std::string const& path){
-        if(path.compare("no") != 0) {
-            _next_filter_path = path;
-            _has_next_filter = true;
-        }
     }
 
     void UnixSession::Stop() {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("UnixSession::Stop::");
         _socket.close();
-        if(_connected) {
-            _filter_socket.close();
-            _connected = false;
-        }
-    }
-
-    void UnixSession::CloseFilterConnection() {
-        if(_connected){
-            _filter_socket.close();
-            _connected = false;
-        }
     }
 
     void UnixSession::ReadHeader() {

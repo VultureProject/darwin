@@ -24,11 +24,12 @@ public:
 
 // Methods to be implemented by the child
 public:
-    /// Create a new task.
     ///
-    /// \param socket The Session's socket.
-    /// \param manager The Session manager.
-    /// \return A pointer to a new session.
+    /// \brief Create a Task object
+    /// 
+    /// \param s a shred pointer to the sessions creating the task
+    /// \return std::shared_ptr<darwin::ATask> a shared pointer to the created task
+    ///
     virtual std::shared_ptr<darwin::ATask> CreateTask(darwin::session_ptr_t s) noexcept = 0;
     
     virtual bool ConfigureNetworkObject(boost::asio::io_context &context);
@@ -79,6 +80,12 @@ private:
     virtual bool ExtractCustomAlertingTags(const rapidjson::Document &configuration,
                                            std::string& tags);
 
+    ///
+    /// \brief Get the configuration object of the task thread pool
+    /// 
+    /// \param nb_task_threads number of workers (threads) to spawn for the tasks
+    /// \return tp::ThreadPoolOptions 
+    ///
     static tp::ThreadPoolOptions GetThreadPoolOptions(size_t nb_task_threads);
 
 protected:

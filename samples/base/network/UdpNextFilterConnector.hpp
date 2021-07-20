@@ -1,3 +1,13 @@
+///
+/// \file UdpNextFilterConnector.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Connector to Next Filter for UDP Protocol
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include <list>
@@ -13,6 +23,12 @@ namespace darwin {
 
     class UdpNextFilterConnector: public ANextFilterConnector {
     public:
+        ///
+        /// \brief Construct a new Udp Next Filter Connector object
+        /// 
+        /// \param net_address parsed IP address of the next filter
+        /// \param port port of the next filter
+        ///
         UdpNextFilterConnector(boost::asio::ip::address const& net_address, int port);
         virtual ~UdpNextFilterConnector() = default;
 

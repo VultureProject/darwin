@@ -1,10 +1,13 @@
-/// \file     Server.hpp
-/// \authors  hsoszynski
-/// \version  1.0
-/// \date     02/07/18
-/// \license  GPLv3
-/// \brief    Copyright (c) 2018 Advens. All rights reserved.
-
+///
+/// \file TcpServer.hpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Server for TCP Protocol
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #pragma once
 
 #include <boost/asio.hpp>
@@ -20,13 +23,15 @@ namespace darwin {
 
     class TcpServer : public AServer {
     public:
-        /// Create an async Tcp stream socket server.
-        /// The server runs on nb_threads thread.
         ///
-        /// \param socket_path Path of the Tcp socket to listen on.
-        /// \param output Filters' output type
-        /// \param next_filter_socket Path of the Tcp socket of the filter to send data to.
-        /// \param threshold Threshold at which the filter will raise a log.
+        /// \brief Construct a new Tcp Server object
+        /// 
+        /// \param address parsed ip address of this filter
+        /// \param port port of this filter
+        /// \param output filter's output type
+        /// \param threshold filter's threshold
+        /// \param generator ref to the task generator
+        ///
         TcpServer(boost::asio::ip::address const& address, 
                 int port,
                 std::string const& output,

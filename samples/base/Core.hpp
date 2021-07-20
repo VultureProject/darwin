@@ -82,10 +82,28 @@ namespace darwin {
         /// \return true on success, false otherwise.
         bool SetLogLevel(std::string level);
 
+        ///
+        /// \brief returns the daemon attribute, it is set ine the Configure method
+        /// 
+        /// \return true If the filter is configured to be ran as deamon
         bool IsDaemon() const;
 
+        ///
+        /// \brief Set the Next Filter Connector object
+        /// 
+        /// \param path_address string to be parsed, can be a socket path, 
+        ///                     an ipv4 address with the port specified 'x.x.x.x:pppp' or 
+        ///                     an ipv6 address with the port specified '[xx:xx:xx:xx:xx]:ppp'
+        /// \param is_udp true if we should use udp, the parameter is unused if path_address is a socket
+        /// \return true if there was no error setting up the Next FilterConnector
+        ///
         bool SetNextFilterConnector(std::string const& path_address, bool is_udp);
 
+        ///
+        /// \brief Get a ref to the NextFilterConnector
+        /// 
+        /// \return ANextFilterConnector& a ref to the next filter
+        /// \throws std::logic_error if the NextFilterConnector is not set (happens if SetNextFilterConnector was not called)
         ANextFilterConnector& GetNextFilterconnector();
 
     private:
