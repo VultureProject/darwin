@@ -104,7 +104,7 @@ class Services:
         if filt['network']['socket_type'] == 'UDP':
             cmd.append('-u')
         
-        if filt['next_filter_unix_socket']['socket_type'] == 'UDP':
+        if filt['next_filter_network']['socket_type'] == 'UDP':
             cmd.append('-v')
         
         cmd += [

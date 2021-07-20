@@ -195,8 +195,8 @@ conf_v2_schema = {
                         "properties": {
                             "socket_type":{
                                 "type":"string",
-                                "enum": ["UNIX", "TCP", "UDP"],
-                                "default":"UNIX"
+                                "enum": ["NONE", "UNIX", "TCP", "UDP"],
+                                "default":"NONE"
                                 },
                             "address_path": {"type": "string"}
                             }
@@ -293,6 +293,7 @@ def complete_filters_conf(prefix, suffix):
 
         if not filter['next_filter']:
             filter['next_filter_unix_socket'] = 'no'
+            filter['next_filter_network'] = { "socket_type":"NONE", "address_path":filter['next_filter_unix_socket'] }
         else:
             filter['next_filter_unix_socket'] = '{prefix}/sockets{suffix}/{next_filter}.sock'.format(
                 prefix=prefix, suffix=suffix,
