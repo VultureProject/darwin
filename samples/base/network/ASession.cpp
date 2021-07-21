@@ -116,7 +116,7 @@ namespace darwin {
                     this->SendErrorResponse("Error receiving body: Empty body retrieved", DARWIN_RESPONSE_CODE_REQUEST_ERROR);
                     return;
                 }
-                if (_packet.GetParsedBodySize() <= 0) { //TODO useless branch
+                if (_packet.GetParsedBodySize() == 0) { 
                     DARWIN_LOG_ERROR(
                             "ASession::ReadBodyCallback Body is not empty, but the header appears to be invalid"
                     );
@@ -135,14 +135,14 @@ namespace darwin {
     void ASession::ExecuteFilter() {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("ASession::ExecuteFilter::");
-        auto t = _generator.CreateTask(shared_from_this()); //shared pt Task
+        auto t = _generator.CreateTask(shared_from_this());
 
         _generator.GetTaskThreadPool().post(std::bind(&ATask::run, t));
     }
 
     void ASession::SendNext(DarwinPacket& packet) {
         // TODO : Unsure of the logic behind the if's and and the Start calls
-        switch(packet.GetResponse()) {
+        switch(packet.GetResponseType()) {
             case DARWIN_RESPONSE_SEND_BOTH:
                 this->SendToFilter(packet);
             case DARWIN_RESPONSE_SEND_BACK:
