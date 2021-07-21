@@ -99,11 +99,11 @@ namespace darwin {
         return this->_type;
     }
 
-    enum darwin_filter_response_type DarwinPacket::GetResponse() const {
+    enum darwin_filter_response_type DarwinPacket::GetResponseType() const {
         return this->_response;
     }
 
-    void DarwinPacket::SetResponse(enum darwin_filter_response_type response) {
+    void DarwinPacket::SetResponseType(enum darwin_filter_response_type response) {
         this->_response = response; 
     }
 
