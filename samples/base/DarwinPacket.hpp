@@ -95,13 +95,13 @@ namespace darwin {
         /// 
         /// \return enum darwin_filter_response_type 
         ///
-        enum darwin_filter_response_type GetResponse() const;
+        enum darwin_filter_response_type GetResponseType() const;
 
         ///
         /// \brief Set the Response Type
         /// 
         ///
-        void SetResponse(enum darwin_filter_response_type);
+        void SetResponseType(enum darwin_filter_response_type);
 
         ///
         /// \brief Get the Filter Code
