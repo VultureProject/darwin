@@ -31,12 +31,6 @@ namespace darwin {
 
         void Stop() override final;
 
-        /// Set the path to the associated decision module UNIX socket
-        ///
-        /// \param path Path to the UNIX socket.
-        void SetNextFilterSocketPath(std::string const& path);
-
-
     protected:
 
         /// Set the async read for the header.

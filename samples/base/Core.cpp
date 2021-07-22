@@ -44,15 +44,20 @@ namespace darwin {
         try {
             Monitor monitor{_monSocketPath};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
-            std::thread t_nextfilter{std::bind(&ANextFilterConnector::Run, std::ref(GetNextFilterconnector()))};
+            std::thread t_nextfilter;
+            if(_next_filter_connector){
+                t_nextfilter = std::thread{std::bind(&ANextFilterConnector::Run, std::ref(*_next_filter_connector))};
+            }
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
             Generator gen{_nbThread};
             if (not gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
                 raise(SIGTERM);
-                t_nextfilter.join();
-                t.join();
+                if(t_nextfilter.joinable()) 
+                    t_nextfilter.join();
+                if(t.joinable()) 
+                    t.join();
                 return 1;
             }
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
@@ -73,16 +78,20 @@ namespace darwin {
                 default:
                     DARWIN_LOG_CRITICAL("Core:: Run:: Network Configuration problem");
                     raise(SIGTERM);
-                    t_nextfilter.join();
-                    t.join();
+                    if(t_nextfilter.joinable()) 
+                        t_nextfilter.join();
+                    if (t.joinable())
+                        t.join();
                     return 1;
             }
 
             try {
                 if (not gen.ConfigureNetworkObject(server->GetIOContext())) {
                     raise(SIGTERM);
-                    t_nextfilter.join();
-                    t.join();
+                    if(t_nextfilter.joinable())
+                        t_nextfilter.join();
+                    if (t.joinable())
+                        t.join();
                     return 1;
                 }
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
@@ -98,7 +107,8 @@ namespace darwin {
                 raise(SIGTERM);
             }
             DARWIN_LOG_DEBUG("Core::run:: Joining monitoring thread...");
-            t_nextfilter.join();
+            if(t_nextfilter.joinable())
+                t_nextfilter.join();
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {
@@ -198,6 +208,10 @@ namespace darwin {
 
     bool Core::SetNextFilterConnector(std::string const& path_address, bool is_udp) {
         DARWIN_LOGGER;
+        if(path_address == "no"){
+            DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: No Next Filter set");
+            return true;
+        }
         network::NetworkSocketType net_type;
         std::string path;
         int port;
@@ -207,12 +221,15 @@ namespace darwin {
 
         switch(net_type) {
             case network::NetworkSocketType::Unix:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter UNIX set on " + path);
                 _next_filter_connector = std::make_unique<UnixNextFilterConnector>(path);
                 return true;
             case network::NetworkSocketType::Tcp:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter TCP set on " + addr.to_string() + ":" + std::to_string(port));
                 _next_filter_connector = std::make_unique<TcpNextFilterConnector>(addr, port);
                 return true;
             case network::NetworkSocketType::Udp:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter UDP set on " + addr.to_string() + ":" + std::to_string(port));
                 _next_filter_connector = std::make_unique<UdpNextFilterConnector>(addr, port);
                 return true;
             default:
@@ -314,13 +331,8 @@ namespace darwin {
         return this->daemon;
     }
 
-    ANextFilterConnector& Core::GetNextFilterconnector() {
-        if(!_next_filter_connector) {
-            DARWIN_LOGGER;
-            DARWIN_LOG_CRITICAL("Core::GetNextFilterConnector :: Configure must be called before GetNextFilterConnector");
-            throw std::logic_error("Core:: Configure must be called before GetNextFilterConnector()");
-        }
-        return *_next_filter_connector;
+    ANextFilterConnector* Core::GetNextFilterconnector() {
+        return _next_filter_connector.get();
     }
 
 }

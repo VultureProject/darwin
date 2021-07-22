@@ -27,7 +27,7 @@
 namespace darwin {
     ASession::ASession(darwin::Manager& manager,
                      Generator& generator)
-            : _manager{manager}, _generator{generator}, _has_next_filter{false} {}
+            : _manager{manager}, _generator{generator} {}
 
     
 
@@ -76,7 +76,7 @@ namespace darwin {
                 DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
-            _packet = DarwinPacket(_header);
+            _packet = std::move(DarwinPacket(_header));
             if (_packet.GetParsedBodySize() == 0) {
                 ExecuteFilter();
                 return;
@@ -145,6 +145,7 @@ namespace darwin {
         switch(packet.GetResponseType()) {
             case DARWIN_RESPONSE_SEND_BOTH:
                 this->SendToFilter(packet);
+                __attribute((fallthrough));
             case DARWIN_RESPONSE_SEND_BACK:
                 if(not this->SendToClient(packet)) Start();
                 break;
@@ -177,14 +178,13 @@ namespace darwin {
     bool ASession::SendToFilter(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
 
-        if (!_has_next_filter) {
+        ANextFilterConnector* connector_ptr = Core::instance().GetNextFilterconnector();
+
+        if (!connector_ptr) {
             DARWIN_LOG_NOTICE("ASession::SendToFilter:: No next filter provided. Ignoring...");
             return false;
         }
-
-        ANextFilterConnector& c = Core::instance().GetNextFilterconnector();
-
-        c.Send(packet);
+        connector_ptr->Send(packet);
         return true;
     }
 
@@ -224,7 +224,7 @@ namespace darwin {
     
 
     void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
-        if (this->_packet.GetResponse() != DARWIN_RESPONSE_SEND_BACK && this->_packet.GetResponse() != DARWIN_RESPONSE_SEND_BOTH)
+        if (this->_packet.GetResponseType() != DARWIN_RESPONSE_SEND_BACK && this->_packet.GetResponseType() != DARWIN_RESPONSE_SEND_BOTH)
             return;
         _packet.GetMutableBody().clear();
         _packet.GetMutableBody() += "{\"error\":\"" + message + "\", \"error_code\":" + std::to_string(code) + "}";

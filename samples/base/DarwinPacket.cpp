@@ -14,11 +14,37 @@ namespace darwin {
         unsigned char event_id[16],
         size_t certitude_size,
         size_t body_size)
-        : _type{type}, _response{response}, _filter_code{filter_code},
+        :_type{type}, _response{response}, _filter_code{filter_code},
         _parsed_certitude_size{certitude_size}, _parsed_body_size{body_size} 
     {
         std::memcpy(this->_evt_id, event_id, 16);
 
+    }
+
+    DarwinPacket::DarwinPacket(DarwinPacket&& other) noexcept
+     :  _type{std::move(other._type)}, _response{std::move(other._response)}, _filter_code{std::move(other._filter_code)},
+        _parsed_certitude_size{std::move(other._parsed_certitude_size)}, _parsed_body_size{std::move(other._parsed_body_size)},
+        _certitude_list{std::move(other._certitude_list)}, _body{std::move(other._body)}, 
+        _parsed_body{other._parsed_body.release()}, _logs{std::move(other._logs)} 
+    {
+        std::memcpy(this->_evt_id, other._evt_id, sizeof(this->_evt_id));
+        std::memset(other._evt_id, 0, sizeof(other._evt_id));
+    }
+
+    DarwinPacket& DarwinPacket::operator=(DarwinPacket&& other) noexcept {
+        this->clear();
+        _type = std::move(other._type);
+        _response = std::move(other._response);
+        _filter_code = std::move(other._filter_code);
+        std::memcpy(this->_evt_id, other._evt_id, sizeof(this->_evt_id));
+        std::memset(other._evt_id, 0, sizeof(other._evt_id));
+        _parsed_certitude_size = std::move(other._parsed_certitude_size);
+        _parsed_body_size = std::move(other._parsed_body_size);
+        _certitude_list = std::move(other._certitude_list);
+        _body = std::move(other._body);
+        _parsed_body.reset(other._parsed_body.release());
+        _logs = std::move(other._logs);
+        return *this;
     }
 
     DarwinPacket::DarwinPacket(darwin_filter_packet_t& input) 
@@ -81,18 +107,15 @@ namespace darwin {
         this->_parsed_certitude_size = 0;
         _certitude_list.clear();
         _body.clear();
+        this->_parsed_body.reset(nullptr);
     }
 
     rapidjson::Document& DarwinPacket::JsonBody() {
-        if(this->_parsed_body == nullptr) {
-            this->_parsed_body = new rapidjson::Document();
+        if(! this->_parsed_body) {
+            this->_parsed_body = std::make_unique<rapidjson::Document>();
         }
         this->_parsed_body->Parse(this->_body.c_str());
         return *(this->_parsed_body);
-    }
-
-    DarwinPacket::~DarwinPacket(){
-        delete this->_parsed_body;
     }
 
     enum darwin_packet_type DarwinPacket::GetType() const {

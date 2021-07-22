@@ -174,7 +174,6 @@ namespace darwin {
         Generator& _generator; //!< The Task Generator.
         DarwinPacket _packet;
         std::string _logs; //!< Represents data given in the logs by the Session
-        bool _has_next_filter;
     };
 }
 
