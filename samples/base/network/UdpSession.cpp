@@ -32,17 +32,24 @@ namespace darwin {
         }
 
         std::memcpy(&_header, _buffer.data(), sizeof(_header));
-
-        if(size != sizeof(_header) + _header.body_size){
+        
+        //The header can hold one certitude, if there are more, we have to parsed them accordingly
+        size_t size_cert_above_header = _header.certitude_size > 1 ? (_header.certitude_size-1) * sizeof(unsigned int) : 0;
+        if(size != sizeof(_header) + _header.body_size + size_cert_above_header){
             DARWIN_LOG_ERROR("Error parsing header sizes, expected " + std::to_string(sizeof(_header) + _header.body_size) + " but buffer is " + std::to_string(size));
             return;
         }
 
-        //TODO Certitudes parsing
+        _packet = std::move(DarwinPacket(_header));
 
-        _packet = DarwinPacket(_header);
-        auto& body = _packet.GetMutableBody();
-        body.append(_buffer.begin() + sizeof(_header), _header.body_size);
+        for(size_t i=1; i < _header.certitude_size; i++){
+            unsigned int cert = 0;
+            std::memcpy(&cert, _buffer.data() + sizeof(_header) + (i-1)*sizeof(unsigned int), sizeof(unsigned int));
+            _packet.AddCertitude(cert);
+        }
+
+        std::string& body = _packet.GetMutableBody();
+        body.append(_buffer.begin() + sizeof(_header) + size_cert_above_header, _header.body_size);
 
         this->ExecuteFilter();
     }

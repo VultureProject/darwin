@@ -50,7 +50,16 @@ namespace darwin {
         
         DarwinPacket() = default;
 
-        virtual ~DarwinPacket();
+        DarwinPacket(DarwinPacket&& other) noexcept;
+
+        DarwinPacket& operator=(DarwinPacket&& other) noexcept;
+
+        virtual ~DarwinPacket() = default;
+
+        // No copy allowed of a DarwinPacket, only moves
+        // It may be implemented in the future as a deep copy if this is needed
+        DarwinPacket(const DarwinPacket&) = delete;
+        DarwinPacket& operator=(const DarwinPacket&) = delete;
 
         ///
         /// \brief Serialize the packet
@@ -76,9 +85,11 @@ namespace darwin {
         ///
         void clear();
 
-        /// TODO check if useful
+        ///
         /// \brief Parse the body as a json document and returns a reference to it
-        /// 
+        ///        While the parsed Body is kept inside the DarwinPacket, subsequent calls to JsonBody()
+        ///        will re-parse the body as the body may have been modified
+        ///
         /// \return rapidjson::Document& the reference to the parsed body
         ///
         rapidjson::Document& JsonBody();
@@ -106,7 +117,7 @@ namespace darwin {
         ///
         /// \brief Get the Filter Code
         /// 
-        /// \return long 
+        /// \return long filter code
         ///
         long GetFilterCode() const;
 
@@ -206,10 +217,6 @@ namespace darwin {
 
     private:
 
-        // TODO replace with a better solution 
-        // It is added as a ptr because Document, and smart pointers can't be moved but we use move semantics
-        rapidjson::Document* _parsed_body = nullptr;
-
         darwin_packet_type _type; //!< The type of information sent.
         darwin_filter_response_type _response; //!< Whom the response will be sent to.
         long _filter_code; //!< The unique identifier code of a filter.
@@ -218,6 +225,10 @@ namespace darwin {
         size_t _parsed_body_size;
         std::vector<unsigned int> _certitude_list; //!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
         std::string _body;
+
+        // Parsed Body is stored as late-initiliaized pointer because is cannot be moved, nor assigned
+        // For move semantics, we want to be able to move this, hence the std::unique_ptr
+        std::unique_ptr<rapidjson::Document> _parsed_body;
 
         std::string _logs;
 

@@ -100,11 +100,11 @@ namespace darwin {
         bool SetNextFilterConnector(std::string const& path_address, bool is_udp);
 
         ///
-        /// \brief Get a ref to the NextFilterConnector
+        /// \brief Get a pointer to the NextFilterConnector, it may be a nullptr if no NextFilter was set during the configuration
+        ///        If it is not nullptr, it has the lifetime of the darwin::Core instance (most of the duration of the program)
         /// 
-        /// \return ANextFilterConnector& a ref to the next filter
-        /// \throws std::logic_error if the NextFilterConnector is not set (happens if SetNextFilterConnector was not called)
-        ANextFilterConnector& GetNextFilterconnector();
+        /// \return ANextFilterConnector* a pointer to the next filter connector or nullptr
+        ANextFilterConnector* GetNextFilterconnector();
 
     private:
         std::string _name;
