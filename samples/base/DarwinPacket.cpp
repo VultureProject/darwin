@@ -84,11 +84,11 @@ namespace darwin {
         unsigned char * pt = ret.data();
 
         std::memcpy(pt, &header, sizeof(header));
-        pt += sizeof(header) - sizeof(int);
+        pt += sizeof(header);
 
         //certitudes
         for(size_t i=1; i < _certitude_list.size(); i++) {
-            auto certitude = _certitude_list[i];
+            unsigned int certitude = _certitude_list[i];
             std::memcpy(pt,(void*)(&certitude), sizeof(certitude));
             pt += sizeof(certitude);
         }

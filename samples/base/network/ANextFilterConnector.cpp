@@ -7,7 +7,7 @@
 namespace darwin {
 
     ANextFilterConnector::ANextFilterConnector()
-     : _io_context{}, _max_attempts{3}, _attempts_delay_ms{std::chrono::milliseconds(1000)}
+     : _io_context{}, _nb_attempts{0}, _max_attempts{3}, _attempts_delay_ms{std::chrono::milliseconds(1000)}
     {
     }
 
