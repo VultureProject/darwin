@@ -72,8 +72,8 @@ namespace darwin {
         boost::asio::io_context _io_context;
         std::set<std::shared_ptr<boost::asio::const_buffer>> _buffer_set;
 
-        size_t _max_attempts;
         size_t _nb_attempts;
+        size_t _max_attempts;
         std::chrono::milliseconds _attempts_delay_ms;
     };
 }

@@ -77,6 +77,7 @@ void TestTask::operator()() {
                 DARWIN_LOG_DEBUG("TestTask:: not triggered specific action, generating alert by default");
                 DARWIN_ALERT_MANAGER.Alert(_line, 100, _s->Evt_idToString());
                 _packet.AddCertitude(0);
+                _response_body.append(_packet.GetBody());
             }
         }
         else {
