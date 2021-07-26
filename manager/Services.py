@@ -541,7 +541,7 @@ class Services:
                 status = "Process not running"
                 continue
 
-            if not HeartBeat.check_socket(content['monitoring']):
+            if not HeartBeat.check_unix_socket(content['monitoring']):
                 status = "Monitoring socket not created"
                 continue
 
@@ -560,7 +560,7 @@ class Services:
                 continue
 
             if "running" in resp:
-                if not HeartBeat.check_socket(content['socket']):
+                if not HeartBeat.check_network_socket(content['network']):
                     status = "Main socket not created"
                     continue
             else:
@@ -584,10 +584,10 @@ class Services:
             if not HeartBeat.check_process(pid):
                 raise Exception('Process not running')
 
-            if not HeartBeat.check_socket(filter['socket']):
+            if not HeartBeat.check_network_socket(filter['network']):
                 raise Exception('Socket not accessible')
 
-            if not HeartBeat.check_socket(filter['monitoring']):
+            if not HeartBeat.check_unix_socket(filter['monitoring']):
                 raise Exception('Monitoring socket not accessible')
 
         except Exception as e:

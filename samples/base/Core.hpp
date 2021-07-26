@@ -106,6 +106,8 @@ namespace darwin {
         /// \return ANextFilterConnector* a pointer to the next filter connector or nullptr
         ANextFilterConnector* GetNextFilterconnector();
 
+        const std::string& GetName() const;
+
     private:
         std::string _name;
         std::string _modConfigPath;
