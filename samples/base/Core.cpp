@@ -339,4 +339,8 @@ namespace darwin {
         return _next_filter_connector.get();
     }
 
+    const std::string& Core::GetName() const {
+        return this->_name;
+    }
+
 }
