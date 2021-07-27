@@ -53,9 +53,9 @@ void ConnectionSupervisionTask::operator()() {
 
             if(certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
-                DARWIN_ALERT_MANAGER.Alert(_connection, certitude, _s->Evt_idToString());
+                DARWIN_ALERT_MANAGER.Alert(_connection, certitude, _packet.Evt_idToString());
                 if (is_log) {
-                    std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
+                    std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() + R"(", "filter": ")" + GetFilterName() +
                             R"(", "connection": ")" + _connection + R"(", "certitude": )" + std::to_string(certitude) + "}";
                     logs += alert_log + "\n";
                 }

@@ -90,9 +90,9 @@ void ContentInspectionTask::operator()() {
                 if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                     STAT_MATCH_INC;
                     DARWIN_ALERT_MANAGER.SetTags(tagListJson);
-                    DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _s->Evt_idToString(), details);
+                    DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _packet.Evt_idToString(), details);
                     if (is_log) {
-                        std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                        std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                                 R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson +
                                 "}";
