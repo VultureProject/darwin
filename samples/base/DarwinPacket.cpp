@@ -4,6 +4,7 @@
 #include <iomanip>
 #include "../../toolkit/rapidjson/writer.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"
+#include "Logger.hpp"
 
 namespace darwin {
 
@@ -116,6 +117,22 @@ namespace darwin {
         }
         this->_parsed_body->Parse(this->_body.c_str());
         return *(this->_parsed_body);
+    }
+
+    std::string DarwinPacket::Evt_idToString() const {
+        DARWIN_LOGGER;
+        std::ostringstream oss;
+        auto default_flags = oss.flags();
+
+        for(size_t i=0; i<sizeof(_evt_id);i++){
+            if(i==4 || i==6 || i==8 || i==10){
+                oss.flags(default_flags);
+                oss << '-';
+            }
+            oss << std::hex << std::setw(2) << std::setfill('0') << (static_cast<int>(_evt_id[i]) & 0xFF);
+        }
+        DARWIN_LOG_DEBUG("DarwinPacket::Evt_idToString:: UUID - " + oss.str());
+        return oss.str();
     }
 
     enum darwin_packet_type DarwinPacket::GetType() const {

@@ -86,11 +86,6 @@ namespace darwin {
         /// \return The filter's threshold
         size_t GetThreshold();
 
-        /// Transform the evt id in the header into a string
-        ///
-        /// \return evt_di as string
-        std::string Evt_idToString();
-
         /// Send
         virtual void SendNext(DarwinPacket& packet) final;
 

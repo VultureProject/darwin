@@ -60,7 +60,7 @@ void UserAgentTask::operator()() {
 
             if (GetCacheResult(hash, certitude)) {
                 if (is_log && (certitude>=_threshold)){
-                    _logs += R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    _logs += R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
                 }
                 _packet.AddCertitude(certitude);
@@ -72,7 +72,7 @@ void UserAgentTask::operator()() {
 
         certitude = Predict(user_agent);
         if (is_log && (certitude>=_threshold)){
-            _logs += R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+            _logs += R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + "\", \"user_agent\": \"" + user_agent + "\", \"ua_classification\": " + std::to_string(certitude) + "}\n";
         }
         _packet.AddCertitude(certitude);

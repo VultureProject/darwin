@@ -59,10 +59,10 @@ void YaraTask::operator()() {
                     if (certitude>=_threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
 
-                        DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _s->Evt_idToString());
+                        DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _packet.Evt_idToString());
 
                         if (is_log) {
-                            std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                                 "}\n";
                             logs += alert_log + '\n';
@@ -92,10 +92,10 @@ void YaraTask::operator()() {
                 std::string tagListJson = YaraTask::GetJsonListFromSet(results.tags);
                 std::string details = "{\"rules\": " + ruleListJson + "}";
 
-                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _s->Evt_idToString(),  details, tagListJson);
+                DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _packet.Evt_idToString(),  details, tagListJson);
 
                 if (is_log) {
-                    std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                             R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                             R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson + "}\n";
                     logs += alert_log + '\n';
