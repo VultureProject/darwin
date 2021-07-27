@@ -75,5 +75,6 @@ namespace darwin {
         size_t _nb_attempts;
         size_t _max_attempts;
         std::chrono::milliseconds _attempts_delay_ms;
+        bool _is_connected;
     };
 }

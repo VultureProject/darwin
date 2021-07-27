@@ -74,7 +74,7 @@ namespace darwin {
         /// Get the filter's output type
         ///
         /// \return The filter's output type
-        config::output_type GetOutputType();
+        config::output_type GetOutputType() const;
 
         /// Get the filter's result in a log form
         ///
@@ -95,21 +95,20 @@ namespace darwin {
         /// Get the data to send to the next filter
         /// according to the filter's output type
         ///
-        /// \param size data's size
-        /// \param data data to send
-        std::string GetDataToSendToFilter();
+        /// \param packet packet to modify (the field _body may be modified)
+        void ModifyDataToSendToFilter(DarwinPacket& packet) const;
 
         virtual void WriteToClient(std::vector<unsigned char>& packet) = 0;
 
         /// Send result to the client.
+        /// Possible failures must be handled in SendToClientCallback
         ///
-        /// \return false if the function could not send the data, true otherwise.
-        virtual bool SendToClient(DarwinPacket& packet) noexcept;
+        virtual void SendToClient(DarwinPacket& packet) noexcept;
 
         /// Send result to next filter.
+        /// Possible failures must be handled in SendToFilterCallback
         ///
-        /// \return false if the function could not send the data, true otherwise.
-        virtual bool SendToFilter(DarwinPacket& packet) noexcept;
+        virtual void SendToFilter(DarwinPacket& packet) noexcept;
 
         /// Called when data is sent using Send() method.
         /// Terminate the session on failure.
@@ -119,7 +118,7 @@ namespace darwin {
         SendToClientCallback(const boost::system::error_code& e,
                      std::size_t size);
 
-        std::string JsonStringify(rapidjson::Document &json);
+        std::string JsonStringify(rapidjson::Document &json) const;
 
         /// Set the async read for the header.
         ///
