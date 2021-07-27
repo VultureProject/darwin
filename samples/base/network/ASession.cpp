@@ -41,7 +41,7 @@ namespace darwin {
         _output = config::convert_output_string(output);
     }
 
-    config::output_type ASession::GetOutputType() {
+    config::output_type ASession::GetOutputType() const {
         return _output;
     }
 
@@ -49,18 +49,21 @@ namespace darwin {
         return _logs;
     }
 
-    std::string ASession::GetDataToSendToFilter(){
-        switch (GetOutputType()){
+    void ASession::ModifyDataToSendToFilter(DarwinPacket &packet) const {
+        std::string& body = packet.GetMutableBody();
+        switch (this->_output){
             case config::output_type::RAW:
-                return _packet.GetBody();
+                return;
             case config::output_type::PARSED:
-                return JsonStringify(_packet.JsonBody());
+                body = std::move(JsonStringify(packet.JsonBody()));
+                return;
             case config::output_type::NONE:
-                return "";
+                body.clear();
+                return;
             case config::output_type::LOG:
-                return _packet.GetLogs();
+                body = packet.GetLogs();
+                return;
         }
-        return "";
     }
 
     void ASession::ReadHeaderCallback(const boost::system::error_code& e,
@@ -157,16 +160,18 @@ namespace darwin {
     }
 
     void ASession::SendNext(DarwinPacket& packet) {
-        // TODO : Unsure of the logic behind the if's and and the Start calls
         switch(packet.GetResponseType()) {
             case DARWIN_RESPONSE_SEND_BOTH:
+                // We try to send to filter, then send back to client anyway
                 this->SendToFilter(packet);
                 __attribute((fallthrough));
             case DARWIN_RESPONSE_SEND_BACK:
-                if(not this->SendToClient(packet)) Start();
+                this->SendToClient(packet);
+                // We don't resume the session by calling Start() because the SendToClientCallback already does
                 break;
             case DARWIN_RESPONSE_SEND_DARWIN:
-                if(not this->SendToFilter(packet)) Start();
+                this->SendToFilter(packet);
+                Start();
                 break;
             default:
                 Start();
@@ -174,7 +179,7 @@ namespace darwin {
     }
 
 
-    std::string ASession::JsonStringify(rapidjson::Document &json) {
+    std::string ASession::JsonStringify(rapidjson::Document &json) const {
         rapidjson::StringBuffer buffer;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
@@ -183,25 +188,24 @@ namespace darwin {
         return std::string(buffer.GetString());
     }
 
-    bool ASession::SendToClient(DarwinPacket& packet) noexcept {
+    void ASession::SendToClient(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
         std::vector<unsigned char> serialized_packet = std::move(packet.Serialize());
         DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(serialized_packet.size()));
         this->WriteToClient(serialized_packet);
-        return true;
     }
 
-    bool ASession::SendToFilter(DarwinPacket& packet) noexcept {
+    void ASession::SendToFilter(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
 
         ANextFilterConnector* connector_ptr = Core::instance().GetNextFilterconnector();
 
         if (!connector_ptr) {
             DARWIN_LOG_NOTICE("ASession::SendToFilter:: No next filter provided. Ignoring...");
-            return false;
+            return;
         }
+        this->ModifyDataToSendToFilter(packet);
         connector_ptr->Send(packet);
-        return true;
     }
 
     void ASession::SendToClientCallback(const boost::system::error_code& e,
