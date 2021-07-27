@@ -28,8 +28,7 @@ ONE_FILTER = """
         "exec_path": "{filter_path}darwin_test",
         "config_file": "/tmp/test.conf",
         "output": "RAW",
-        "next_filter": "{next_filter}",
-        "next_filter_network":{next_filter_network},
+        {next_filter}
         "nb_thread": 1,
         "log_level": "DEBUG",
         "cache_size": 0,
@@ -75,13 +74,13 @@ CONFIG = """
 def alerting_tests(filters_list):
     assert(len(filters_list) == 3)
     filter_1 = ONE_FILTER.format(name='test_1', filter_path=conf.DEFAULT_FILTER_PATH, 
-                            next_filter='test_2', next_filter_network=network_map[filters_list[1]].format(port=8282), 
+                            next_filter='"next_filter": "test_2",', 
                             network=network_map[filters_list[0]].format(port=8181))
     filter_2 = ONE_FILTER.format(name='test_2', filter_path=conf.DEFAULT_FILTER_PATH, 
-                            next_filter='test_3', next_filter_network=network_map[filters_list[2]].format(port=8383), 
+                            next_filter='"next_filter": "test_3",', 
                             network=network_map[filters_list[1]].format(port=8282))
     filter_3 = ONE_FILTER.format(name='test_3', filter_path=conf.DEFAULT_FILTER_PATH, 
-                            next_filter='', next_filter_network='{}', 
+                            next_filter='', 
                             network=network_map[filters_list[2]].format(port=8383))
     config = CONFIG.format(filter_1=filter_1, filter_2=filter_2, filter_3=filter_3)
 
