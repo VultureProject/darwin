@@ -63,14 +63,16 @@ CONFIG = """
 }}
 """
 
-
+# Test different combinations of tcp/udp/unix socket and verifies that everytime, 3 alerts are spawned
 def alerting_tests():
     tests = [
        ['unix', 'unix', 'unix'],
        ['tcp', 'tcp', 'tcp'],
        ['udp', 'udp', 'udp'],
        ['udp', 'unix', 'unix'],
-       ['udp', 'tcp', 'tcp']
+       ['udp', 'tcp', 'tcp'],
+       ['tcp', 'udp', 'unix'],
+       ['unix', 'tcp', 'udp'],
     ]
 
     for test in tests:
@@ -94,9 +96,9 @@ def alerting_tests():
         file.close()
 
         p = darwin_start()
+
         # socket path is given according to how it is currently generated in the manager, 
         # this may have to change in the future
-
         path_addr = '{}/sockets/test_1.1.sock'.format(conf.TEST_FILES_DIR) if test[0] == 'unix' else '[::]:8181'
         f = Filter(socket_type=test[0], socket_path=path_addr)
         api = f.get_darwin_api()

@@ -114,7 +114,7 @@ void AnomalyTask::GenerateAlerts(std::vector<std::string> ips, arma::uvec index_
         details += R"("icmp_nb_host": )" + std::to_string(alerts(ICMP_NB_HOST, i)) + ",";
         details += R"("distance": )" + std::to_string(alerts(DISTANCE, i));
         details += "}";
-        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, _s->Evt_idToString(), details);
+        DARWIN_ALERT_MANAGER.Alert(ips[index_anomalies(i)], 100, _packet.Evt_idToString(), details);
     }
 }
 
@@ -122,7 +122,7 @@ void AnomalyTask::GenerateLogs(std::vector<std::string> ips, arma::uvec index_an
     auto logs = _packet.GetMutableLogs();
     for(unsigned int i=0; i<index_anomalies.n_rows; i++){
         std::string alert_log;
-        alert_log = R"({"evt_id": ")" + _s->Evt_idToString();
+        alert_log = R"({"evt_id": ")" + _packet.Evt_idToString();
         alert_log += R"(", "time": ")" + darwin::time_utils::GetTime();
         alert_log += R"(", "filter": ")" + GetFilterName();
         alert_log += R"(", "anomaly": {)";

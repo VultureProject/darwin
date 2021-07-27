@@ -218,27 +218,6 @@ namespace darwin {
         Start();
     }
 
-    std::string ASession::Evt_idToString() {
-        DARWIN_LOGGER;
-
-        const unsigned char * evt_id = _packet.GetEventId();
-        
-        std::ostringstream oss;
-        auto default_flags = oss.flags();
-
-        for(size_t i=0; i<16;i++){
-            if(i==4 || i==6 || i==8 || i==10){
-                oss.flags(default_flags);
-                oss << '-';
-            }
-            oss << std::hex << std::setw(2) << static_cast<unsigned int>(evt_id[i]);
-        }
-        DARWIN_LOG_DEBUG(std::string("ASession::Evt_idToString:: UUID - ") + oss.str());
-        return oss.str();
-    }
-
-    
-
     void ASession::SendErrorResponse(const std::string& message, const unsigned int code) {
         if (this->_packet.GetResponseType() != DARWIN_RESPONSE_SEND_BACK && this->_packet.GetResponseType() != DARWIN_RESPONSE_SEND_BOTH)
             return;

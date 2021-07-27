@@ -142,6 +142,13 @@ namespace darwin {
         size_t GetEventIdSize() const;
 
         ///
+        /// \brief Serialize the event id as a UUID String
+        /// 
+        /// \return std::string UUID encoded event id
+        ///
+        std::string Evt_idToString() const;
+
+        ///
         /// \brief Get the Parsed Certitude Size, it may differs from GetCertitudeList().size()
         /// 
         /// \return size_t Parsed Certitude Size

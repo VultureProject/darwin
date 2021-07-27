@@ -70,9 +70,9 @@ void DGATask::operator()() {
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
-                        DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _s->Evt_idToString());
+                        DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _packet.Evt_idToString());
                         if (is_log) {
-                            std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                     R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
                             logs += alert_log + '\n';
                         }
@@ -87,9 +87,9 @@ void DGATask::operator()() {
             certitude = Predict();
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
-                DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _s->Evt_idToString());
+                DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _packet.Evt_idToString());
                 if (is_log) {
-                    std::string alert_log = R"({"evt_id": ")" + _s->Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                     R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
                     logs += alert_log + '\n';
                 }
