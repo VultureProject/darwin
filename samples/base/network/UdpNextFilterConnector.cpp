@@ -21,7 +21,8 @@ namespace darwin {
         _socket.connect(_endpoint, ec);
 
         if(ec) {
-            DARWIN_LOG_ERROR("NextFilterConnector::Connect:: Connexion error : " + std::string(ec.message()));
+            // We handle the case but, since UDP is stateless, this _socket.connect call does nothing and never fails
+            DARWIN_LOG_ERROR("UdpNextFilterConnector::Connect:: Connexion error : " + std::string(ec.message()));
             return false;
         }
         return true;
@@ -29,13 +30,10 @@ namespace darwin {
 
     void UdpNextFilterConnector::Send(std::shared_ptr<boost::asio::const_buffer> packet) {
         DARWIN_LOGGER;
-        if(_nb_attempts > _max_attempts){
-            DARWIN_LOG_ERROR("NextFilterConnector::Send:: Maximal number of attempts reached");
-            return;
-        }
-        while( ! this->Connect() && _nb_attempts++ <= _max_attempts) {
-            std::this_thread::sleep_for(_attempts_delay_ms);
-        }
+        // The Connect call cannot fail, we don't have to check and we don't have to retry it
+        this->Connect();
+
+        DARWIN_LOG_DEBUG("UdpNextFilterConnector::Send : Sending packet to UDP endpoint, no retries");
 
         _socket.async_send_to(*packet, 
                             _endpoint, 
