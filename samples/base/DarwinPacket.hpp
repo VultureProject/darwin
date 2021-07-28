@@ -17,7 +17,6 @@
 #include "protocol.h"
 #include "../../toolkit/rapidjson/document.h"
 
-#define DEFAULT_CERTITUDE_LIST_SIZE 1
 
 namespace darwin {
 
@@ -75,8 +74,7 @@ namespace darwin {
         ///
         constexpr static size_t getMinimalSize() {
             return sizeof(_type) + sizeof(_response) + sizeof(_filter_code)
-                + sizeof(_parsed_body_size) + sizeof(_evt_id) + sizeof(_parsed_certitude_size) 
-                + DEFAULT_CERTITUDE_LIST_SIZE * sizeof(unsigned int); // Protocol has at least DEFAULT (one) certitude
+                + sizeof(_parsed_body_size) + sizeof(_evt_id) + sizeof(_parsed_certitude_size);
         };
 
         ///

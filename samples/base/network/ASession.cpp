@@ -80,16 +80,12 @@ namespace darwin {
                 goto header_callback_stop_session;
             }
             _packet = std::move(DarwinPacket(_header));
-            if (_packet.GetParsedBodySize() == 0 && _packet.GetParsedCertitudeSize() <= 1) {
+            if (_packet.GetParsedBodySize() == 0 && _packet.GetParsedCertitudeSize() == 0) {
                 ExecuteFilter();
                 return;
             } // Else the ReadBodyCallback willcall ExecuteFilter
-            size_t sizeToRead = _packet.GetParsedBodySize();
-            if(_packet.GetParsedCertitudeSize() > 1){
-                sizeToRead += _packet.GetParsedCertitudeSize() * sizeof(unsigned int);
-            }
 
-            ReadBody(sizeToRead);
+            ReadBody(_packet.GetParsedBodySize() + _packet.GetParsedCertitudeSize());
             return;
         }
 
@@ -109,7 +105,7 @@ namespace darwin {
 
         if (!e) {
             size_t already_parsed_size = 0;
-            if(_packet.GetParsedCertitudeSize() > 1){
+            if(_packet.GetParsedCertitudeSize() > 0){
                 while(_packet.GetParsedCertitudeSize() != _packet.GetCertitudeList().size()
                     && already_parsed_size + sizeof(unsigned int) <= size) {
                     unsigned int cert = 0;

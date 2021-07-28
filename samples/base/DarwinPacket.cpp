@@ -51,11 +51,8 @@ namespace darwin {
     DarwinPacket::DarwinPacket(darwin_filter_packet_t& input) 
         : _type{input.type}, _response{input.response}, _filter_code{input.filter_code},
         _parsed_certitude_size{input.certitude_size}, _parsed_body_size{input.body_size} 
-    
     {
         std::memcpy(this->_evt_id, input.evt_id, 16);
-        if(input.certitude_size > 0)
-            AddCertitude(input.certitude_list[0]);
     }
 
     std::vector<unsigned char> DarwinPacket::Serialize() const {
@@ -66,29 +63,21 @@ namespace darwin {
             this->_body.size(),
             {0},
             this->_certitude_list.size(),
-            {0}
+            {}
         };
 
         std::memcpy(header.evt_id, this->_evt_id, 16);
 
-        size_t size = sizeof(header) + _body.size();
-        
-        if( ! _certitude_list.empty()) {
-            // From the packet format, at least one certitude is always allocated
-            size += (_certitude_list.size() - 1) * sizeof(unsigned int);
-            header.certitude_list[0] = _certitude_list[0];
-        }
-            
-        
+        size_t size = sizeof(header) + _body.size() + _certitude_list.size() * sizeof(unsigned int);
+
         std::vector<unsigned char> ret(size, 0);
         
         unsigned char * pt = ret.data();
 
         std::memcpy(pt, &header, sizeof(header));
         pt += sizeof(header);
-
         //certitudes
-        for(size_t i=1; i < _certitude_list.size(); i++) {
+        for(size_t i=0; i < _certitude_list.size(); i++) {
             unsigned int certitude = _certitude_list[i];
             std::memcpy(pt,(void*)(&certitude), sizeof(certitude));
             pt += sizeof(certitude);
