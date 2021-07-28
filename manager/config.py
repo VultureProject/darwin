@@ -309,7 +309,7 @@ def complete_filters_conf(prefix, suffix):
     
     # Next filter is setup with a second loop (we need network information already setup)
     for _, filter in filters.items():
-        if 'next_filter' not in filter:
+        if 'next_filter' not in filter or filter['next_filter'] == '':
             filter['next_filter_network'] = { "socket_type":"NONE", "address_path":"no" }
         else:
             if isinstance(filter['next_filter'], str):
