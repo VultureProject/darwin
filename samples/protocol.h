@@ -24,7 +24,6 @@ extern "C" {
 
 #define DARWIN_FILTER_CODE_NO 0x00000000
 // the default certitude list size, which is 1, to allow FMAs (see flexible array members on C99) for both C and C++ code
-#define DEFAULT_CERTITUDE_LIST_SIZE 1
 
 /// Represent the receiver of the results.
 ///
@@ -54,8 +53,9 @@ typedef struct {
     size_t                              body_size; //!< The complete size of the the parameters to be sent (if needed).
     unsigned char			            evt_id[16]; //!< An array containing the event ID
     size_t                              certitude_size; //!< The size of the list containing the certitudes.
-    unsigned int                        certitude_list[DEFAULT_CERTITUDE_LIST_SIZE]; //!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
-} darwin_filter_packet_t;
+    unsigned int                        certitude_list[0]; //!< DEPRECATED, certitudes are no longer passed through this array, 
+                                                           //!< they must be appened after the header, before the body
+} __attribute__((packed)) darwin_filter_packet_t;
 
 #ifdef __cplusplus
 };
