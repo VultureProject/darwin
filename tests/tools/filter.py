@@ -28,7 +28,9 @@ class Filter():
         self.pid = pid_file if pid_file else "{}/{}.pid".format(conf.TEST_FILES_DIR, filter_name)
         self.cmd = [self.path, "-l", log_level, self.filter_name, self.socket, self.config, self.monitor, self.pid, output, next_filter_socket_path, str(nb_threads), str(cache_size), str(threshold)]
         if self.socket_type.startswith('udp'):
-            self.cmd += ['-u']
+            # Flags MUST be before positional arguments as the parsing on HardenedBSD is not done on all the arguments
+            # On BSD getopt stops at the first argument which is not in the specified flags
+            self.cmd.insert(1, '-u')
         self.error_code = 99 # For valgrind testing
         self.pubsub = None
         self.prepare_log_file()

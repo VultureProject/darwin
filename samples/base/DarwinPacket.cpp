@@ -1,6 +1,7 @@
 #include "DarwinPacket.hpp"
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include "../../toolkit/rapidjson/writer.h"
 #include "../../toolkit/rapidjson/stringbuffer.h"

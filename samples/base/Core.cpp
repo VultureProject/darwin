@@ -142,9 +142,11 @@ namespace darwin {
         // OPTIONS
         log.setLevel(logger::Warning); // Log level by default
         opt = -1;
+        // Flags MUST be before positional arguments as the parsing on HardenedBSD is not done on all the arguments
+        // On BSD getopt stops at the first argument which is not in the specified flags
         while((opt = getopt(ac, av, ":l:huv")) != -1)
         {
-            DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
+            DARWIN_LOG_DEBUG(std::string("OPT : ") + (char)opt);
             DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
             switch(opt)
             {
