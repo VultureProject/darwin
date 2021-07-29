@@ -135,6 +135,7 @@ static inline int addFlowToList(Flow *flow, FlowList *flowList) {
     }
 }
 
+__attribute((unused))
 static inline int removeFlowFromList(Flow *flow, FlowList *flowList) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("removeFlowFromList");

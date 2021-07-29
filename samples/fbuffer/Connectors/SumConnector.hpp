@@ -35,7 +35,7 @@ public:
     ///\brief test every Redis Key in _redis_lists to ensure keys are of the correct type if they exist in Redis
     ///
     ///\return true if the keys are not in redis, or are of the good type, false otherwise.
-    virtual bool PrepareKeysInRedis();
+    virtual bool PrepareKeysInRedis() override;
 
     ///\brief This function sends data to the REDIS storage. It overrides default pure virtual one as each filter doesn't need the same data.
     ///
@@ -60,7 +60,7 @@ public:
     ///\param sum_name unused parameter
     ///
     ///\return always true
-    virtual bool REDISReinsertLogs(std::vector<std::string> &logs __attribute__((unused)), const std::string &sum_name __attribute__((unused)));
+    virtual bool REDISReinsertLogs(std::vector<std::string> &logs __attribute__((unused)), const std::string &sum_name __attribute__((unused))) override;
 
     ///\brief Get the sum from Redis
     ///
@@ -85,5 +85,5 @@ protected:
     ///\param format The string to fill with the result
     ///
     ///\return True on success (formatting successful), False otherwise.
-    virtual bool FormatDataToSendToFilter(std::vector<std::string> &logs, std::string &formatted);
+    virtual bool FormatDataToSendToFilter(std::vector<std::string> &logs, std::string &formatted) override;
 };

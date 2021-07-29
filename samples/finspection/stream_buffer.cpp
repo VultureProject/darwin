@@ -197,7 +197,7 @@ int streamBufferExtend(StreamBuffer *sb, uint32_t extLength) {
     return -1;
 }
 
-static inline void streamBufferShift(StreamBuffer *sb, int amount) {
+static inline void streamBufferShift(StreamBuffer *sb, uint32_t amount) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("streamBufferShift, amount=" + std::to_string(amount));
 
