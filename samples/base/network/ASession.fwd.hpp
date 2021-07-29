@@ -1,5 +1,5 @@
 #pragma once
-#include <bits/shared_ptr.h>
+#include <memory>
 #include <array>
 
 // Forward Declaration mandatory because of the circular dependency between Tasks, Sessions and Generators
