@@ -202,7 +202,7 @@ DataObject *getOrCreateAvailableObject(DataPool *pool) {
     return object;
 }
 
-DataPool *createPool(char *poolName, constructor_t objectConstructor,
+DataPool *createPool(const char *poolName, constructor_t objectConstructor,
                      destructor_t objectDestructor, resetor_t objectResetor,
                      uint32_t minAvailableElems) {
     DARWIN_LOGGER;
@@ -346,8 +346,6 @@ void *memoryManagerDoWork(void *pData) {
         DARWIN_LOG_DEBUG("memory manager: cleanup finished, memory freed: " + std::to_string(totalMemFreed) + ","
                   " total memory used: " + std::to_string(poolStorage->totalDataSize));
 
-        uint32_t ratio = (unsigned long int)((float)poolStorage->totalDataSize/(float)poolStorage->maxDataSize*100);
-
         DARWIN_LOG_DEBUG("memory manager: starting TCP session cleanup");
         DataObject *sessObject;
         TcpSession *session;
@@ -403,7 +401,7 @@ void startMemoryManager(MemManagerParams *memManagerParams) {
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
         if(pthread_create(&(memManagerParams->thread), &attr, memoryManagerDoWork, (void *)memManagerParams) != 0) {
-            memManagerParams->thread = NULL;
+            memManagerParams->thread = 0;
             pthread_attr_destroy(&attr);
             return;
         }

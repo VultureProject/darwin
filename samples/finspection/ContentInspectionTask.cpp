@@ -122,7 +122,6 @@ bool ContentInspectionTask::ParseBody() {
         logs.clear();
         std::size_t packetMeta = 0, packetMetaEnd;
         std::size_t packetData, packetDataEnd = 0;
-        std::size_t openingBracket;
 
         do {
             packetMeta = raw_body.find("\"{", packetDataEnd + 1);

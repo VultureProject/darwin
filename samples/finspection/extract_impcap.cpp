@@ -31,8 +31,6 @@
 #include "../toolkit/rapidjson/document.h"
 
 Packet *getImpcapData(std::string impcapMeta, std::string impcapData) {
-    DARWIN_LOGGER;
-    int localret;
     uint32_t contentLength;
     const char *content;
     uint16_t ethType;
@@ -85,9 +83,8 @@ Packet *getImpcapData(std::string impcapMeta, std::string impcapData) {
 
 uint8_t *ImpcapDataDecode(const char *hex, uint32_t length) {
     uint8_t *retBuf = (uint8_t *)malloc(length/2*sizeof(uint8_t));
-    int i;
 
-    for(i = 0; i < length; ++i) {
+    for(uint32_t i = 0; i < length; ++i) {
         if(i%2) {
             retBuf[i/2] <<= 4;
             if(hex[i] >= '0' && hex[i] <= '9') {

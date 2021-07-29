@@ -114,7 +114,6 @@ bool ConnectionSupervisionTask::ParseLine(rapidjson::Value& line){
 unsigned int ConnectionSupervisionTask::REDISLookup(const std::string& connection) noexcept {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervisionTask:: Looking up '" +  connection  + "' in the Redis");
-    int redisReplyCode;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     long long int result;

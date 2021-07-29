@@ -139,6 +139,7 @@ bool YaraTask::ParseLine(rapidjson::Value& line) {
             else {
                 encoding = fields[1].GetString();
             }
+            __attribute((fallthrough));
             // No break here!
         case 1:
             if(not fields[0].IsString()){
