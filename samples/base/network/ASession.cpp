@@ -55,7 +55,7 @@ namespace darwin {
             case config::output_type::RAW:
                 return;
             case config::output_type::PARSED:
-                body = std::move(JsonStringify(packet.JsonBody()));
+                body = JsonStringify(packet.JsonBody());
                 return;
             case config::output_type::NONE:
                 body.clear();
@@ -79,7 +79,7 @@ namespace darwin {
                 DARWIN_LOG_ERROR("ASession::ReadHeaderCallback:: Mismatching header size");
                 goto header_callback_stop_session;
             }
-            _packet = std::move(DarwinPacket(_header));
+            _packet = DarwinPacket(_header);
             if (_packet.GetParsedBodySize() == 0 && _packet.GetParsedCertitudeSize() == 0) {
                 ExecuteFilter();
                 return;
@@ -186,7 +186,7 @@ namespace darwin {
 
     void ASession::SendToClient(DarwinPacket& packet) noexcept {
         DARWIN_LOGGER;
-        std::vector<unsigned char> serialized_packet = std::move(packet.Serialize());
+        std::vector<unsigned char> serialized_packet = packet.Serialize();
         DARWIN_LOG_DEBUG("ASession::SendToClient: Computed packet size: " + std::to_string(serialized_packet.size()));
         this->WriteToClient(serialized_packet);
     }

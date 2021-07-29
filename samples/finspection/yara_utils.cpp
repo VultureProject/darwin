@@ -287,7 +287,7 @@ YaraResults yaraScan(uint8_t *buffer, uint32_t buffLen, StreamBuffer *sb) {
 }
 
 #if YR_MAJOR_VERSION == 3
-void yaraErrorCallback(int errorLevel, const char *fileName, int lineNumber, const char *message, void *userData) {
+void yaraErrorCallback(int errorLevel, const char *fileName, int lineNumber, const char *message, void *userData __attribute((unused))) {
     DARWIN_LOGGER;
     char errStr[2048];
     if(fileName) {

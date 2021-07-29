@@ -91,7 +91,7 @@ std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
 }
 
 
-bool SessionTask::REDISResetExpire(const std::string &token, const std::string &repo_id) {
+bool SessionTask::REDISResetExpire(const std::string &token, const std::string &repo_id __attribute((unused))) {
     DARWIN_LOGGER;
     long long int ttl;
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();

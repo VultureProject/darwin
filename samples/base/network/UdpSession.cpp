@@ -40,7 +40,7 @@ namespace darwin {
             return;
         }
 
-        _packet = std::move(DarwinPacket(_header));
+        _packet = DarwinPacket(_header);
 
         for(size_t i=0; i < _header.certitude_size; i++){
             unsigned int cert = 0;
