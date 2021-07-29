@@ -90,6 +90,14 @@ class Services:
 
         cmd = [filt['exec_path']]
 
+        # Flags MUST be before positional arguments as the parsing on HardenedBSD is not done on all the arguments
+        # On BSD getopt stops at the first argument which is not in the specified flags
+        if filt['network']['socket_type'] == 'UDP':
+            cmd.append('-u')
+        
+        if filt['next_filter_network']['socket_type'] == 'UDP':
+            cmd.append('-v')
+        
         try:
             if filt['log_level'] not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DEVELOPER"]:
                 logger.warning(
@@ -100,12 +108,6 @@ class Services:
                 cmd.append(filt['log_level'])
         except KeyError:
             pass
-        
-        if filt['network']['socket_type'] == 'UDP':
-            cmd.append('-u')
-        
-        if filt['next_filter_network']['socket_type'] == 'UDP':
-            cmd.append('-v')
         
         cmd += [
             filt['name'],
