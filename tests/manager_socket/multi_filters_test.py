@@ -5,7 +5,7 @@ from tools.output import print_result
 from tools.darwin_utils import darwin_configure, darwin_stop, darwin_start, darwin_remove_configuration
 from tools.filter import Filter
 import conf
-
+import psutil
 
 def run():
     scenarios = [
@@ -96,9 +96,23 @@ def alerting_tests(filters_list):
 
     # socket path is given according to how it is currently generated in the manager, 
     # this may have to change in the future
-    path_addr = '{}/sockets/test_1.1.sock'.format(conf.TEST_FILES_DIR) if filters_list[0] == 'unix' else '[::]:8181'
+    path_addr = '{}/sockets/test_1.1.sock'.format(conf.TEST_FILES_DIR) if filters_list[0] == 'unix' else '[::1]:8181'
     f = Filter(socket_type=filters_list[0], socket_path=path_addr)
     api = f.get_darwin_api()
+
+    start = time.time()
+    nb_test_filters=0
+    # We check that all 3 filters are running, on VM HardenedBSD, it may take some time
+    while nb_test_filters < 3 and time.time() - start < 6:
+        time.sleep(1)
+        nb_test_filters=0
+        for proc in psutil.process_iter():
+            try:
+                # Check if process name contains the given name string.
+                if 'darwin_test' in proc.name().lower():
+                    nb_test_filters += 1
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
 
     api.call("Hello", response_type="darwin")
     time.sleep(0.2)
@@ -123,5 +137,6 @@ def alerting_tests(filters_list):
 
     if line1 != 2 or line2 != 2 or line3 != 2:
         print('test failed: ', filters_list)
+        print("test1 : {}, test2 : {}, test3 : {}".format(line1, line2, line3))
         return False
     return True

@@ -35,8 +35,7 @@ namespace darwin {
 
         DARWIN_LOG_DEBUG("UdpNextFilterConnector::Send : Sending packet to UDP endpoint, no retries");
 
-        _socket.async_send_to(*packet, 
-                            _endpoint, 
+        _socket.async_send(*packet, 
                             boost::bind(&UdpNextFilterConnector::SendCallback, this, 
                                 boost::asio::placeholders::error, 
                                 boost::asio::placeholders::bytes_transferred,
