@@ -9,6 +9,8 @@ import filters.fbuffer as fbuffer
 import filters.fvast as fvast
 import filters.fvaml as fvaml
 import filters.fsession as fsession
+import filters.fpcr as fpcr
+import filters.fnsigma as fnsigma
 
 from tools.output import print_results
 
@@ -27,6 +29,8 @@ def run():
     fvast.run()
     fvaml.run()
     fsession.run()
+    fpcr.run()
+    fnsigma.run()
 
     print()
     print()

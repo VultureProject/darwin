@@ -29,6 +29,8 @@ if (NOT DEFINED FILTER)
         CONTENT_INSPECTION
         BUFFER
         YARA
+        PCR
+        NSIGMA
     )
 else (NOT DEFINED FILTER)
     set(
@@ -167,4 +169,12 @@ endif()
 
 if("VAML" IN_LIST FILTERS)
 include(fvaml)
+endif()
+
+if("PCR" IN_LIST FILTERS)
+include(fpcr)
+endif()
+
+if("NSIGMA" IN_LIST FILTERS)
+include(fnsigma)
 endif()
