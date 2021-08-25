@@ -165,7 +165,18 @@ class Filter():
 
         api.close()
         return ret
+    
+    def send_all(self, lines):
+        """
+        Send multiples lines, must be an array
+        """
+        assert isinstance(lines, list)
 
+        api = DarwinApi(socket_type="unix", socket_path=self.socket)
+        ret = api.bulk_call(lines, response_type="back")
+
+        api.close()
+        return ret
 
     def validate_alert_line(self, alert_line, details_checks=[]):
         try:
