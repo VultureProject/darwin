@@ -48,7 +48,7 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    std::string GetFormated(FunctionUnion<FunctionHolder::format_t>& func, FunctionOrigin& origin, PyObject* processedData);
+    std::string GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData);
 
 private:
     FunctionHolder& _functions;

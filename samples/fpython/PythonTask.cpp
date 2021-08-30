@@ -31,30 +31,18 @@ bool PythonTask::ParseLine(rapidjson::Value& line __attribute((unused))) {
 
 void PythonTask::operator()() {
     DARWIN_LOGGER;
-    if(PyErr_Occurred() != nullptr) PyErr_Print();
-
-    PyObject* py_result2 = nullptr;
-    if ((py_result2 = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.py, _result, nullptr)) == nullptr) {
-        DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
-        if(PyErr_Occurred() != nullptr) PyErr_Print();
-    }
-
-    if ((py_result2 = PyObject_CallFunctionObjArgs(_functions.processingFunc.py, py_result2, nullptr)) == nullptr) {
-        DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
-        if(PyErr_Occurred() != nullptr) PyErr_Print();
-    }
     PyObject* preProc_res = nullptr, *proc_res = nullptr;
 
-    switch(_functions.preProcessingOrigin) {
+    switch(_functions.preProcessingFunc.loc) {
         case FunctionOrigin::PYTHON_MODULE:{
-            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.py, _parsed_body, nullptr)) == nullptr) {
+            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.f.py, _parsed_body, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
             }
             break;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if ((preProc_res = _functions.preProcessingFunc.so(_parsed_body)) == nullptr) {
+            if ((preProc_res = _functions.preProcessingFunc.f.so(_parsed_body)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
             }
             break;
@@ -63,16 +51,16 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for preProcessing Origin");
     }
 
-    switch(_functions.preProcessingOrigin) {
+    switch(_functions.processingFunc.loc) {
         case FunctionOrigin::PYTHON_MODULE:{
-            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.py, preProc_res, nullptr)) == nullptr) {
+            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.f.py, preProc_res, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
             }
             break;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if ((proc_res = _functions.processingFunc.so(preProc_res)) == nullptr) {
+            if ((proc_res = _functions.processingFunc.f.so(preProc_res)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
             }
             break;
@@ -81,9 +69,9 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for preProcessing Origin");
     }
 
-    std::string alert = GetFormated(_functions.alertFormatingFunc, _functions.alertFormatingOrigin, proc_res);
-    std::string output = GetFormated(_functions.outputFormatingFunc, _functions.outputFormatingOrigin, proc_res);
-    std::string resp = GetFormated(_functions.responseFormatingFunc, _functions.responseFormatingOrigin, proc_res);
+    std::string alert = GetFormated(_functions.alertFormatingFunc, proc_res);
+    std::string output = GetFormated(_functions.outputFormatingFunc, proc_res);
+    std::string resp = GetFormated(_functions.responseFormatingFunc, proc_res);
     if( ! alert.empty()) {
         DARWIN_ALERT_MANAGER.Alert(alert);
     }
@@ -101,7 +89,7 @@ bool PythonTask::ParseBody() {
     DARWIN_LOGGER;
     PyObject* raw_body = nullptr;
     bool ret = false;
-    switch(_functions.parseBodyOrigin){
+    switch(_functions.parseBodyFunc.loc){
         case FunctionOrigin::NONE:{
             ret = Session::ParseBody();
             if(!ret) 
@@ -119,7 +107,13 @@ bool PythonTask::ParseBody() {
             return ret;
         }
         case FunctionOrigin::PYTHON_MODULE:{
-            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.py, raw_body, nullptr)) == nullptr) {
+            raw_body = PyUnicode_DecodeFSDefault(_raw_body.c_str());
+            if((raw_body = PyUnicode_DecodeFSDefault(_raw_body.c_str())) == nullptr) {
+                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_raw_body);
+                PyErr_Print();
+                return false;
+            }
+            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.f.py, raw_body, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
                 return false;
@@ -127,7 +121,7 @@ bool PythonTask::ParseBody() {
             return true;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if((_parsed_body = _functions.parseBodyFunc.so(_raw_body))== nullptr){
+            if((_parsed_body = _functions.parseBodyFunc.f.so(_raw_body))== nullptr){
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                 return false;
             }  
@@ -139,18 +133,18 @@ bool PythonTask::ParseBody() {
 }
 
 
-std::string PythonTask::GetFormated(FunctionUnion<FunctionHolder::format_t>& func, FunctionOrigin& origin, PyObject* processedData){
+std::string PythonTask::GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData){
     DARWIN_LOGGER;
     PyObject *ret = nullptr;
-    char * out = nullptr;
-    switch(origin) {
+    const char * out = nullptr;
+    switch(func.loc) {
         case FunctionOrigin::PYTHON_MODULE:{
-            if ((ret = PyObject_CallFunctionObjArgs(func.py, processedData, nullptr)) == nullptr) {
+            if ((ret = PyObject_CallFunctionObjArgs(func.f.py, processedData, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
                 return "";
             }
-            if((out = PyBytes_AsString(ret)) == nullptr) {
+            if((out = PyUnicode_AS_DATA(ret)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
                 return "";
@@ -158,7 +152,7 @@ std::string PythonTask::GetFormated(FunctionUnion<FunctionHolder::format_t>& fun
             return std::string(out);
         }
         case FunctionOrigin::SHARED_LIBRARY:
-            return func.so(processedData);
+            return func.f.so(processedData);
         default:
             return "";
     }

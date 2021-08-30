@@ -33,11 +33,20 @@ enum FunctionOrigin {
     SHARED_LIBRARY,
 };
 
+template<typename F>
+struct FunctionPySo {
+    FunctionOrigin loc;
+    FunctionUnion<F> f;
+
+    FunctionPySo(): loc{FunctionOrigin::NONE} { }
+    ~FunctionPySo() = default;
+};
+
+
 struct FunctionHolder{
-    FunctionHolder(): parseBodyOrigin{FunctionOrigin::NONE}, preProcessingOrigin{FunctionOrigin::NONE},
-        alertFormatingOrigin{FunctionOrigin::NONE}, outputFormatingOrigin{FunctionOrigin::NONE},
-        responseFormatingOrigin{FunctionOrigin::NONE} { }
+    FunctionHolder() = default;
     ~FunctionHolder() = default;
+
     FunctionHolder(FunctionHolder const &) = delete;
     FunctionHolder(FunctionHolder &&) = delete;
     FunctionHolder& operator=(FunctionHolder const &) = delete;
@@ -47,24 +56,14 @@ struct FunctionHolder{
     typedef PyObject*(*process_t)(PyObject*);
     typedef std::string(*format_t)(PyObject*);
     
-    FunctionUnion<parse_body_t> parseBodyFunc;
-    FunctionOrigin parseBodyOrigin;
+    FunctionPySo<parse_body_t> parseBodyFunc;
     
-    FunctionUnion<process_t> processingFunc;
-    FunctionOrigin processingOrigin;
+    FunctionPySo<process_t> processingFunc;
+    FunctionPySo<process_t> preProcessingFunc;
 
-    FunctionUnion<process_t> preProcessingFunc;
-    FunctionOrigin preProcessingOrigin;
-
-    FunctionUnion<format_t> alertFormatingFunc;
-    FunctionOrigin alertFormatingOrigin;
-
-    FunctionUnion<format_t> outputFormatingFunc;
-    FunctionOrigin outputFormatingOrigin;
-
-    FunctionUnion<format_t> responseFormatingFunc;
-    FunctionOrigin responseFormatingOrigin;
-
+    FunctionPySo<format_t> alertFormatingFunc;
+    FunctionPySo<format_t> outputFormatingFunc;
+    FunctionPySo<format_t> responseFormatingFunc;
 };
 
 class Generator: public AGenerator {
