@@ -29,6 +29,7 @@ if (NOT DEFINED FILTER)
         CONTENT_INSPECTION
         BUFFER
         YARA
+        PYTHON
     )
 else (NOT DEFINED FILTER)
     set(
@@ -167,4 +168,8 @@ endif()
 
 if("VAML" IN_LIST FILTERS)
 include(fvaml)
+endif()
+
+if("PYTHON" IN_LIST FILTERS)
+include(fpython)
 endif()
