@@ -52,9 +52,9 @@ struct FunctionHolder{
     FunctionHolder& operator=(FunctionHolder const &) = delete;
     FunctionHolder& operator=(FunctionHolder &&) = delete;
 
-    typedef PyObject*(*parse_body_t)(const std::string&);
-    typedef PyObject*(*process_t)(PyObject*);
-    typedef std::string(*format_t)(PyObject*);
+    typedef PyObject*(*parse_body_t)(PyObject*, const std::string&);
+    typedef PyObject*(*process_t)(PyObject*, PyObject*);
+    typedef std::list<std::string>(*format_t)(PyObject*, PyObject*);
     
     FunctionPySo<parse_body_t> parseBodyFunc;
     

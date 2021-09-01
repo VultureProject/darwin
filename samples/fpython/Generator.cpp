@@ -293,7 +293,7 @@ Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
                       darwin::Manager& manager) noexcept {
     return std::static_pointer_cast<darwin::Session>(
             std::make_shared<PythonTask>(socket, manager, _cache, _cache_mutex, 
-                functions));
+                pModule, functions));
 }
 
 

@@ -15,8 +15,8 @@
 PythonTask::PythonTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex, FunctionHolder& functions)
-        : Session{DARWIN_FILTER_NAME, socket, manager, cache, cache_mutex}, _functions{functions}
+                         std::mutex& cache_mutex, PyObject* pModule, FunctionHolder& functions)
+        : Session{DARWIN_FILTER_NAME, socket, manager, cache, cache_mutex}, _pModule{pModule}, _functions{functions}
 {
     _is_cache = _cache != nullptr;
 }
@@ -42,7 +42,7 @@ void PythonTask::operator()() {
             break;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if ((preProc_res = _functions.preProcessingFunc.f.so(_parsed_body)) == nullptr) {
+            if ((preProc_res = _functions.preProcessingFunc.f.so(_pModule, _parsed_body)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
             }
             break;
@@ -60,7 +60,7 @@ void PythonTask::operator()() {
             break;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if ((proc_res = _functions.processingFunc.f.so(preProc_res)) == nullptr) {
+            if ((proc_res = _functions.processingFunc.f.so(_pModule, preProc_res)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
             }
             break;
@@ -121,7 +121,7 @@ bool PythonTask::ParseBody() {
             return true;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if((_parsed_body = _functions.parseBodyFunc.f.so(_raw_body))== nullptr){
+            if((_parsed_body = _functions.parseBodyFunc.f.so(_pModule, _raw_body))== nullptr){
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                 return false;
             }  
@@ -133,28 +133,41 @@ bool PythonTask::ParseBody() {
 }
 
 
-std::string PythonTask::GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData){
+std::list<std::string> PythonTask::GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData){
     DARWIN_LOGGER;
-    PyObject *ret = nullptr;
+    PyObject *pyRes = nullptr;
+    ssize_t pySize = 0, strSize=0;
     const char * out = nullptr;
+    std::list<std::string> ret;
     switch(func.loc) {
         case FunctionOrigin::PYTHON_MODULE:{
-            if ((ret = PyObject_CallFunctionObjArgs(func.f.py, processedData, nullptr)) == nullptr) {
+            if ((pyRes = PyObject_CallFunctionObjArgs(func.f.py, processedData, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
-                return "";
+                return ret;
             }
-            if((out = PyUnicode_AS_DATA(ret)) == nullptr) {
-                DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
+            if(PyList_Check(pyRes) == 0){
+                DARWIN_LOG_ERROR("PythonTask::GetFormated : not a list");
+            }
+            pySize = PyList_Size(pyRes);
+            if(PyErr_Occurred() != nullptr) {
+                PyErr_Print();
+                return ret;
+            }
+
+            for(size_t i = 0; i < pySize; i++) {
+                PyObject* str = PyList_GetItem(pyRes, i);
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
-                return "";
+                out = PyUnicode_AsUTF8AndSize(str, &strSize);
+                if(PyErr_Occurred() != nullptr) PyErr_Print();
+                ret.push_back(std::string(out, strSize));
             }
-            return std::string(out);
+            return ret;
         }
         case FunctionOrigin::SHARED_LIBRARY:
-            return func.f.so(processedData);
+            return func.f.so(_pModule, processedData);
         default:
-            return "";
+            return ret;
     }
 
     

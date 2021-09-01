@@ -27,7 +27,7 @@ public:
     explicit PythonTask(boost::asio::local::stream_protocol::socket& socket,
                          darwin::Manager& manager,
                          std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex, FunctionHolder& functions);
+                         std::mutex& cache_mutex, PyObject * pModule, FunctionHolder& functions);
 
     ~PythonTask() override = default;
 
@@ -48,9 +48,10 @@ private:
     /// Parse the body received.
     bool ParseBody() override;
 
-    std::string GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData);
+    std::list<std::string> GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData);
 
 private:
+    PyObject* _pModule;
     FunctionHolder& _functions;
 
     PyObject* _result;
