@@ -16,6 +16,7 @@
 #include "protocol.h"
 #include "Session.hpp"
 #include "Generator.hpp"
+#include "fpython.hpp"
 
 #define DARWIN_FILTER_PYTHON_EXAMPLE 0x70797468
 #define DARWIN_FILTER_NAME "python"
@@ -47,8 +48,8 @@ private:
 
     /// Parse the body received.
     bool ParseBody() override;
-
-    std::list<std::string> GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData);
+    std::list<std::string> GetFormatedAlerts(FunctionPySo<FunctionHolder::alert_format_t>& func, PyObject* processedData);
+    DarwinResponse GetFormatedResponse(FunctionPySo<FunctionHolder::resp_format_t>& func, PyObject* processedData);
 
 private:
     PyObject* _pModule;

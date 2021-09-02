@@ -32,4 +32,5 @@ def test():
     print(' '.join(f.cmd))
     f.configure()
     f.valgrind_start()
-    print(f.send_single("hello"))
+    print('ret:' , f.send_single("hello"))
+    return True

@@ -14,6 +14,7 @@
 #include "../../toolkit/RedisManager.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "AGenerator.hpp"
+#include "fpython.hpp"
 
 template<typename F>
 union FunctionUnion{
@@ -54,16 +55,17 @@ struct FunctionHolder{
 
     typedef PyObject*(*parse_body_t)(PyObject*, const std::string&);
     typedef PyObject*(*process_t)(PyObject*, PyObject*);
-    typedef std::list<std::string>(*format_t)(PyObject*, PyObject*);
+    typedef std::list<std::string>(*alert_format_t)(PyObject*, PyObject*);
+    typedef DarwinResponse(*resp_format_t)(PyObject*, PyObject*);
     
     FunctionPySo<parse_body_t> parseBodyFunc;
     
     FunctionPySo<process_t> processingFunc;
     FunctionPySo<process_t> preProcessingFunc;
 
-    FunctionPySo<format_t> alertFormatingFunc;
-    FunctionPySo<format_t> outputFormatingFunc;
-    FunctionPySo<format_t> responseFormatingFunc;
+    FunctionPySo<alert_format_t> alertFormatingFunc;
+    FunctionPySo<resp_format_t> outputFormatingFunc;
+    FunctionPySo<resp_format_t> responseFormatingFunc;
 };
 
 class Generator: public AGenerator {

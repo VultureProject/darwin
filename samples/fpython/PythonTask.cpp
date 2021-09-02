@@ -69,19 +69,26 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for preProcessing Origin");
     }
 
-    std::string alert = GetFormated(_functions.alertFormatingFunc, proc_res);
-    std::string output = GetFormated(_functions.outputFormatingFunc, proc_res);
-    std::string resp = GetFormated(_functions.responseFormatingFunc, proc_res);
-    if( ! alert.empty()) {
-        DARWIN_ALERT_MANAGER.Alert(alert);
+    std::list<std::string> alerts = GetFormatedAlerts(_functions.alertFormatingFunc, proc_res);
+    DarwinResponse output = GetFormatedResponse(_functions.outputFormatingFunc, proc_res);
+    DarwinResponse resp = GetFormatedResponse(_functions.responseFormatingFunc, proc_res);
+    Py_DECREF(proc_res);
+    Py_DECREF(preProc_res);
+
+    for(auto& alert: alerts) {
+        if( ! alert.empty()) {
+            DARWIN_ALERT_MANAGER.Alert(alert);
+        }
+    }
+    for(auto cert: resp.certitudes) {
+        _certitudes.push_back(cert);
+    }
+    if( ! output.body.empty()) {
+        _raw_body = output.body;
     }
 
-    if( ! output.empty()) {
-        _raw_body = output;
-    }
-
-    if( ! resp.empty()){
-        _response_body = resp;
+    if( ! resp.body.empty()){
+        _response_body = resp.body;
     }
 }
 
@@ -133,7 +140,7 @@ bool PythonTask::ParseBody() {
 }
 
 
-std::list<std::string> PythonTask::GetFormated(FunctionPySo<FunctionHolder::format_t>& func, PyObject* processedData){
+std::list<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHolder::alert_format_t>& func, PyObject* processedData){
     DARWIN_LOGGER;
     PyObject *pyRes = nullptr;
     ssize_t pySize = 0, strSize=0;
@@ -155,7 +162,7 @@ std::list<std::string> PythonTask::GetFormated(FunctionPySo<FunctionHolder::form
                 return ret;
             }
 
-            for(size_t i = 0; i < pySize; i++) {
+            for(ssize_t i = 0; i < pySize; i++) {
                 PyObject* str = PyList_GetItem(pyRes, i);
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
                 out = PyUnicode_AsUTF8AndSize(str, &strSize);
@@ -171,4 +178,72 @@ std::list<std::string> PythonTask::GetFormated(FunctionPySo<FunctionHolder::form
     }
 
     
+}
+
+DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp_format_t>& func, PyObject* processedData) {
+    DARWIN_LOGGER;
+    DarwinResponse ret;
+    switch(func.loc) {
+        case FunctionOrigin::PYTHON_MODULE:{
+
+            PyObject * pBody = nullptr, *pCertitudes = nullptr;
+            ssize_t certSize = 0;
+            if((pBody = PyObject_GetAttrString(processedData, "response")) == nullptr){
+                DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
+                if(PyErr_Occurred() != nullptr) PyErr_Print();
+                return ret;
+            }
+
+            const char* cBody = nullptr;
+            ssize_t bodySize = 0;
+
+            if((cBody = PyUnicode_AsUTF8AndSize(pBody, &bodySize)) == nullptr) {
+                DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
+                if(PyErr_Occurred() != nullptr) PyErr_Print();
+                return ret;
+            }
+
+            ret.body = std::string(cBody, bodySize);
+            Py_DECREF(pBody);
+
+            if((pCertitudes = PyObject_GetAttrString(processedData, "certitudes")) == nullptr){
+                DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the Python function");
+                if(PyErr_Occurred() != nullptr) PyErr_Print();
+                return ret;
+            }
+            certSize = PyList_Size(pCertitudes);
+            if(PyErr_Occurred() != nullptr) {
+                PyErr_Print();
+                return ret;
+            }
+
+            for(ssize_t i = 0; i < certSize; i++) {
+                PyObject* cert = nullptr;
+                if((cert = PyList_GetItem(pCertitudes, i)) == nullptr) {
+                    if(PyErr_Occurred() != nullptr) PyErr_Print();
+                    continue;
+                }
+
+                if(PyLong_Check(cert) == 0) {
+                    DARWIN_LOG_DEBUG("PythonTask:: Not a long");
+                }
+                long lCert = PyLong_AS_LONG(cert);
+                if(PyErr_Occurred() != nullptr){
+                    DARWIN_LOG_DEBUG("PythonTask:: error getting long");
+                    PyErr_Print();
+                    continue;
+                }
+                if (lCert < 0 || lCert > UINT_MAX) {
+                    DARWIN_LOG_DEBUG("PythonTask:: out of range certitude");
+                    continue;
+                }
+                ret.certitudes.push_back(static_cast<unsigned int>(lCert));
+            }
+            return ret;
+        }
+        case FunctionOrigin::SHARED_LIBRARY:
+            return func.f.so(_pModule, processedData);
+        default:
+            return ret;
+    }    
 }

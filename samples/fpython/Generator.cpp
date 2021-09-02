@@ -106,7 +106,7 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         functions.processingFunc.f.so = proc;
     }
 
-    FunctionHolder::format_t alert_format = (FunctionHolder::format_t)dlsym(handle, "alert_formating");
+    FunctionHolder::alert_format_t alert_format = (FunctionHolder::alert_format_t)dlsym(handle, "alert_formating");
     if(alert_format == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'alert_formating' function in the shared library");
     } else {
@@ -114,7 +114,7 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         functions.alertFormatingFunc.f.so = alert_format;
     }
 
-    FunctionHolder::format_t output_format = (FunctionHolder::format_t)dlsym(handle, "output_formating");
+    FunctionHolder::resp_format_t output_format = (FunctionHolder::resp_format_t)dlsym(handle, "output_formating");
     if(parse == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'output_formating' function in the shared library");
     } else {
@@ -122,7 +122,7 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         functions.outputFormatingFunc.f.so = output_format;
     }
 
-    FunctionHolder::format_t resp_format = (FunctionHolder::format_t)dlsym(handle, "response_formating");
+    FunctionHolder::resp_format_t resp_format = (FunctionHolder::resp_format_t)dlsym(handle, "response_formating");
     if(resp_format == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'response_formating' function in the shared library");
     } else {

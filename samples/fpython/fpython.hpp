@@ -1,6 +1,7 @@
 #pragma once
 #include <Python.h>
 #include <string>
+#include <list>
 
 struct DarwinResponse{
     std::list<unsigned int> certitudes;
