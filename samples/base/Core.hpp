@@ -11,6 +11,10 @@
 #include <atomic>
 #include "Monitor.hpp"
 #include "ThreadGroup.hpp"
+#include "Network.hpp"
+#include "ANextFilterConnector.hpp"
+
+#include <boost/asio.hpp>
 
 #ifndef PID_PATH
 # define PID_PATH "/var/run/darwin/"
@@ -78,22 +82,49 @@ namespace darwin {
         /// \return true on success, false otherwise.
         bool SetLogLevel(std::string level);
 
+        ///
+        /// \brief returns the daemon attribute, it is set ine the Configure method
+        /// 
+        /// \return true If the filter is configured to be ran as deamon
+        bool IsDaemon() const;
+
+        ///
+        /// \brief Set the Next Filter Connector object
+        /// 
+        /// \param path_address string to be parsed, can be a socket path, 
+        ///                     an ipv4 address with the port specified 'x.x.x.x:pppp' or 
+        ///                     an ipv6 address with the port specified '[xx:xx:xx:xx:xx]:ppp'
+        /// \param is_udp true if we should use udp, the parameter is unused if path_address is a socket
+        /// \return true if there was no error setting up the Next FilterConnector
+        ///
+        bool SetNextFilterConnector(std::string const& path_address, bool is_udp);
+
+        ///
+        /// \brief Get a pointer to the NextFilterConnector, it may be a nullptr if no NextFilter was set during the configuration
+        ///        If it is not nullptr, it has the lifetime of the darwin::Core instance (most of the duration of the program)
+        /// 
+        /// \return ANextFilterConnector* a pointer to the next filter connector or nullptr
+        ANextFilterConnector* GetNextFilterconnector();
+
+        const std::string& GetName() const;
+
     private:
         std::string _name;
-        std::string _socketPath;
         std::string _modConfigPath;
         std::string _monSocketPath;
         std::string _pidPath;
-        std::string _nextFilterUnixSocketPath;
         std::string _output;
         std::size_t _nbThread;
         std::size_t _cacheSize;
         std::size_t _threshold;
-        ThreadGroup _threadpool;
 
+        std::unique_ptr<ANextFilterConnector> _next_filter_connector;
 
-    public:
-        // TODO Maybe a getter is a better idea...
+        network::NetworkSocketType _net_type;
+        std::string _socketPath;
+        boost::asio::ip::address _net_address;
+        int _net_port;
+
         bool daemon;
     };
 }

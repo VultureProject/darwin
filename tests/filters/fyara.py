@@ -204,8 +204,7 @@ def input_with_several_rules(data, expected_certitudes=[0]):
         return False
 
         # SEND TEST
-    darwin_api = DarwinApi(socket_path=yara_filter.socket,
-                           socket_type="unix")
+    darwin_api = yara_filter.get_darwin_api()
 
 
 

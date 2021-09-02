@@ -13,8 +13,9 @@
 #include "../../toolkit/lru_cache.hpp"
 #include "../../toolkit/rapidjson/stringbuffer.h"
 #include "../../toolkit/rapidjson/writer.h"
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 
 #include "tcp_sessions.hpp"
 #include "stream_buffer.hpp"
@@ -37,12 +38,12 @@ typedef struct Configurations_t {
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class ContentInspectionTask : public darwin::Session {
+class ContentInspectionTask : public darwin::ATask {
 public:
-    explicit ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
-                            darwin::Manager& manager,
-                            std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-				std::mutex& _cache_mutex,
+    explicit ContentInspectionTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
+                            darwin::session_ptr_t s,
+                            darwin::DarwinPacket& packet,
                             Configurations& configurations);
 
     ~ContentInspectionTask() override = default;
@@ -67,7 +68,7 @@ private:
     std::string GetJsonListFromSet(std::set<std::string> &input);
 
     // Implemented but not used.
-    bool ParseLine(rapidjson::Value& line __attribute__((unsused))) final {return true;}
+    bool ParseLine(rapidjson::Value& line __attribute__((unused))) final {return true;}
 
 private:
     Configurations _configurations;

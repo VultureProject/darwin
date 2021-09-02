@@ -110,7 +110,7 @@ void AnomalyThreadManager::PreProcess(std::vector<std::string> logs) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AnomalyThread::PreProcess:: Starting the pre-process...");
 
-    size_t size, pos, i;
+    size_t size, i;
     char delimiter = ';';
     std::array<int, 5> values{};
     std::string ip, ip_dst, port, protocol;

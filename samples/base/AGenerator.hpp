@@ -11,25 +11,27 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <thread_pool.hpp>
 
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "../toolkit/rapidjson/document.h"
 
 class AGenerator {
 public:
-    AGenerator() = default;
+    AGenerator(size_t nb_task_threads);
     virtual ~AGenerator() = default;
+
 
 // Methods to be implemented by the child
 public:
-    /// Create a new task.
     ///
-    /// \param socket The Session's socket.
-    /// \param manager The Session manager.
-    /// \return A pointer to a new session.
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept = 0;
+    /// \brief Create a Task object
+    /// 
+    /// \param s a shred pointer to the sessions creating the task
+    /// \return std::shared_ptr<darwin::ATask> a shared pointer to the created task
+    ///
+    virtual std::shared_ptr<darwin::ATask> CreateTask(darwin::session_ptr_t s) noexcept = 0;
+    
     virtual bool ConfigureNetworkObject(boost::asio::io_context &context);
 
 protected:
@@ -59,6 +61,8 @@ public:
     Configure(std::string const& configFile,
               const std::size_t cache_size) final;
 
+    virtual tp::ThreadPool& GetTaskThreadPool() final;
+
 private:
     /// Open and read the configuration file.
     /// Try to load the json format of the configuration.
@@ -76,7 +80,18 @@ private:
     virtual bool ExtractCustomAlertingTags(const rapidjson::Document &configuration,
                                            std::string& tags);
 
+    ///
+    /// \brief Get the configuration object of the task thread pool
+    /// 
+    /// \param nb_task_threads number of workers (threads) to spawn for the tasks
+    /// \return tp::ThreadPoolOptions 
+    ///
+    static tp::ThreadPoolOptions GetThreadPoolOptions(size_t nb_task_threads);
+
 protected:
     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> _cache; //!< The cache for already processed request
     std::mutex _cache_mutex;
+
+    tp::ThreadPool _threadPool;
+
 };

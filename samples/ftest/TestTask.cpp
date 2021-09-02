@@ -13,17 +13,18 @@
 #include "../../toolkit/xxhash.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "TestTask.hpp"
+#include "ASession.hpp"
 #include "Logger.hpp"
-#include "protocol.h"
 #include "AlertManager.hpp"
+#include "Core.hpp"
 
-TestTask::TestTask(boost::asio::local::stream_protocol::socket& socket,
-                               darwin::Manager& manager,
-                               std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+TestTask::TestTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
+                               darwin::session_ptr_t s,
+                               darwin::DarwinPacket& packet,
                                std::string& redis_list,
                                std::string& redis_channel)
-        : Session{"test", socket, manager, cache, cache_mutex},
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet),
         _redis_list{redis_list},
         _redis_channel{redis_channel} {
     _is_cache = _cache != nullptr;
@@ -51,29 +52,37 @@ void TestTask::operator()() {
             if(_line == "trigger_redis_list") {
                 DARWIN_LOG_DEBUG("TestTask:: triggered redis list action");
                 if(REDISAddList(_redis_list, _line)) {
-                    _certitudes.push_back(0);
+                    _packet.AddCertitude(0);
                 }
                 else {
-                    _certitudes.push_back(DARWIN_ERROR_RETURN);
+                    _packet.AddCertitude(DARWIN_ERROR_RETURN);
                 }
             }
             else if(_line == "trigger_redis_channel") {
                 DARWIN_LOG_DEBUG("TestTask:: triggered redis channel action");
                 if(REDISPublishChannel(_redis_channel, _line)) {
-                    _certitudes.push_back(0);
+                    _packet.AddCertitude(0);
                 }
                 else {
-                    _certitudes.push_back(DARWIN_ERROR_RETURN);
+                    _packet.AddCertitude(DARWIN_ERROR_RETURN);
                 }
             }
-            else {
+            else if (_line == "load_test") {
+                DARWIN_LOG_DEBUG("TestTask:: load_test triggered, doing work for some times (2 000 000 mults)");
+                int n = _line.size();
+                for(int i=0; i< 2000000;i++){
+                    n *=i;
+                }
+                _packet.AddCertitude(n & 1);
+            } else {
                 DARWIN_LOG_DEBUG("TestTask:: not triggered specific action, generating alert by default");
-                DARWIN_ALERT_MANAGER.Alert(_line, 100, Evt_idToString());
-                _certitudes.push_back(0);
+                DARWIN_ALERT_MANAGER.Alert(_line, 100, _packet.Evt_idToString(), "{\"filter_name\":\"" + darwin::Core::instance().GetName() + "\"}");
+                _packet.AddCertitude(0);
+                _response_body.append(_packet.GetBody());
             }
         }
         else {
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
     }
 }

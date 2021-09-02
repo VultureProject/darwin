@@ -13,15 +13,15 @@
 #include "ContentInspectionTask.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
 
-ContentInspectionTask::ContentInspectionTask(boost::asio::local::stream_protocol::socket& socket,
-                               darwin::Manager& manager,
-                               std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+ContentInspectionTask::ContentInspectionTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                                std::mutex& cache_mutex,
+                               darwin::session_ptr_t s,
+                               darwin::DarwinPacket& packet,
                                Configurations& configurations)
-        : Session{"content_inspection", socket, manager, cache, cache_mutex} {
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet) {
     _is_cache = _cache != nullptr;
     _configurations = configurations;
 }
@@ -33,7 +33,8 @@ long ContentInspectionTask::GetFilterCode() noexcept {
 void ContentInspectionTask::operator()() {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ContentInspectionTask:: started task");
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
+    bool is_log = _s->GetOutputType() == darwin::config::output_type::LOG;
+    auto logs = _packet.GetMutableLogs();
 
     for(Packet *pkt : _packetList) {
         unsigned int certitude = 0;
@@ -89,19 +90,19 @@ void ContentInspectionTask::operator()() {
                 if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                     STAT_MATCH_INC;
                     DARWIN_ALERT_MANAGER.SetTags(tagListJson);
-                    DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, Evt_idToString(), details);
+                    DARWIN_ALERT_MANAGER.Alert("raw_data", certitude, _packet.Evt_idToString(), details);
                     if (is_log) {
-                        std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                        std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                 R"(", "filter": ")" + GetFilterName() + R"(", "certitude": )" + std::to_string(certitude) +
                                 R"(, "rules": )" + ruleListJson + R"(, "tags": )" + tagListJson +
                                 "}";
-                        _logs += alert_log + "\n";
+                        logs += alert_log + "\n";
                     }
                 }
             }
         }
 
-        _certitudes.push_back(certitude);
+        _packet.AddCertitude(certitude);
         DARWIN_LOG_INFO("ContentInspectionTask:: processed entry in "
                          + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
         freePacket(pkt);
@@ -113,36 +114,37 @@ void ContentInspectionTask::operator()() {
 bool ContentInspectionTask::ParseBody() {
     DARWIN_LOGGER;
     _packetList.clear();
-    DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: _raw_body: " + _raw_body);
+    auto raw_body = _packet.GetBody();
+    DARWIN_LOG_DEBUG("ContentInspectionTask:: ParseBody: _raw_body: " + raw_body);
 
     try {
-        _logs.clear();
+        auto logs = _packet.GetMutableLogs();
+        logs.clear();
         std::size_t packetMeta = 0, packetMetaEnd;
         std::size_t packetData, packetDataEnd = 0;
-        std::size_t openingBracket;
 
         do {
-            packetMeta = _raw_body.find("\"{", packetDataEnd + 1);
+            packetMeta = raw_body.find("\"{", packetDataEnd + 1);
             if(packetMeta == std::string::npos) {
                 break;
             }
             STAT_INPUT_INC;
 
-            packetMetaEnd = _raw_body.find("}\",", packetMeta);
+            packetMetaEnd = raw_body.find("}\",", packetMeta);
             if(packetMetaEnd == std::string::npos) {
                 DARWIN_LOG_WARNING("ContentInspectionTask:: parse fail 1");
                 STAT_PARSE_ERROR_INC;
                 break;
             }
 
-            packetData = _raw_body.find("\"{", packetMetaEnd);
+            packetData = raw_body.find("\"{", packetMetaEnd);
             if(packetData == std::string::npos) {
                 DARWIN_LOG_WARNING("ContentInspectionTask:: parse fail 2");
                 STAT_PARSE_ERROR_INC;
                 break;
             }
 
-            packetDataEnd = _raw_body.find("}\"", packetData);
+            packetDataEnd = raw_body.find("}\"", packetData);
             if(packetDataEnd == std::string::npos) {
                 DARWIN_LOG_WARNING("ContentInspectionTask:: parse fail 3");
                 STAT_PARSE_ERROR_INC;
@@ -150,8 +152,8 @@ bool ContentInspectionTask::ParseBody() {
             }
 
             _packetList.push_back(getImpcapData(
-                    _raw_body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
-                    _raw_body.substr(packetData + 1, packetDataEnd - packetData)
+                    raw_body.substr(packetMeta + 1, packetMetaEnd - packetMeta),
+                    raw_body.substr(packetData + 1, packetDataEnd - packetData)
             ));
         } while(true);
 

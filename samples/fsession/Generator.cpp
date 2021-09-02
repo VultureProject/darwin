@@ -13,7 +13,14 @@
 #include "base/Logger.hpp"
 #include "Generator.hpp"
 #include "SessionTask.hpp"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
@@ -53,9 +60,14 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     return redis.FindAndConnect();
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<SessionTask>(socket, manager, _cache, _cache_mutex));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<SessionTask>(_cache, _cache_mutex, s, s->_packet
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_SESSION;
 }
