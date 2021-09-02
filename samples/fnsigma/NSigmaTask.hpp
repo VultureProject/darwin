@@ -21,8 +21,6 @@
 #define DARWIN_ALERT_RULE_NAME "N-Sigma Filter"
 #define DARWIN_ALERT_TAGS "[]"
 
-#define MINIMAL_SIZE 10
-
 // To create a usable task method you MUST inherit from darwin::thread::Task publicly.
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
@@ -32,7 +30,7 @@ public:
     explicit NSigmaTask(boost::asio::local::stream_protocol::socket& socket,
                      darwin::Manager& manager,
                      std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                     std::mutex& cache_mutex, int n_sigma);
+                     std::mutex& cache_mutex, int n_sigma, size_t min_size);
     ~NSigmaTask() override;
 
 public:
@@ -49,11 +47,10 @@ private:
     /// Parse a line in the body.
     bool ParseLine(rapidjson::Value &line) final;
 
-    void CalculatePCR();
-
 private:
     const int _n_sigma;
-    std::vector<double> input_pcr;
-    std::vector<double> filtered_pcr;
+    const size_t _minimum_size;
+    std::vector<double> input_values;
+    std::vector<double> filtered_values;
     std::vector<size_t> filtered_indices;
 };

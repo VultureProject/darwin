@@ -17,7 +17,7 @@
 
 class Generator: public AGenerator {
 public:
-    Generator() = default;
+    Generator();
     ~Generator();
 
 public:
@@ -31,6 +31,8 @@ private:
     virtual bool ConfigureAlerting(const std::string& tags) override final;
     
     static const int DEFAULT_N_SIGMA = 3;
-    int n_sigma = DEFAULT_N_SIGMA;
+    static const size_t DEFAULT_MIN_SIZE = 1;
+    int n_sigma;
+    size_t min_size;
 
 };

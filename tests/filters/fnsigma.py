@@ -25,8 +25,12 @@ class NSigmaFilter(Filter):
         super().__init__(filter_name="nsigma")
         self.n = n
     
-    def configure(self):
-        super().configure('{{"n_sigma":{}, "log_file_path":"{}"}}'.format(self.n, self.log_filename))
+    def configure(self, c = None):
+        if c is None:
+            super().configure('{{"n_sigma":{}, "log_file_path":"{}"}}'.format(self.n, self.log_filename))
+        else:
+            super().configure(c)
+    
 
     def clean_files(self):
         super().clean_files()
