@@ -12,17 +12,17 @@
 #include "Logger.hpp"
 #include "AlertManager.hpp"
 
-PythonTask::PythonTask(boost::asio::local::stream_protocol::socket& socket,
-                         darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex, PyObject* pModule, FunctionHolder& functions)
-        : Session{DARWIN_FILTER_NAME, socket, manager, cache, cache_mutex}, _pModule{pModule}, _functions{functions}
+PythonTask::PythonTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                        std::mutex& cache_mutex,
+                        darwin::session_ptr_t s,
+                        darwin::DarwinPacket& packet, PyObject* pModule, FunctionHolder& functions)
+        : ATask{DARWIN_FILTER_NAME, cache, cache_mutex, s, packet}, _pModule{pModule}, _functions{functions}
 {
     _is_cache = _cache != nullptr;
 }
 
 long PythonTask::GetFilterCode() noexcept{
-    return DARWIN_FILTER_PYTHON_EXAMPLE;
+    return DARWIN_FILTER_PYTHON;
 }
 
 bool PythonTask::ParseLine(rapidjson::Value& line __attribute((unused))) {
@@ -81,14 +81,20 @@ void PythonTask::operator()() {
         }
     }
     for(auto cert: resp.certitudes) {
-        _certitudes.push_back(cert);
+        DARWIN_LOG_DEBUG("PythonTask:: cert added");
+        _packet.AddCertitude(cert);
     }
+    std::string& body = _packet.GetMutableBody();
     if( ! output.body.empty()) {
-        _raw_body = output.body;
+        DARWIN_LOG_DEBUG("PythonTask:: output");
+        body.clear();
+        body.append(output.body);
     }
 
     if( ! resp.body.empty()){
-        _response_body = resp.body;
+        DARWIN_LOG_DEBUG("PythonTask:: resp");
+        body.clear();
+        body.append(resp.body);
     }
 }
 
@@ -98,37 +104,40 @@ bool PythonTask::ParseBody() {
     bool ret = false;
     switch(_functions.parseBodyFunc.loc){
         case FunctionOrigin::NONE:{
-            ret = Session::ParseBody();
+            ret = ATask::ParseBody();
+
+            // TODO :WRONG!  Turn to list
             if(!ret) 
                 return false;
-            std::string parsed_body = JsonStringify(_body);
+            std::string parsed_body;// = JsonStringify(_packet.GetBody());
             if(parsed_body.empty()) 
                 return true;
 
             _parsed_body = PyUnicode_DecodeFSDefault(parsed_body.c_str());
             if(PyErr_Occurred() != nullptr) {
-                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_raw_body);
+                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:");
                 PyErr_Print();
                 return false;
             }
             return ret;
         }
         case FunctionOrigin::PYTHON_MODULE:{
-            raw_body = PyUnicode_DecodeFSDefault(_raw_body.c_str());
-            if((raw_body = PyUnicode_DecodeFSDefault(_raw_body.c_str())) == nullptr) {
-                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_raw_body);
+            if((raw_body = PyUnicode_DecodeFSDefault(_packet.GetBody().c_str())) == nullptr) {
+                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_packet.GetBody());
                 PyErr_Print();
                 return false;
             }
             if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.f.py, raw_body, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the Python function");
                 if(PyErr_Occurred() != nullptr) PyErr_Print();
+                Py_DECREF(raw_body);
                 return false;
             }
+            Py_DECREF(raw_body);
             return true;
         }
         case FunctionOrigin::SHARED_LIBRARY:{
-            if((_parsed_body = _functions.parseBodyFunc.f.so(_pModule, _raw_body))== nullptr){
+            if((_parsed_body = _functions.parseBodyFunc.f.so(_pModule, _packet.GetBody()))== nullptr){
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                 return false;
             }  

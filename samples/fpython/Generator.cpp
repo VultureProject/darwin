@@ -12,10 +12,12 @@
 #include "base/Logger.hpp"
 #include "Generator.hpp"
 #include "PythonTask.hpp"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
 #include "fpython.hpp"
 
-Generator::Generator(): pName{nullptr}, pModule{nullptr}
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads), pName{nullptr}, pModule{nullptr}
          { }
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
@@ -288,14 +290,17 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<PythonTask>(socket, manager, _cache, _cache_mutex, 
-                pModule, functions));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<PythonTask>(_cache, _cache_mutex, s, s->_packet,
+            pModule, functions)
+        );
 }
 
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_PYTHON;
+}
 
 Generator::~Generator() {
     Py_Finalize();

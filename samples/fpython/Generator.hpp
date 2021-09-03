@@ -10,7 +10,7 @@
 #include <string>
 
 #include "../../toolkit/PythonUtils.hpp"
-#include "Session.hpp"
+#include "ATask.hpp"
 #include "../../toolkit/RedisManager.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "AGenerator.hpp"
@@ -70,13 +70,13 @@ struct FunctionHolder{
 
 class Generator: public AGenerator {
 public:
-    Generator();
+    Generator(size_t nb_task_threads);
     ~Generator();
 
-public:
-    virtual darwin::session_ptr_t
-    CreateTask(boost::asio::local::stream_protocol::socket& socket,
-               darwin::Manager& manager) noexcept override final;
+    virtual std::shared_ptr<darwin::ATask>
+    CreateTask(darwin::session_ptr_t s) noexcept override final;
+
+    virtual long GetFilterCode() const;
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;

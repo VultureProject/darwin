@@ -13,22 +13,25 @@
 #include "../../toolkit/PythonUtils.hpp"
 #include "../../toolkit/xxhash.h"
 #include "../../toolkit/xxhash.hpp"
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 #include "Generator.hpp"
 #include "fpython.hpp"
 
-#define DARWIN_FILTER_PYTHON_EXAMPLE 0x70797468
+#define DARWIN_FILTER_PYTHON 0x70797468
 #define DARWIN_FILTER_NAME "python"
 #define DARWIN_ALERT_RULE_NAME "Python"
 #define DARWIN_ALERT_TAGS "[]"
 
-class PythonTask : public darwin::Session {
+class PythonTask : public darwin::ATask {
 public:
-    explicit PythonTask(boost::asio::local::stream_protocol::socket& socket,
-                         darwin::Manager& manager,
-                         std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                         std::mutex& cache_mutex, PyObject * pModule, FunctionHolder& functions);
+    explicit PythonTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                            std::mutex& cache_mutex,
+                            darwin::session_ptr_t s,
+                            darwin::DarwinPacket& packet,
+                            PyObject * pModule, 
+                            FunctionHolder& functions);
 
     ~PythonTask() override = default;
 
