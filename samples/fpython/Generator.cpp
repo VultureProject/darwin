@@ -15,6 +15,45 @@
 #include "ASession.hpp"
 #include "AlertManager.hpp"
 #include "fpython.hpp"
+#include "PythonObject.hpp"
+
+///
+/// \brief 
+/// 
+/// \param prefix_log 
+/// \param log_type 
+/// \return true if an exception was found and handled
+/// \return false if no exception were risen
+///
+bool PyExceptionCheckAndLog(std::string const& prefix_log, darwin::logger::log_type log_type=darwin::logger::Critical){
+    if(PyErr_Occurred() == nullptr){
+        return false;
+    }
+    DARWIN_LOGGER;
+    PyObject *errType, *err, *tb;
+    PyObjectOwner pErrStr, pTypeStr;
+    const char * pErrChars, *pTypeChars;
+    ssize_t errCharsLen = 0,  typeCharsLen = 0;
+    std::string errString, typeString;
+    PyErr_Fetch(&errType, &err, &tb);
+
+    if((pErrStr = PyObject_Str(err)) != nullptr){
+        if((pErrChars = PyUnicode_AsUTF8AndSize(*pErrStr, &errCharsLen)) != nullptr) {
+            errString = std::string(pErrChars, errCharsLen);
+        }
+    }
+
+    if((pTypeStr = PyObject_Str(errType)) != nullptr){
+        if((pTypeChars = PyUnicode_AsUTF8AndSize(*pTypeStr, &typeCharsLen)) != nullptr) {
+            typeString = std::string(pTypeChars, typeCharsLen);
+        }
+    }        
+    std::ostringstream oss;
+    oss << prefix_log;
+    oss << "Python error '" << typeString << "' : " << errString;
+    log.log(log_type, oss.str());
+    return true;
+}
 
 Generator::Generator(size_t nb_task_threads) 
     : AGenerator(nb_task_threads), pName{nullptr}, pModule{nullptr}
@@ -66,7 +105,14 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     shared_library_path = configuration["shared_library_path"].GetString();
     DARWIN_LOG_DEBUG("Python:: Generator:: Loading configuration...");
 
-    return LoadPythonScript(python_script_path) && LoadSharedLibrary(shared_library_path) && CheckConfig();
+    bool pythonLoad = LoadPythonScript(python_script_path);
+
+    if(Py_IsInitialized() != 0) {
+        // Release the GIL, This is safe to call because we just initialized the python interpreter
+        PyEval_SaveThread();
+    }
+
+    return pythonLoad && LoadSharedLibrary(shared_library_path) && CheckConfig();
 }
 
 bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
@@ -149,6 +195,16 @@ bool Generator::CheckConfig() {
     return true;
 }
 
+PythonThread& Generator::GetPythonThread(){
+    thread_local PythonThread thread;
+    if(! thread.IsInit()){
+        PyGILState_STATE lock = PyGILState_Ensure();
+        thread.Init(PyInterpreterState_Main());
+        PyGILState_Release(lock);
+    }
+    return thread;
+}
+
 bool Generator::LoadPythonScript(const std::string& python_script_path) {
     DARWIN_LOGGER;
 
@@ -172,58 +228,33 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
     }
 
     Py_Initialize();
-    if(PyErr_Occurred() != nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error post py init");
-        PyErr_Print();
-    }
-    pName = PyUnicode_DecodeFSDefault(filename.c_str());
-    // PyObject* pFolders = PyUnicode_DecodeFSDefault(folders.c_str());
-    // PyObject* pFilename = PyUnicode_DecodeFSDefault(filename.c_str());
-    if(PyErr_Occurred() != nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error post filename decode");
-        PyErr_Print();
-    }
-    if (PyRun_SimpleString("import sys") != 0) {
-        DARWIN_LOG_DEBUG("darwin:: pythonutils:: InitPythonProgram:: An error occurred while loading the 'sys' module");
-        if(PyErr_Occurred() != nullptr) PyErr_Print();
+    PyEval_InitThreads();
 
+    if(PyExceptionCheckAndLog("Generator::LoadPythonScript : Error during python init :")) {
         return false;
     }
-    if(PyErr_Occurred() != nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error post imp sys");
-        PyErr_Print();
+    if((pName = PyUnicode_DecodeFSDefault(filename.c_str())) == nullptr){
+        PyExceptionCheckAndLog("Generator::LoadPythonScript : error importing string " + filename + " : ");
+        return false;
+    }
+    
+    if (PyRun_SimpleString("import sys") != 0) {
+        DARWIN_LOG_DEBUG("Generator::LoadPythonScript : An error occurred while loading the 'sys' module");
+        return false;
     }
 
     std::string command = "sys.path.append(\"" + folders + "\")";
     if (PyRun_SimpleString(command.c_str()) != 0) {
         DARWIN_LOG_DEBUG(
-                "darwin:: pythonutils:: InitPythonProgram:: An error occurred while appending the custom path '" +
+                "Generator::LoadPythonScript : An error occurred while appending the custom path '" +
                 folders +
                 "' to the Python path"
         );
-
-        if(PyErr_Occurred() != nullptr) PyErr_Print();
-
         return false;
     }
 
-    if(PyErr_Occurred() != nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error post sys path");
-        PyErr_Print();
-    }
-
-    pModule = PyImport_Import(pName);
-
-    if(PyErr_Occurred() != nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : post import");
-
-        PyErr_Print();
-    }
-
-    if(pModule == nullptr) {        
-        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error while attempting to load the python script module");
-        if(PyErr_Occurred() != nullptr) PyErr_Print();
-
+    if((pModule = PyImport_Import(pName)) == nullptr) {
+        PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
     
@@ -303,5 +334,7 @@ long Generator::GetFilterCode() const {
 }
 
 Generator::~Generator() {
+    PyGILState_Ensure();
     Py_Finalize();
-} 
+    // Python environment is destroyed, we can't release the GIL
+}

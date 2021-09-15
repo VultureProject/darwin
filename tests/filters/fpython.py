@@ -32,5 +32,9 @@ def test():
     print(' '.join(f.cmd))
     f.configure()
     f.valgrind_start()
-    print('ret:' , f.send_single("hello"))
+    api = f.get_darwin_api(verbose=True)
+    ret = api.call('hello', response_type="back")
+
+    print(ret)
+    # print('ret:' , f.send_single("hello"))
     return True

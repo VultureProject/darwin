@@ -15,6 +15,7 @@
 #include "../toolkit/rapidjson/document.h"
 #include "AGenerator.hpp"
 #include "fpython.hpp"
+#include "PythonThread.hpp"
 
 template<typename F>
 union FunctionUnion{
@@ -77,6 +78,7 @@ public:
     CreateTask(darwin::session_ptr_t s) noexcept override final;
 
     virtual long GetFilterCode() const;
+    static PythonThread& GetPythonThread();
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
