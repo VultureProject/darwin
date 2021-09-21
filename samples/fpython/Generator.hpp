@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "Logger.hpp"
 #include "../../toolkit/PythonUtils.hpp"
 #include "ATask.hpp"
 #include "../../toolkit/RedisManager.hpp"
@@ -16,6 +17,7 @@
 #include "AGenerator.hpp"
 #include "fpython.hpp"
 #include "PythonThread.hpp"
+#include "PythonObject.hpp"
 
 template<typename F>
 union FunctionUnion{
@@ -90,11 +92,11 @@ private:
     bool LoadPythonScript(const std::string& python_script_path);
     bool LoadSharedLibrary(const std::string& shared_library_path);
     bool CheckConfig() const;
-    bool SendConfig(rapidjson::Document const& config) const;
-    bool SendPythonConfig(rapidjson::Document const& config) const;
+    bool SendConfig(rapidjson::Document const& config);
+    bool SendPythonConfig(rapidjson::Document const& config);
 
-    PyObject* pName;
-    PyObject* pModule;
+    PyObjectOwner pName;
+    PyObjectOwner pModule;
 
     FunctionHolder functions;
     

@@ -16,6 +16,7 @@ socket_arg_group.add_argument("--udp", action="store_true")
 socket_arg_group.add_argument("--unix", action="store_true")
 parser.add_argument("ip_address", nargs='?', 
     help="(For tcp and udp only) The IP address formatted like this: ipv4: 'x.x.x.x:port', ipv6: '[x:x:x:x:x:x:x]:port'")
+parser.add_argument("--valgrind", action='store_true', help="Run valgrind on the filters")
 args = parser.parse_args()
 
 if args.tcp:
@@ -27,6 +28,9 @@ elif args.unix:
 
 if args.ip_address != None:
     conf.DEFAULT_ADDRESS = args.ip_address
+
+if args.valgrind:
+    conf.VALGRIND_MEMCHECK = True
 
 if __name__ == "__main__":
     logging.basicConfig(filename="test_error.log", filemode='w', level=logging.ERROR)

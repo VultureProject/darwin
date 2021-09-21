@@ -58,6 +58,5 @@ private:
     PyObject* _pModule;
     FunctionHolder& _functions;
 
-    PyObject* _result;
-    PyObject* _parsed_body;
+    PyObjectOwner _parsed_body;
 };

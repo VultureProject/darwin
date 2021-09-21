@@ -47,9 +47,8 @@ class PyObjectOwner {
         return *handle;
     }
 
-private:
     void Decref(){
-        if(handle != nullptr){
+        if(handle != nullptr && Py_IsInitialized() != 0){
             if(PyGILState_Check() == 1){
                 Py_DECREF(handle);
             } else {
@@ -59,5 +58,7 @@ private:
             handle = nullptr;
         }
     }
+
+private:
     PyObject* handle;
 };

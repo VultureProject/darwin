@@ -18,7 +18,7 @@
 #include "PythonObject.hpp"
 
 ///
-/// \brief 
+/// \brief This expects the thread to hold the GIL 
 /// 
 /// \param prefix_log 
 /// \param log_type 
@@ -56,7 +56,7 @@ bool Generator::PyExceptionCheckAndLog(std::string const& prefix_log, darwin::lo
 }
 
 Generator::Generator(size_t nb_task_threads) 
-    : AGenerator(nb_task_threads), pName{nullptr}, pModule{nullptr}
+    : AGenerator(nb_task_threads)
          { }
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
@@ -115,7 +115,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     return pythonLoad && LoadSharedLibrary(shared_library_path) && CheckConfig() && SendConfig(configuration);
 }
 
-bool Generator::SendConfig(rapidjson::Document const& config) const{
+bool Generator::SendConfig(rapidjson::Document const& config) {
     DARWIN_LOGGER;
     bool pyConfigRes = false, soConfigRes = false;
     switch(functions.configPyFunc.loc) {
@@ -147,7 +147,7 @@ bool Generator::SendConfig(rapidjson::Document const& config) const{
     return pyConfigRes && soConfigRes;
 }
 
-bool Generator::SendPythonConfig(rapidjson::Document const& config) const{
+bool Generator::SendPythonConfig(rapidjson::Document const& config) {
     DARWIN_LOGGER;
     rapidjson::StringBuffer buffer;
     buffer.Clear();
@@ -164,7 +164,7 @@ bool Generator::SendPythonConfig(rapidjson::Document const& config) const{
     std::string cmd = "json.loads(\"\"\"";
     cmd += buffer.GetString();
     cmd += "\"\"\")";
-    PyObject* globalDictionary = PyModule_GetDict(pModule);
+    PyObject* globalDictionary = PyModule_GetDict(*pModule);
 
     PyObjectOwner pConfig = PyRun_StringFlags(cmd.c_str(), Py_eval_input, globalDictionary, globalDictionary, nullptr);
     if(Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: Converting config to Py Object :")){
@@ -347,12 +347,12 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     }
 
-    if((pModule = PyImport_Import(pName)) == nullptr) {
+    if((pModule = PyImport_Import(*pName)) == nullptr) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
 
-    functions.configPyFunc.f.py = PyObject_GetAttrString(pModule, "filter_config");
+    functions.configPyFunc.f.py = PyObject_GetAttrString(*pModule, "filter_config");
     if(functions.configPyFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_config' method in the python script");
     } else if (! PyCallable_Check(functions.configPyFunc.f.py)){
@@ -362,7 +362,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.configPyFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.parseBodyFunc.f.py = PyObject_GetAttrString(pModule, "parse_body");
+    functions.parseBodyFunc.f.py = PyObject_GetAttrString(*pModule, "parse_body");
     if(functions.parseBodyFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'parse_body' method in the python script");
     } else if (! PyCallable_Check(functions.parseBodyFunc.f.py)){
@@ -372,7 +372,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.parseBodyFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.preProcessingFunc.f.py = PyObject_GetAttrString(pModule, "filter_pre_process");
+    functions.preProcessingFunc.f.py = PyObject_GetAttrString(*pModule, "filter_pre_process");
     if(functions.preProcessingFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_pre_process' method in the python script");
     } else if (! PyCallable_Check(functions.preProcessingFunc.f.py)){
@@ -382,7 +382,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.preProcessingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.processingFunc.f.py = PyObject_GetAttrString(pModule, "filter_process");
+    functions.processingFunc.f.py = PyObject_GetAttrString(*pModule, "filter_process");
     if(functions.processingFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_process' method in the python script");
     } else if (! PyCallable_Check(functions.processingFunc.f.py)){
@@ -392,7 +392,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.processingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.alertFormatingFunc.f.py = PyObject_GetAttrString(pModule, "alert_formating");
+    functions.alertFormatingFunc.f.py = PyObject_GetAttrString(*pModule, "alert_formating");
     if(functions.alertFormatingFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'alert_formating' method in the python script");
     } else if (! PyCallable_Check(functions.alertFormatingFunc.f.py)){
@@ -402,7 +402,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.alertFormatingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.outputFormatingFunc.f.py = PyObject_GetAttrString(pModule, "output_formating");
+    functions.outputFormatingFunc.f.py = PyObject_GetAttrString(*pModule, "output_formating");
     if(functions.outputFormatingFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'output_formating' method in the python script");
     } else if (! PyCallable_Check(functions.outputFormatingFunc.f.py)){
@@ -412,7 +412,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         functions.outputFormatingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
-    functions.responseFormatingFunc.f.py = PyObject_GetAttrString(pModule, "response_formating");
+    functions.responseFormatingFunc.f.py = PyObject_GetAttrString(*pModule, "response_formating");
     if(functions.responseFormatingFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'response_formating' method in the python script");
     } else if (! PyCallable_Check(functions.responseFormatingFunc.f.py)){
@@ -429,7 +429,7 @@ std::shared_ptr<darwin::ATask>
 Generator::CreateTask(darwin::session_ptr_t s) noexcept {
     return std::static_pointer_cast<darwin::ATask>(
             std::make_shared<PythonTask>(_cache, _cache_mutex, s, s->_packet,
-            pModule, functions)
+            *pModule, functions)
         );
 }
 

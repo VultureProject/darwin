@@ -9,7 +9,7 @@ struct DarwinResponse{
 };
 
 extern "C" {
-
+    bool filter_config(rapidjson::Document const&);
     PyObject* parse_body(PyObject* module, const std::string&);
     PyObject* filter_pre_process(PyObject* module, PyObject*);
     PyObject* filter_process(PyObject* module, PyObject*);
