@@ -1,5 +1,5 @@
 #include <Python.h>
-#include "Logger.hpp"
+
 class PythonThread {
 public:
     PythonThread(): _init{false}, pThreadState{nullptr} {}
@@ -31,14 +31,10 @@ public:
     class Use {
     public:
         Use(PythonThread& thread): _thread{thread} {
-            DARWIN_LOGGER;
-            DARWIN_LOG_DEBUG("Start thread");
             PyEval_RestoreThread(_thread.GetThreadState());
         }
 
         ~Use(){
-            DARWIN_LOGGER;
-            DARWIN_LOG_DEBUG("End thread");
             _thread.SetThreadState(PyEval_SaveThread());
         }
 
@@ -50,5 +46,18 @@ private:
 
     bool _init;
     PyThreadState * pThreadState;
+
+};
+
+class PythonLock {
+public:
+    PythonLock(){
+        lock = PyGILState_Ensure();
+    }
+    ~PythonLock(){
+        PyGILState_Release(lock);
+    }
+private:
+    PyGILState_STATE lock;
 
 };

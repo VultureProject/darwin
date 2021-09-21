@@ -29,7 +29,7 @@ union FunctionUnion{
     ~FunctionUnion(){}
 };
 
-enum FunctionOrigin {
+enum class FunctionOrigin {
     NONE,
     PYTHON_MODULE,
     SHARED_LIBRARY,
@@ -58,7 +58,7 @@ struct FunctionHolder{
     typedef PyObject*(*process_t)(PyObject*, PyObject*);
     typedef std::list<std::string>(*alert_format_t)(PyObject*, PyObject*);
     typedef DarwinResponse(*resp_format_t)(PyObject*, PyObject*);
-    
+    typedef bool(*config_t)(rapidjson::Document const &);
     FunctionPySo<parse_body_t> parseBodyFunc;
     
     FunctionPySo<process_t> processingFunc;
@@ -67,6 +67,8 @@ struct FunctionHolder{
     FunctionPySo<alert_format_t> alertFormatingFunc;
     FunctionPySo<resp_format_t> outputFormatingFunc;
     FunctionPySo<resp_format_t> responseFormatingFunc;
+    FunctionPySo<config_t> configPyFunc; 
+    FunctionPySo<config_t> configSoFunc; 
 };
 
 class Generator: public AGenerator {
@@ -79,6 +81,7 @@ public:
 
     virtual long GetFilterCode() const;
     static PythonThread& GetPythonThread();
+    static bool PyExceptionCheckAndLog(std::string const& prefix_log, darwin::logger::log_type log_type=darwin::logger::Critical);
 
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
@@ -86,8 +89,10 @@ private:
 
     bool LoadPythonScript(const std::string& python_script_path);
     bool LoadSharedLibrary(const std::string& shared_library_path);
-    bool CheckConfig();
-    
+    bool CheckConfig() const;
+    bool SendConfig(rapidjson::Document const& config) const;
+    bool SendPythonConfig(rapidjson::Document const& config) const;
+
     PyObject* pName;
     PyObject* pModule;
 

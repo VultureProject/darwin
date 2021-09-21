@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import Any, List
 
 
 class PythonFilterError(Exception):
@@ -15,6 +15,10 @@ class PythonFilterResponse:
         self.alerts = []
         self.response = ''
 
+def filter_config(config: Any) -> bool:
+    print('filter', config)
+    return True
+
 def parse_body(input: str) -> list:
     parsed = json.loads(input)
     if not isinstance(parsed, list):
@@ -25,20 +29,28 @@ def filter_pre_process(input) -> list:
     return input
 
 def filter_process(input: list) -> PythonFilterResponse:
+    print('py hi')
+    print(input)
     resp = PythonFilterResponse()
     for line in input:
-        print(line)
+        print('py line')
+        # print(line)
         if isinstance(line, str):
             resp.certitudes.append(101)
             resp.alerts.append(line)
             resp.response += line
+
+    print('py ret')
     return resp
 
 def alert_formating(input: PythonFilterResponse) -> str:
-    return json.dumps(input.alerts)
+    print('alert')
+    return input.alerts
 
 def output_formating(input: PythonFilterResponse) -> str:
-    return json.dumps(input.response)
+    print('output')
+    return input
 
 def response_formating(input: PythonFilterResponse) -> str:
-    return json.dumps(input.response)
+    print('output')
+    return input

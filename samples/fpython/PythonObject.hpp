@@ -50,8 +50,13 @@ class PyObjectOwner {
 private:
     void Decref(){
         if(handle != nullptr){
-           Py_DECREF(handle);
-           handle = nullptr;
+            if(PyGILState_Check() == 1){
+                Py_DECREF(handle);
+            } else {
+                PythonLock lock;
+                Py_DECREF(handle);
+            }
+            handle = nullptr;
         }
     }
     PyObject* handle;

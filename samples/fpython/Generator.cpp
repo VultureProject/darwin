@@ -25,7 +25,7 @@
 /// \return true if an exception was found and handled
 /// \return false if no exception were risen
 ///
-bool PyExceptionCheckAndLog(std::string const& prefix_log, darwin::logger::log_type log_type=darwin::logger::Critical){
+bool Generator::PyExceptionCheckAndLog(std::string const& prefix_log, darwin::logger::log_type log_type){
     if(PyErr_Occurred() == nullptr){
         return false;
     }
@@ -112,7 +112,83 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         PyEval_SaveThread();
     }
 
-    return pythonLoad && LoadSharedLibrary(shared_library_path) && CheckConfig();
+    return pythonLoad && LoadSharedLibrary(shared_library_path) && CheckConfig() && SendConfig(configuration);
+}
+
+bool Generator::SendConfig(rapidjson::Document const& config) const{
+    DARWIN_LOGGER;
+    bool pyConfigRes = false, soConfigRes = false;
+    switch(functions.configPyFunc.loc) {
+        case FunctionOrigin::NONE:
+            DARWIN_LOG_INFO("Python:: Generator:: SendConfig: No configuration function found in python script");
+            pyConfigRes = true;
+            break;
+        case FunctionOrigin::PYTHON_MODULE:
+            pyConfigRes = this->SendPythonConfig(config);
+            break;
+        case FunctionOrigin::SHARED_LIBRARY:
+            DARWIN_LOG_CRITICAL("Python:: Generator:: SendConfig: Incoherent configuration");
+            return false;
+    }
+
+    switch(functions.configSoFunc.loc) {
+        case FunctionOrigin::NONE:
+            DARWIN_LOG_INFO("Python:: Generator:: SendConfig: No configuration function found in shared object");
+            soConfigRes = true;
+            break;
+        case FunctionOrigin::PYTHON_MODULE:
+            DARWIN_LOG_CRITICAL("Python:: Generator:: SendConfig: Incoherent configuration");
+            return false;
+        case FunctionOrigin::SHARED_LIBRARY:
+            soConfigRes = functions.configSoFunc.f.so(config);
+            break;
+    }
+
+    return pyConfigRes && soConfigRes;
+}
+
+bool Generator::SendPythonConfig(rapidjson::Document const& config) const{
+    DARWIN_LOGGER;
+    rapidjson::StringBuffer buffer;
+    buffer.Clear();
+
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    config.Accept(writer);
+
+    PythonLock lock;
+    if(PyRun_SimpleString("import json") != 0) {
+        DARWIN_LOG_CRITICAL("Python:: Generator:: SendPythonConfig: import json failed");
+        return false;
+    }
+
+    std::string cmd = "json.loads(\"\"\"";
+    cmd += buffer.GetString();
+    cmd += "\"\"\")";
+    PyObject* globalDictionary = PyModule_GetDict(pModule);
+
+    PyObjectOwner pConfig = PyRun_StringFlags(cmd.c_str(), Py_eval_input, globalDictionary, globalDictionary, nullptr);
+    if(Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: Converting config to Py Object :")){
+        return false;
+    }
+    PyObjectOwner res;
+    if ((res  = PyObject_CallFunctionObjArgs(functions.configPyFunc.f.py, *pConfig, nullptr)) == nullptr) {
+        Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: ");
+        return false;
+    }
+    int resTruthiness = -1;
+    if((resTruthiness = PyObject_IsTrue(*res)) == 1) {
+        // 1 : true
+        return true;
+    } else if (resTruthiness == 0){
+        // 0 : false
+        DARWIN_LOG_CRITICAL("Python:: Generator:: SendPythonConfig: filter_config returned false");
+    } else {
+        // -1 : error while evaluating truthiness
+        DARWIN_LOG_CRITICAL("Python:: Generator:: SendPythonConfig: truthiness evaluation of the returned value of 'filter_config' failed");
+        Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: ");
+    }
+
+    return false;
 }
 
 bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
@@ -123,10 +199,19 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         return true;
     }
 
-    void* handle = dlopen(shared_library_path.c_str(), RTLD_LAZY);
+    void* handle = dlopen(shared_library_path.c_str(), RTLD_NOW | RTLD_GLOBAL);
     if(handle == nullptr) {
-        DARWIN_LOG_CRITICAL("Generator::LoadSharedLibrary : Error loading the shared library : failed to open " + shared_library_path);
+        DARWIN_LOG_CRITICAL("Generator::LoadSharedLibrary : Error loading the shared library : failed to open " + shared_library_path + " : " + std::string(dlerror()));
         return false;
+    }
+
+    FunctionHolder::config_t conf = (FunctionHolder::config_t)dlsym(handle, "filter_config");    
+
+    if(conf == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_config' function in the shared library");
+    } else {
+        functions.configSoFunc.loc = FunctionOrigin::SHARED_LIBRARY;
+        functions.configSoFunc.f.so = conf;
     }
 
     FunctionHolder::parse_body_t parse = (FunctionHolder::parse_body_t)dlsym(handle, "parse_body");    
@@ -181,7 +266,7 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
     return true;
 }
 
-bool Generator::CheckConfig() {
+bool Generator::CheckConfig() const {
     if(functions.preProcessingFunc.loc == FunctionOrigin::NONE
         || functions.processingFunc.loc == FunctionOrigin::NONE
         || functions.alertFormatingFunc.loc == FunctionOrigin::NONE
@@ -237,7 +322,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : error importing string " + filename + " : ");
         return false;
     }
-    
+
     if (PyRun_SimpleString("import sys") != 0) {
         DARWIN_LOG_DEBUG("Generator::LoadPythonScript : An error occurred while loading the 'sys' module");
         return false;
@@ -253,11 +338,30 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     }
 
+    if (PyRun_SimpleString("sys.path.append('/tmp/pydebug/lib/python3.8/site-packages/')") != 0) {
+        DARWIN_LOG_DEBUG(
+                "Generator::LoadPythonScript : An error occurred while appending the custom path '" +
+                folders +
+                "' to the Python path"
+        );
+        return false;
+    }
+
     if((pModule = PyImport_Import(pName)) == nullptr) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
-    
+
+    functions.configPyFunc.f.py = PyObject_GetAttrString(pModule, "filter_config");
+    if(functions.configPyFunc.f.py == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_config' method in the python script");
+    } else if (! PyCallable_Check(functions.configPyFunc.f.py)){
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : filter_config symbol exists but is not callable");
+        return false;
+    } else {
+        functions.configPyFunc.loc = FunctionOrigin::PYTHON_MODULE;
+    }
+
     functions.parseBodyFunc.f.py = PyObject_GetAttrString(pModule, "parse_body");
     if(functions.parseBodyFunc.f.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'parse_body' method in the python script");
@@ -265,7 +369,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : parse_body symbol exists but is not callable");
         return false;
     } else {
-        functions.parseBodyFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.parseBodyFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.preProcessingFunc.f.py = PyObject_GetAttrString(pModule, "filter_pre_process");
@@ -275,7 +379,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : filter_pre_process symbol exists but is not callable");
         return false;
     } else {
-        functions.preProcessingFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.preProcessingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.processingFunc.f.py = PyObject_GetAttrString(pModule, "filter_process");
@@ -285,7 +389,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : filter_process symbol exists but is not callable");
         return false;
     } else {
-        functions.processingFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.processingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.alertFormatingFunc.f.py = PyObject_GetAttrString(pModule, "alert_formating");
@@ -295,7 +399,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : alert_formating symbol exists but is not callable");
         return false;
     } else {
-        functions.alertFormatingFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.alertFormatingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.outputFormatingFunc.f.py = PyObject_GetAttrString(pModule, "output_formating");
@@ -305,7 +409,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : output_formating symbol exists but is not callable");
         return false;
     } else {
-        functions.outputFormatingFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.outputFormatingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.responseFormatingFunc.f.py = PyObject_GetAttrString(pModule, "response_formating");
@@ -315,7 +419,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : response_formating symbol exists but is not callable");
         return false;
     } else {
-        functions.responseFormatingFunc.loc= FunctionOrigin::PYTHON_MODULE;
+        functions.responseFormatingFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     return true;
