@@ -20,40 +20,36 @@
 #include "PythonObject.hpp"
 
 ///
-/// \brief Unions representing either a function pointer from a shared object or a python function reference
-/// 
-/// \tparam F the prototype of the function (if it comes from a shared object)
+/// \brief Tag for the FunctionPySo struct
+///        It is declared outside the struct to stay unaffected by the template grammar
 ///
-template<typename F>
-union FunctionUnion{
-    PyObject* py;
-    F so;
-
-    FunctionUnion() {
-        this->py = nullptr;
-    }
-
-    ~FunctionUnion(){}
-};
-
 enum class FunctionOrigin {
-    NONE,
-    PYTHON_MODULE,
-    SHARED_LIBRARY,
+    none,
+    python_module,
+    shared_library,
 };
 
 ///
-/// \brief tagged union containing a FunctionUnion and its tag FunctionOrigin
+/// \brief tagged union containing either a function pointer from a shared object or a python function reference 
+///        along with a tag FunctionOrigin
 /// 
 /// \tparam F prototype of the function if loaded from a shared object
 ///
 template<typename F>
 struct FunctionPySo {
-    FunctionOrigin loc;
-    FunctionUnion<F> f;
-
-    FunctionPySo(): loc{FunctionOrigin::NONE} { }
-    ~FunctionPySo() = default;
+public:
+    FunctionOrigin origin;
+    union {
+        PyObject* py;
+        F so;
+    };
+    FunctionPySo(): origin{FunctionOrigin::none}, py {nullptr} { }
+    ~FunctionPySo() {
+        if(origin == FunctionOrigin::python_module){
+            //We use PyObjectOwner to decrement the reference counter of the function
+            PyObjectOwner _{py};
+        }
+    };
 };
 
 ///
@@ -156,8 +152,13 @@ private:
     ///
     bool SendPythonConfig(rapidjson::Document const& config);
 
-    PyObjectOwner pModule;
+    template<typename F>
+    inline void LoadFunctionFromSO(void* lib_handle, FunctionPySo<F>& function_holder, const std::string& function_name);
 
+    template<typename F>
+    inline bool LoadFunctionFromPython(PyObject* pModule, FunctionPySo<F>& function_holder, const std::string& function_name);
+
+    PyObjectOwner pModule;
     FunctionHolder functions;
     
 };

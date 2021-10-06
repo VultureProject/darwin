@@ -34,18 +34,18 @@ void PythonTask::operator()() {
     DARWIN_LOGGER;
     PyObjectOwner preProc_res, proc_res, context_res, alert_context_res;
 
-    switch(_functions.preProcessingFunc.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(_functions.preProcessingFunc.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.f.py, *_parsed_body, nullptr)) == nullptr) {
+            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.py, *_parsed_body, nullptr)) == nullptr) {
                 Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Preprocess: ");
                 return;
             }
             break;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try {
-                if ((preProc_res = _functions.preProcessingFunc.f.so(_pModule, *_parsed_body)) == nullptr) {
+                if ((preProc_res = _functions.preProcessingFunc.so(_pModule, *_parsed_body)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_pre_process function");
                     return;
                 }
@@ -59,18 +59,18 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for preProcessing Origin");
     }
 
-    switch(_functions.processingFunc.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(_functions.processingFunc.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.f.py, *preProc_res, nullptr)) == nullptr) {
+            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.py, *preProc_res, nullptr)) == nullptr) {
                 Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Process: ");
                 return;
             }
             break;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try{
-                if ((proc_res = _functions.processingFunc.f.so(_pModule, *preProc_res)) == nullptr) {
+                if ((proc_res = _functions.processingFunc.so(_pModule, *preProc_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_process function");
                     return;
                 }
@@ -84,18 +84,18 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for processing Origin");
     }
 
-    switch(_functions.contextualizeFunc.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(_functions.contextualizeFunc.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((context_res = PyObject_CallFunctionObjArgs(_functions.contextualizeFunc.f.py, *proc_res, nullptr)) == nullptr) {
+            if ((context_res = PyObject_CallFunctionObjArgs(_functions.contextualizeFunc.py, *proc_res, nullptr)) == nullptr) {
                 Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Contextualize: ");
                 return;
             }
             break;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try{
-                if ((context_res = _functions.contextualizeFunc.f.so(_pModule, *proc_res)) == nullptr) {
+                if ((context_res = _functions.contextualizeFunc.so(_pModule, *proc_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_contextualize function");
                     return;
                 }
@@ -109,18 +109,18 @@ void PythonTask::operator()() {
             DARWIN_LOG_CRITICAL("PythonTask:: Corrupted state for processing Origin");
     }
 
-    switch(_functions.alertContextualizeFunc.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(_functions.alertContextualizeFunc.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((alert_context_res = PyObject_CallFunctionObjArgs(_functions.alertContextualizeFunc.f.py, *context_res, nullptr)) == nullptr) {
+            if ((alert_context_res = PyObject_CallFunctionObjArgs(_functions.alertContextualizeFunc.py, *context_res, nullptr)) == nullptr) {
                 Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Alert Contextualize: ");
                 return;
             }
             break;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try{
-                if ((alert_context_res = _functions.alertContextualizeFunc.f.so(_pModule, *context_res)) == nullptr) {
+                if ((alert_context_res = _functions.alertContextualizeFunc.so(_pModule, *context_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO alert_contextualize function");
                     return;
                 }
@@ -163,8 +163,8 @@ bool PythonTask::ParseBody() {
     DARWIN_LOGGER;
     PyObjectOwner raw_body;
     bool ret = false;
-    switch(_functions.parseBodyFunc.loc){
-        case FunctionOrigin::NONE:{
+    switch(_functions.parseBodyFunc.origin){
+        case FunctionOrigin::none:{
             ret = ATask::ParseBody();
             if(!ret){
                 return false;
@@ -189,7 +189,7 @@ bool PythonTask::ParseBody() {
             }
             return ret;
         }
-        case FunctionOrigin::PYTHON_MODULE:{
+        case FunctionOrigin::python_module:{
             // This lock is valid because we use only ONE interpreter
             // If at some point, we decide to use multiple interpreters
             // (one by thread for example)
@@ -200,7 +200,7 @@ bool PythonTask::ParseBody() {
                 return false;
             }
 
-            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.f.py, *raw_body, nullptr)) == nullptr) {
+            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.py, *raw_body, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the Python function");
                 Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
                 return false;
@@ -208,9 +208,9 @@ bool PythonTask::ParseBody() {
 
             return true;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try{
-                if((_parsed_body = _functions.parseBodyFunc.f.so(_pModule, _packet.GetBody()))== nullptr){
+                if((_parsed_body = _functions.parseBodyFunc.so(_pModule, _packet.GetBody()))== nullptr){
                     DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                     return false;
                 }  
@@ -232,11 +232,11 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
     ssize_t pySize = 0, strSize=0;
     const char * out = nullptr;
     std::vector<std::string> ret;
-    switch(func.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(func.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
             PyObjectOwner pyRes;
-            if ((pyRes = PyObject_CallFunctionObjArgs(func.f.py, processedData, nullptr)) == nullptr) {
+            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, processedData, nullptr)) == nullptr) {
                 Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ");
                 return ret;
             }
@@ -263,9 +263,9 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
             }
             return ret;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try{
-                return func.f.so(_pModule, processedData);
+                return func.so(_pModule, processedData);
             } catch(std::exception const& e){
                 DARWIN_LOG_ERROR("PythonTask:: GetFormatedAlerts:: Error while calling the SO alert_format function : " + std::string(e.what()));
                 return ret;
@@ -282,8 +282,8 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
 DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp_format_t>& func, PyObject* processedData) {
     DARWIN_LOGGER;
     DarwinResponse ret;
-    switch(func.loc) {
-        case FunctionOrigin::PYTHON_MODULE:{
+    switch(func.origin) {
+        case FunctionOrigin::python_module:{
             PythonLock pylock;
 
             PyObjectOwner pBody, pCertitudes;
@@ -340,9 +340,9 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
             }
             return ret;
         }
-        case FunctionOrigin::SHARED_LIBRARY:{
+        case FunctionOrigin::shared_library:{
             try {
-                return func.f.so(_pModule, processedData);
+                return func.so(_pModule, processedData);
             } catch(std::exception const& e){
                 DARWIN_LOG_ERROR("PythonTask:: GetFormatedResponse:: Error while calling the SO response_format function : " + std::string(e.what()));
                 return ret;
