@@ -1,6 +1,12 @@
 #pragma once
 #include <Python.h>
 
+///
+/// \brief Helper class that takes the ownership of a PyObject pointer
+///        when detroyed, if it still holds a reference, it will attempt to DECREF it to the interpreter
+///        Calls to destructor or Move operator or Decref will query the GIL if it does not have it.
+///        These methods are always safe to call
+///
 class PyObjectOwner {
     public:
     // no copy, move ok

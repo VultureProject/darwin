@@ -140,7 +140,12 @@ bool Generator::SendConfig(rapidjson::Document const& config) {
             DARWIN_LOG_CRITICAL("Python:: Generator:: SendConfig: Incoherent configuration");
             return false;
         case FunctionOrigin::SHARED_LIBRARY:
-            soConfigRes = functions.configSoFunc.f.so(config);
+            try{
+                soConfigRes = functions.configSoFunc.f.so(config);
+            } catch(std::exception const& e){
+                DARWIN_LOG_CRITICAL("Python:: Generator:: SendConfig: error while sending config :" + std::string(e.what()));
+                soConfigRes = false;
+            }
             break;
     }
 
@@ -239,6 +244,22 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         functions.processingFunc.f.so = proc;
     }
 
+    FunctionHolder::process_t context = (FunctionHolder::process_t)dlsym(handle, "filter_contextualize");
+    if(context == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_contextualize' function in the shared library");
+    } else {
+        functions.processingFunc.loc = FunctionOrigin::SHARED_LIBRARY;
+        functions.processingFunc.f.so = context;
+    }
+
+    FunctionHolder::process_t alert_cont = (FunctionHolder::process_t)dlsym(handle, "alert_contextualize");
+    if(alert_cont == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'alert_contextualize' function in the shared library");
+    } else {
+        functions.processingFunc.loc = FunctionOrigin::SHARED_LIBRARY;
+        functions.processingFunc.f.so = alert_cont;
+    }
+
     FunctionHolder::alert_format_t alert_format = (FunctionHolder::alert_format_t)dlsym(handle, "alert_formating");
     if(alert_format == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'alert_formating' function in the shared library");
@@ -269,6 +290,8 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
 bool Generator::CheckConfig() const {
     if(functions.preProcessingFunc.loc == FunctionOrigin::NONE
         || functions.processingFunc.loc == FunctionOrigin::NONE
+        || functions.contextualizeFunc.loc == FunctionOrigin::NONE
+        || functions.alertContextualizeFunc.loc == FunctionOrigin::NONE
         || functions.alertFormatingFunc.loc == FunctionOrigin::NONE
         || functions.outputFormatingFunc.loc == FunctionOrigin::NONE
         || functions.responseFormatingFunc.loc == FunctionOrigin::NONE) 
@@ -318,6 +341,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
     if(PyExceptionCheckAndLog("Generator::LoadPythonScript : Error during python init :")) {
         return false;
     }
+    PyObjectOwner pName;
     if((pName = PyUnicode_DecodeFSDefault(filename.c_str())) == nullptr){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : error importing string " + filename + " : ");
         return false;
@@ -338,19 +362,11 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     }
 
-    if (PyRun_SimpleString("sys.path.append('/tmp/pydebug/lib/python3.8/site-packages/')") != 0) {
-        DARWIN_LOG_DEBUG(
-                "Generator::LoadPythonScript : An error occurred while appending the custom path '" +
-                folders +
-                "' to the Python path"
-        );
-        return false;
-    }
-
     if((pModule = PyImport_Import(*pName)) == nullptr) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
+    pName.Decref();
 
     functions.configPyFunc.f.py = PyObject_GetAttrString(*pModule, "filter_config");
     if(functions.configPyFunc.f.py == nullptr) {
@@ -390,6 +406,26 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     } else {
         functions.processingFunc.loc = FunctionOrigin::PYTHON_MODULE;
+    }
+
+    functions.contextualizeFunc.f.py = PyObject_GetAttrString(*pModule, "filter_contextualize");
+    if(functions.contextualizeFunc.f.py == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'filter_contextualize' method in the python script");
+    } else if (! PyCallable_Check(functions.contextualizeFunc.f.py)){
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : filter_contextualize symbol exists but is not callable");
+        return false;
+    } else {
+        functions.contextualizeFunc.loc = FunctionOrigin::PYTHON_MODULE;
+    }
+
+    functions.alertContextualizeFunc.f.py = PyObject_GetAttrString(*pModule, "alert_contextualize");
+    if(functions.alertContextualizeFunc.f.py == nullptr) {
+        DARWIN_LOG_INFO("Generator::LoadPythonScript : No 'alert_contextualize' method in the python script");
+    } else if (! PyCallable_Check(functions.alertContextualizeFunc.f.py)){
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : alert_contextualize symbol exists but is not callable");
+        return false;
+    } else {
+        functions.alertContextualizeFunc.loc = FunctionOrigin::PYTHON_MODULE;
     }
 
     functions.alertFormatingFunc.f.py = PyObject_GetAttrString(*pModule, "alert_formating");
