@@ -55,6 +55,38 @@ bool Generator::PyExceptionCheckAndLog(std::string const& prefix_log, darwin::lo
     return true;
 }
 
+static PyObject* darwin_log(PyObject *self __attribute__((__unused__)), PyObject* args) {
+    DARWIN_LOGGER;
+    int tag = 0;
+    const char* msg = nullptr;
+    ssize_t msgLen = 0;
+    if(PyArg_ParseTuple(args, "is#", &tag, &msg, &msgLen) != 1){
+        Generator::PyExceptionCheckAndLog("darwin_log: Error parsing arguments :");
+        Py_RETURN_NONE;
+    }
+
+    log.log(static_cast<darwin::logger::log_type>(tag), std::string(msg, msgLen));
+
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef logMethod[] = {
+    {"log",  darwin_log, METH_VARARGS, "sends log to darwin"},
+    {nullptr, nullptr, 0, nullptr}        /* Sentinel */
+};
+
+static PyModuleDef darwin_log_mod = {
+    PyModuleDef_HEAD_INIT,
+    "darwin_logger",
+    "Python interface for the fdarwin C++ logger",
+    -1,
+    logMethod,
+    nullptr,
+    nullptr,
+    nullptr,
+    nullptr
+};
+
 Generator::Generator(size_t nb_task_threads) 
     : AGenerator(nb_task_threads)
          { }
@@ -293,6 +325,26 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : error importing string " + filename + " : ");
         return false;
     }
+    
+    if(PyImport_AddModule("darlog") == nullptr){
+        PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to import the logger module : ");
+        return false;
+    }
+
+    PyObjectOwner logmod;
+    if((logmod = PyModule_Create(&darwin_log_mod))== nullptr){
+        PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the logger module : ");
+        return false;
+    }
+
+    PyObject* sys_modules = PyImport_GetModuleDict();
+    if (PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while calling PyImport_GetModuleDict(): ")){
+        return false;
+    }
+    PyDict_SetItemString(sys_modules, "darwin_logger", *logmod);
+    if (PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while calling PyDict_SetItemString(): ")){
+        return false;
+    }
 
     if (PyRun_SimpleString("import sys") != 0) {
         DARWIN_LOG_DEBUG("Generator::LoadPythonScript : An error occurred while loading the 'sys' module");
@@ -314,6 +366,15 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     }
     pName.Decref();
+    // DARWIN_LOG_DEBUG("yes");
+    // DARWIN_LOG_DEBUG("after log");
+    // int a = 0;
+    // if((a=PyModule_AddFunctions(*pModule, logMethod)) != 0) {
+    //     DARWIN_LOG_DEBUG("error func" + std::to_string(a));
+    //     PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while adding 'darwin_log' function to the module : ");
+    //     return false;
+    // }
+    // DARWIN_LOG_DEBUG("after addfunc");
 
     if( ! LoadFunctionFromPython(*pModule, functions.configPyFunc, "filter_config")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_config' : ");

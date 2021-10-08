@@ -136,8 +136,8 @@ void PythonTask::operator()() {
 
 
     std::vector<std::string> alerts = GetFormatedAlerts(_functions.alertFormatingFunc, *alert_context_res);
-    DarwinResponse output = GetFormatedResponse(_functions.outputFormatingFunc, *proc_res);
-    DarwinResponse resp = GetFormatedResponse(_functions.responseFormatingFunc, *proc_res);
+    // DarwinResponse output = GetFormatedResponse(_functions.outputFormatingFunc, *context_res);
+    DarwinResponse resp = GetFormatedResponse(_functions.responseFormatingFunc, *context_res);
 
     for(auto& alert: alerts) {
         if( ! alert.empty()) {
@@ -147,15 +147,14 @@ void PythonTask::operator()() {
     for(auto cert: resp.certitudes) {
         _packet.AddCertitude(cert);
     }
-    std::string& body = _packet.GetMutableBody();
-    if( ! output.body.empty()) {
-        body.clear();
-        body.append(output.body);
-    }
+    // if( ! output.body.empty()) {
+    //     _response_body.clear();
+    //     _response_body.append(output.body);
+    // }
 
     if( ! resp.body.empty()){
-        body.clear();
-        body.append(resp.body);
+        _response_body.clear();
+        _response_body.append(resp.body);
     }
 }
 
@@ -286,9 +285,13 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
         case FunctionOrigin::python_module:{
             PythonLock pylock;
 
-            PyObjectOwner pBody, pCertitudes;
+            PyObjectOwner pBody, pCertitudes, pyRes;
             ssize_t certSize = 0;
-            if((pBody = PyObject_GetAttrString(processedData, "body")) == nullptr){
+            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, processedData, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ");
+                return ret;
+            }
+            if((pBody = PyObject_GetAttrString(*pyRes, "body")) == nullptr){
                 Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.body :");
                 return ret;
             }
@@ -302,7 +305,7 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
             }
 
             ret.body = std::string(cBody, bodySize);
-            if((pCertitudes = PyObject_GetAttrString(processedData, "certitudes")) == nullptr){
+            if((pCertitudes = PyObject_GetAttrString(*pyRes, "certitudes")) == nullptr){
                 Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.certitudes :");
                 return ret;
             }

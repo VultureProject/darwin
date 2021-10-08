@@ -23,7 +23,8 @@ class CustomData:
     pass
 
 def filter_config(config: dict) -> bool:
-    print('filter', config)
+    if 'dummy' not in config:
+        return False
     return True
 
 def parse_body(body: str) -> Union[list, CustomData]:
