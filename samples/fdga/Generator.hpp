@@ -14,7 +14,8 @@
 #include "../toolkit/rapidjson/document.h"
 #include "Session.hpp"
 #include "AGenerator.hpp"
-#include "tensorflow/core/public/session.h"
+#include "TfLiteHelper.hpp"
+#include "tensorflow/lite/model.h"
 
 class Generator: public AGenerator {
 public:
@@ -35,11 +36,11 @@ private:
     bool LoadTokenMap(const std::string &token_map_path);
     bool LoadModel(const std::string &model_path);
 
-    // The doc is quite hard to find so here is a link to the version currently used on BSD
-    // (see vulture-libtensorflow)
-    // https://github.com/tensorflow/tensorflow/blob/r1.13/tensorflow/core/public/session.h
-    std::shared_ptr<tensorflow::Session> _session;
+    std::shared_ptr<tflite::FlatBufferModel> _model;
     std::map<std::string, unsigned int> _token_map;
     unsigned int _max_tokens = 75;
     faup_options_t* _faup_options = nullptr;
+
+    // API that hold the thread_local interpreters
+    DarwinTfLiteInterpreterFactory _interpreter_factory;
 };
