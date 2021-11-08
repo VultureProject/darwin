@@ -4,11 +4,13 @@ set(DGA_NAME darwin_dga)
 # FILTER DEPENDENCIES #
 #######################
 
-set(TENSORFLOW_SOURCE_DIR "/../tensorflow_src")
 if(NOT TENSORFLOW_SOURCE_DIR)
-  get_filename_component(TENSORFLOW_SOURCE_DIR
-    "${CMAKE_CURRENT_LIST_DIR}/../../../../" ABSOLUTE)
+  set(TENSORFLOW_SOURCE_DIR "../tensorflow_src")
 endif()
+
+set(TENSORFLOW_SOURCE_DIR "" CACHE PATH
+  "Directory that contains the TensorFlow project"
+) 
 
 add_subdirectory(
   "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite"
