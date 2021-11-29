@@ -211,7 +211,12 @@ unsigned int DGATask::Predict(std::shared_ptr<tflite::Interpreter> interpreter) 
     std::vector<std::size_t> domain_tokens(_max_tokens, 0);
     DomainTokenizer(domain_tokens, to_predict);
 
-    interpreter->AllocateTensors();
+    TfLiteStatus status = interpreter->AllocateTensors();
+
+    if(status != TfLiteStatus::kTfLiteOk) {
+        DARWIN_LOG_ERROR("DGATask::Predict:: Tflite Error while allocating tensors : " + std::to_string(static_cast<int>(status)));
+        return DARWIN_ERROR_RETURN;
+    }
 
     float* input_tensor_mapped = interpreter->typed_input_tensor<float>(0);
     size_t index = 0;
@@ -219,8 +224,12 @@ unsigned int DGATask::Predict(std::shared_ptr<tflite::Interpreter> interpreter) 
         input_tensor_mapped[index++] = domain_token;
     }
 
-    auto status = interpreter->Invoke();
-    //TODO: Check return status
+    status = interpreter->Invoke();
+    if(status != TfLiteStatus::kTfLiteOk) {
+        DARWIN_LOG_ERROR("DGATask::Predict:: Tflite Error while predicting : " + std::to_string(static_cast<int>(status)));
+        return DARWIN_ERROR_RETURN;
+    }
+    
     float* output_tensor = interpreter->typed_output_tensor<float>(0);
 
     unsigned int certitude = round(output_tensor[0] * 100);

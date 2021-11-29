@@ -8,10 +8,23 @@
 #include "tensorflow/lite/kernels/register.h"
 #include "tensorflow/lite/interpreter_builder.h"
 
+///
+/// \brief acquire pointer to model to be used for prediction
+/// 
+/// \param model pointer to model to be used for prediction
+///
 void DarwinTfLiteInterpreterFactory::SetModel(std::shared_ptr<tflite::FlatBufferModel> model){
     this->_model = model;
 }
 
+///
+/// \brief TF lite interpreters are *NOT* thread-safe, to ensure thread safety in darwin, 
+///        this function returns a pointer to a thread_local tflite::interpreter
+///        This method must be called AFTER Factory::SetModel
+///        In case of an error (model not set), it kills its process and returns a nullptr
+/// 
+/// \return std::shared_ptr<tflite::Interpreter> pointer to a thread_local allocated interpreter, may be null if no model is set
+///
 std::shared_ptr<tflite::Interpreter> DarwinTfLiteInterpreterFactory::GetInterpreter(){
     static thread_local std::shared_ptr<tflite::Interpreter> interpreter;
     if( ! interpreter){
@@ -31,6 +44,10 @@ std::shared_ptr<tflite::Interpreter> DarwinTfLiteInterpreterFactory::GetInterpre
     return interpreter;
 };
 
+///
+/// \brief Static instance of the tf lite reporter used to log errors in darwin
+/// 
+///
 DarwinTfLiteErrorReporter DarwinTfLiteErrorReporter::tfErrorReporter;
 
 DarwinTfLiteErrorReporter* DarwinTfLiteErrorReporter::GetInstance() noexcept {
