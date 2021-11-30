@@ -41,6 +41,6 @@ private:
     unsigned int _max_tokens = 75;
     faup_options_t* _faup_options = nullptr;
 
-    // API that hold the thread_local interpreters
+    // Object that distributes the thread_local interpreters
     DarwinTfLiteInterpreterFactory _interpreter_factory;
 };

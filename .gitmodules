@@ -1,3 +1,7 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/VultureProject/darwin.wiki
+[submodule "tensorflow"]
+	path = tensorflow
+	url = https://github.com/tensorflow/tensorflow.git
+	branch = r2.6

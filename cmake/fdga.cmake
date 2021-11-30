@@ -9,7 +9,7 @@ set(TENSORFLOW_SOURCE_DIR "" CACHE PATH
 )
 if(NOT TENSORFLOW_SOURCE_DIR)
   get_filename_component(TENSORFLOW_SOURCE_DIR
-    "${CMAKE_CURRENT_LIST_DIR}/../../tensorflow_src"
+    "${CMAKE_CURRENT_LIST_DIR}/../tensorflow"
     ABSOLUTE
   )
 endif()

@@ -16,6 +16,10 @@ class DarwinTfLiteErrorReporter: public tflite::ErrorReporter {
         int Report(const char* format, va_list args) noexcept override final;
     private:
         DarwinTfLiteErrorReporter() = default;
+        ///
+        /// \brief Static instance of the tf lite reporter used to log errors in darwin
+        /// 
+        ///
         static DarwinTfLiteErrorReporter tfErrorReporter;
 };
 
@@ -47,8 +51,9 @@ class DarwinTfLiteInterpreterFactory {
         std::shared_ptr<tflite::Interpreter> GetInterpreter();
 
         ///
-        /// \brief Static instance of the tf lite reporter used to log errors in darwin
+        /// \brief acquire pointer to model to be used for prediction
         /// 
+        /// \param model pointer to model to be used for prediction
         ///
         void SetModel(std::shared_ptr<tflite::FlatBufferModel> model);
     private:

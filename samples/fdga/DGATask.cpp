@@ -54,7 +54,7 @@ void DGATask::operator()() {
     if(! interpreter) {
         // Error in the configuration stage, cannot happen in the actual workflow, the program will kill itself, 
         // see DarwinTfLiteInterpreterFactory::GetInterpreter for more information
-        DARWIN_LOG_ERROR("DGATask:: TFLite Interpreter is null, no process of the data");
+        DARWIN_LOG_ERROR("DGATask:: TFLite Interpreter is null, the filter cannot process data");
         STAT_PARSE_ERROR_INC;
         _certitudes.push_back(DARWIN_ERROR_RETURN);
         return;
