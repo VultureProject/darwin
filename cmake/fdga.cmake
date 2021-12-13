@@ -4,6 +4,9 @@ set(DGA_NAME darwin_dga)
 # FILTER DEPENDENCIES #
 #######################
 
+# This will deactivate XNNPACK by default as it is uncompatible with FreeBSD
+set(TFLITE_ENABLE_XNNPACK OFF CACHE BOOL "Deactivate XNNPACK for the build (incompatible with freebsd)")
+
 set(TENSORFLOW_SOURCE_DIR "" CACHE PATH
   "Directory that contains the TensorFlow project"
 )
