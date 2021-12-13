@@ -7,9 +7,11 @@ from darwin import DarwinApi, darwinexceptions
 from tools.filter import Filter
 from tools.output import print_result
 
-PASSING_TESTS_DATA = "filters/data/dga_domains_score.json"
-MODEL_PATH = "filters/data/dga_model.tflite"
-TOKEN_MAP_PATH = "filters/data/dga_tokens.csv"
+TEST_FILTERS_FOLDER_PATH = os.path.dirname(__file__)
+
+PASSING_TESTS_DATA = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_domains_score.json"
+MODEL_PATH = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_model.tflite"
+TOKEN_MAP_PATH = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_tokens.csv"
 
 TMP_TOKEN_MAP_PATH = f"{TOKEN_MAP_PATH}.tmp"
 MAX_TOKENS = 80
