@@ -14,7 +14,7 @@ import atexit
 import os
 from sys import exit
 from Services import Services
-from logging import FileHandler
+from logging.handlers import WatchedFileHandler
 from Administration import Server
 from threading import Thread, Condition
 from time import sleep
@@ -92,7 +92,7 @@ log_path = '{}/log{}/darwin_manager.log'.format(prefix, suffix)
 if not os.path.isfile(log_path):
     open(log_path, "a+").close()
 
-file_handler = FileHandler(log_path, mode="a+")
+file_handler = WatchedFileHandler(log_path, mode="a+")
 
 file_handler.setLevel(loglevel)
 file_handler.setFormatter(formatter)
