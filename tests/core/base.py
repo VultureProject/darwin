@@ -1,9 +1,11 @@
 import logging
 import socket
-from os import kill, remove, access, F_OK
+from os import kill, remove, access, rename, F_OK
+from signal import SIGHUP
 from time import sleep
-from tools.filter import Filter
+from tools.filter import Filter, DEFAULT_LOG_FILE
 from tools.output import print_result
+from tools.darwin_utils import count_file_lines
 from core.utils import DEFAULT_PATH, FTEST_CONFIG, RESP_MON_STATUS_RUNNING
 from darwin import DarwinApi
 
@@ -26,6 +28,8 @@ def run():
         check_start_outbound_thread_num,
         check_start_outbound_cache_num,
         check_start_outbound_threshold_num,
+        check_write_logs,
+        check_rotate_logs,
     ]
 
     for i in tests:
@@ -261,6 +265,72 @@ def check_start_outbound_threshold_num():
     if filter.check_start():
         logging.error("check_start_outbound_threshold_num: Process started when threshold was out of bounds")
         filter.stop()
+        return False
+
+    return True
+
+def check_write_logs():
+    filter = Filter(filter_name="test")
+
+    filter.configure(FTEST_CONFIG)
+
+    init_lines = count_file_lines(DEFAULT_LOG_FILE)
+
+    filter.valgrind_start()
+    try:
+        kill(filter.process.pid, 0)
+    except OSError as e:
+        logging.error("check_write_logs: Process {} not running: {}".format(filter.process.pid, e))
+        return False
+
+    if filter.stop() is not True:
+        logging.error("check_write_logs: Process {} not stopping: {}".format(filter.process.pid, e))
+        return False
+
+    if init_lines == count_file_lines(DEFAULT_LOG_FILE):
+        logging.error("check_write_logs: filter didn't write any logs in logfile")
+        return False
+
+    return True
+
+def check_rotate_logs():
+    error = ""
+    filter = Filter(filter_name="test")
+
+    filter.configure(FTEST_CONFIG)
+
+    filter.valgrind_start()
+
+    # rename file to simulate log rotation
+    rename(DEFAULT_LOG_FILE, DEFAULT_LOG_FILE + ".moved")
+    # send rotate signal to filter
+    kill(filter.process.pid, SIGHUP)
+
+    lines_after_rotate = count_file_lines(DEFAULT_LOG_FILE + ".moved")
+
+    # send a line to filter to trigger writting to logfile
+    filter.send_single("test")
+
+    if count_file_lines(DEFAULT_LOG_FILE + ".moved") > lines_after_rotate:
+        error += "check_rotate_logs: new lines appended to old logfile"
+
+    if count_file_lines(DEFAULT_LOG_FILE) == 0:
+        error += "check_rotate_logs: no new lines written to new logfile"
+
+    remove(DEFAULT_LOG_FILE + ".moved")
+
+    if error:
+        logging.error(error)
+        return False
+
+    try:
+        kill(filter.process.pid, 0)
+    except OSError as e:
+        logging.error("check_rotate_logs: Process {} not running: {}".format(filter.process.pid, e))
+        return False
+
+    if filter.stop() is not True:
+        logging.error("check_rotate_logs: Process {} not stopping: {}".format(filter.process.pid, e))
         return False
 
     return True
