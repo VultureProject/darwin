@@ -59,7 +59,7 @@ namespace darwin {
 
     private:
         boost::asio::ip::address _address;
-        int _port_nb; //!< Path to the Tcp socket to listen on.
+        int _port_nb; //!< Port of the Tcp socket to listen on.
         boost::asio::ip::tcp::acceptor _acceptor; //!< Acceptor for the incoming connections.
         boost::asio::ip::tcp::socket _new_connection; //!< Socket used to accept a new connection.
     };
