@@ -160,7 +160,7 @@ namespace darwin {
             case DARWIN_RESPONSE_SEND_BOTH:
                 // We try to send to filter, then send back to client anyway
                 this->SendToFilter(packet);
-                __attribute((fallthrough));
+                [[fallthrough]];
             case DARWIN_RESPONSE_SEND_BACK:
                 this->SendToClient(packet);
                 // We don't resume the session by calling Start() because the SendToClientCallback already does

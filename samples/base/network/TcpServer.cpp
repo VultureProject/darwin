@@ -1,10 +1,13 @@
-/// \file     Server.cpp
-/// \authors  hsoszynski
-/// \version  1.0
-/// \date     02/07/18
-/// \license  GPLv3
-/// \brief    Copyright (c) 2018 Advens. All rights reserved.
-
+///
+/// \file TcpServer.cpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Server for TCP Protocol
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #include <iostream>
 #include <functional>
 #include <boost/bind.hpp>

@@ -147,7 +147,7 @@ namespace darwin {
         std::string Evt_idToString() const;
 
         ///
-        /// \brief Get the Parsed Certitude Size, it may differs from GetCertitudeList().size()
+        /// \brief Get the Parsed Certitude Size, it may differ from GetCertitudeList().size()
         /// 
         /// \return size_t Parsed Certitude Size
         ///
@@ -231,7 +231,7 @@ namespace darwin {
         std::vector<unsigned int> _certitude_list; //!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
         std::string _body;
 
-        // Parsed Body is stored as late-initiliaized pointer because is cannot be moved, nor assigned
+        // Parsed Body is stored as late-initialized pointer because it cannot be moved, nor assigned
         // For move semantics, we want to be able to move this, hence the std::unique_ptr
         std::unique_ptr<rapidjson::Document> _parsed_body;
 

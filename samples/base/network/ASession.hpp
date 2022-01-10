@@ -86,7 +86,7 @@ namespace darwin {
         /// \return The filter's threshold
         size_t GetThreshold();
 
-        /// Send
+        /// Send the packet to client and/or next filter depending on its response type
         virtual void SendNext(DarwinPacket& packet) final;
 
     protected:

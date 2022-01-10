@@ -1,7 +1,7 @@
 ///
 /// \file UdpServer.hpp
 /// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
-/// \brief Server for TCP Protocol
+/// \brief Server for UDP Protocol
 /// \version 1.0
 /// \date 20-07-2021
 /// 

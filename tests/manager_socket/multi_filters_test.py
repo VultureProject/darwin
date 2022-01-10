@@ -1,4 +1,5 @@
 import functools
+import logging
 from manager_socket.utils import CONF_FTEST, PATH_CONF_FTEST
 import time
 from tools.output import print_result
@@ -7,7 +8,10 @@ from tools.filter import Filter
 import conf
 import psutil
 
+EXPECTED_NB_FILTERS = 3
+
 def run():
+    # Every scenarios must be EXPECTED_NB_FILTERS long (3 now)
     scenarios = [
         ['unix', 'unix', 'unix'],
         ['tcp', 'tcp', 'tcp'],
@@ -72,7 +76,7 @@ CONFIG = """
 
 # Test different combinations of tcp/udp/unix socket and verifies that everytime, 3 alerts are spawned
 def alerting_tests(filters_list):
-    assert(len(filters_list) == 3)
+    assert(len(filters_list) == EXPECTED_NB_FILTERS)
     filter_1 = ONE_FILTER.format(name='test_1', filter_path=conf.DEFAULT_FILTER_PATH, 
                             next_filter='"next_filter": "test_2",', 
                             network=network_map[filters_list[0]].format(port=8181))
@@ -103,7 +107,7 @@ def alerting_tests(filters_list):
     start = time.time()
     nb_test_filters=0
     # We check that all 3 filters are running, on VM HardenedBSD, it may take some time
-    while nb_test_filters < 3 and time.time() - start < 6:
+    while nb_test_filters < EXPECTED_NB_FILTERS and time.time() - start < 6:
         time.sleep(1)
         nb_test_filters=0
         for proc in psutil.process_iter():
@@ -111,9 +115,12 @@ def alerting_tests(filters_list):
                 # Check if process name contains the given name string.
                 if 'darwin_test' in proc.name().lower():
                     nb_test_filters += 1
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                logging.error(f"alerting_tests: Errror while checking processes: {e.msg}", exc_info=e)
+                return False
+    if nb_test_filters != EXPECTED_NB_FILTERS:
+        logging.error(f"alerting_tests: Expected {EXPECTED_NB_FILTERS} filters but got {nb_test_filters}")
+        return False
     api.call("Hello", response_type="darwin")
     time.sleep(0.2)
     api.call("There", response_type="darwin")
@@ -136,7 +143,7 @@ def alerting_tests(filters_list):
     darwin_remove_configuration(path=PATH_CONF_FTEST)
 
     if line1 != 2 or line2 != 2 or line3 != 2:
-        print('test failed: ', filters_list)
-        print("test1 : {}, test2 : {}, test3 : {}".format(line1, line2, line3))
+        logging.error(f"alerting_tests: test failed: {filters_list}")
+        logging.error(f"alerting_tests: Expected 'test_1', 'test_2', 'test_3' but got instead : test1 : {line1}, test2 : {line2}, test3 : {line3}")
         return False
     return True

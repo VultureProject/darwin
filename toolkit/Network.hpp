@@ -58,7 +58,7 @@ namespace darwin {
         /// \brief Parse a string to get the socket path if any or the ipv4/v6 address
         /// 
         /// \param path_address the string to parse
-        /// \param is_udp true if we should use udp instead of tcp (it is not used)
+        /// \param is_udp true if we should use udp instead of tcp
         /// \param out_net_type type of address/path parsed
         /// \param out_net_address ip address to fill when parsed
         /// \param out_port ip port to fill when parsed

@@ -1,7 +1,7 @@
 ///
 /// \file TcpNextFilterConnector.hpp
 /// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
-/// \brief Connection to NExt Filter (TCP Protocol)
+/// \brief Connection to Next Filter (TCP Protocol)
 /// \version 1.0
 /// \date 20-07-2021
 /// 

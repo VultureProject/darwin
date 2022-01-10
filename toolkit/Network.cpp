@@ -103,8 +103,8 @@ namespace darwin {
                 return false;
             }
 
-            if (port < 0 || port > 65353) {
-                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number : out of bounds [0; 65353]: '" + str_port + "'");
+            if (port < 0 || port > 65535) {
+                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number : out of bounds [0; 65535]: '" + str_port + "'");
                 return false;
             }
 
