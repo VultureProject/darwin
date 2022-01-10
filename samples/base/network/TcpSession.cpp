@@ -23,7 +23,7 @@ namespace darwin {
     void TcpSession::ReadHeader() {
         DARWIN_LOGGER;
 
-        DARWIN_LOG_DEBUG("ASession::ReadHeader:: Starting to read incoming header...");
+        DARWIN_LOG_DEBUG("TcpSession::ReadHeader:: Starting to read incoming header...");
         boost::asio::async_read(_socket,
                                 boost::asio::buffer(&_header, sizeof(_header)),
                                 boost::bind(&TcpSession::ReadHeaderCallback, this,
@@ -33,7 +33,7 @@ namespace darwin {
 
     void TcpSession::ReadBody(std::size_t size) {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("ASession::ReadBody:: Starting to read incoming body...");
+        DARWIN_LOG_DEBUG("TcpSession::ReadBody:: Starting to read incoming body...");
 
         _socket.async_read_some(boost::asio::buffer(_body_buffer,
                                                     size),

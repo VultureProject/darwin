@@ -10,7 +10,6 @@
 ///
 #pragma once
 
-#include <set>
 #include <chrono>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -70,7 +69,6 @@ namespace darwin {
         virtual void SendCallback(const boost::system::error_code& e, size_t size, std::shared_ptr<boost::asio::const_buffer> buffer);
 
         boost::asio::io_context _io_context;
-        std::set<std::shared_ptr<boost::asio::const_buffer>> _buffer_set;
 
         size_t _nb_attempts;
         size_t _max_attempts;

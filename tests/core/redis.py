@@ -292,7 +292,7 @@ def multi_thread_master():
 
     number = master.get_number_of_connections()
 
-    # 6 threads : 5 task threads  + the main thread for configuring the redis socket
+    # 6 threads : 5 task threads + the main thread for configuring the redis socket
     if number != 6:
         logging.error("multi_thread_master: wrong number of active connections: expected 6 but got {}".format(number))
         return False

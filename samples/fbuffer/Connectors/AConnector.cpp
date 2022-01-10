@@ -218,8 +218,7 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: size:" + std::to_string(data.size()) + ", data : " + data);
     /*
      * Allocate the header +
-     * the size of the certitude -
-     * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+     * the size of the certitude 
      */
     std::size_t certitude_size = 1;
     std::size_t packet_size = sizeof(darwin_filter_packet_t) + data.size() + certitude_size*sizeof(unsigned int);

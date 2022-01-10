@@ -18,7 +18,6 @@ namespace darwin {
     void ANextFilterConnector::Send(DarwinPacket& packet) {
         std::vector<unsigned char> v = packet.Serialize();
         std::shared_ptr<boost::asio::const_buffer> buf_ptr = std::make_shared<boost::asio::const_buffer>(v.data(), v.size());
-        _buffer_set.insert(buf_ptr);
         this->Send(buf_ptr);
     }
 
@@ -35,8 +34,6 @@ namespace darwin {
             Send(buffer);
             return;
         }
-
-        _buffer_set.erase(buffer);
         _nb_attempts = 0;
     }
 }

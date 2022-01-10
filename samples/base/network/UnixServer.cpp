@@ -1,6 +1,6 @@
-/// \file     Server.cpp
+/// \file     UnixServer.cpp
 /// \authors  hsoszynski
-/// \version  1.0
+/// \version  2.0
 /// \date     02/07/18
 /// \license  GPLv3
 /// \brief    Copyright (c) 2018 Advens. All rights reserved.

@@ -227,14 +227,15 @@ def check_udp_socket_connection():
 
     try:
         api = filter.get_darwin_api()
-        api.call("udp test", filter_code=0x74657374, response_type="no")
+        for i in range(5):
+            api.call(f"udp test{i}", filter_code=0x74657374, response_type="no")
         # sleep to let the filter process the call
-        #TODO check alert
-        api.call("udp test2", filter_code=0x74657374, response_type="no")
-        api.call("udp test3", filter_code=0x74657374, response_type="no")
-        api.call("udp test4", filter_code=0x74657374, response_type="no")
-        api.call("udp test5", filter_code=0x74657374, response_type="no")
         sleep(2)
+        # We check with 'check_line_in_filter_log' because udp can't return an answer, we must check alerts or logs
+        for i in range(5):
+            if not filter.check_line_in_filter_log(f"udp test{i}"):
+                logging.error(f"No alert risen when it should have risen 'udp test{i}'")
+                return False
 
         api.close()
     except Exception as e:
@@ -253,9 +254,12 @@ def check_udp6_socket_connection():
 
     try:
         api = filter.get_darwin_api()
-        api.call("test\n", filter_code=0x74657374, response_type="no")
+        api.call("test doppledidoo\n", filter_code=0x74657374, response_type="no")
         sleep(1) #let filter process
-        # todo check alert
+        # We check with 'check_line_in_filter_log' because udp can't return an answer, we must check alerts or logs
+        if not filter.check_line_in_filter_log("test doppledidoo"):
+            logging.error("No alert risen when it should have risen 'test doppledidoo'")
+            return False
         api.close()
     except Exception as e:
         logging.error("check_udp6_socket_connection: Error connecting to socket: {}".format(e))

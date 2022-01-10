@@ -83,9 +83,9 @@ namespace darwin {
         bool SetLogLevel(std::string level);
 
         ///
-        /// \brief returns the daemon attribute, it is set ine the Configure method
+        /// \brief returns the daemon attribute, it is set in the Configure method
         /// 
-        /// \return true If the filter is configured to be ran as deamon
+        /// \return true If the filter is configured to be run as daemon
         bool IsDaemon() const;
 
         ///

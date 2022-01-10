@@ -1,10 +1,13 @@
-/// \file     Server.cpp
-/// \authors  hsoszynski
-/// \version  1.0
-/// \date     02/07/18
-/// \license  GPLv3
-/// \brief    Copyright (c) 2018 Advens. All rights reserved.
-
+///
+/// \file UdpServer.cpp
+/// \author Thibaud Cartegnie (thibaud.cartegnie@advens.fr)
+/// \brief Server for UDP Protocol
+/// \version 1.0
+/// \date 20-07-2021
+/// 
+/// @copyright Copyright (c) 2021
+/// 
+///
 #include <iostream>
 #include <functional>
 #include <boost/bind.hpp>
@@ -35,7 +38,7 @@ namespace darwin {
 
     void UdpServer::Clean() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
+        DARWIN_LOG_DEBUG("UdpServer::Clean:: Cleaning server...");
         _manager.StopAll();
     }
 
@@ -46,7 +49,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::stopping);
-        DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
+        DARWIN_LOG_DEBUG("UdpServer::Handle:: Closing acceptor");
         _io_context.stop();
     }
 

@@ -27,7 +27,7 @@ public:
     ///
     /// \brief Create a Task object
     /// 
-    /// \param s a shred pointer to the sessions creating the task
+    /// \param s a shared pointer to the sessions creating the task
     /// \return std::shared_ptr<darwin::ATask> a shared pointer to the created task
     ///
     virtual std::shared_ptr<darwin::ATask> CreateTask(darwin::session_ptr_t s) noexcept = 0;

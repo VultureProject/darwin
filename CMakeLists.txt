@@ -81,8 +81,6 @@ include_directories(
 	${Boost_INCLUDE_DIRS}
 )
 
-add_compile_options(-Wno-unknown-pragmas)
-
 ####################
 #   CORE SOURCES   #
 ####################

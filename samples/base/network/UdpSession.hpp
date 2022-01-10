@@ -32,8 +32,6 @@ namespace darwin {
 
         void Stop() override final;
 
-        void SetNextFilterPort(int port);
-
         /// Set the async read for the body.
         ///
         virtual void ReadBody(std::size_t size) override;
