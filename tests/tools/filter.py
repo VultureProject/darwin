@@ -11,6 +11,7 @@ from time import sleep
 from tools.redis_utils import RedisServer
 
 DEFAULT_LOG_FILE = "/var/log/darwin/darwin.log"
+DEFAULT_ALERTS_FILE = "/var/log/darwin/alerts.log"
 REDIS_SOCKET = "/tmp/redis.sock"
 REDIS_LIST_NAME = "darwin_tests"
 REDIS_CHANNEL_NAME = "darwin.tests"

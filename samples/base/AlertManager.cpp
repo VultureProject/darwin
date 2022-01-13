@@ -181,7 +181,8 @@ namespace darwin {
     }
 
     void AlertManager::Rotate() {
-        this->_log_file->Open(true);
+        if (this->_log)
+            this->_log_file->Open(true);
     }
 
     std::string AlertManager::FormatLog(const std::string& entry,
