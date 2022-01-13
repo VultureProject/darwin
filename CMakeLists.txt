@@ -22,7 +22,6 @@ if (NOT DEFINED FILTER)
         FILTERS
         HOSTLOOKUP
         SESSION
-        DGA
         CONNECTION
         TANOMALY
         ANOMALY

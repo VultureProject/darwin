@@ -4,31 +4,63 @@ on:
   release:
     types:
       - published
+  push:
+    branches:
+      - dev
 
 env:
-  FAUP_VERSION: 1.5
   BOOST_VERSION: 1.71.0
-  ARMADILLO_VERSION: 9.900.x
+  ARMADILLO_VERSION: 9.900.1
   MLPACK_VERSION: 3.4.0
-  TF_VERSION: 1.13.0
-  YARA_VERSION: 3.11.0
+  YARA_VERSION: 4.0.5
   DOCKER_REPO: vultureproject
   DOCKER_USER: vultureworker
   IMAGE_NAME: darwin
 
 jobs:
 
-  darwin-docker-release:
+  darwin-docker-dev:
     runs-on: ubuntu-latest
+
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Prepare build
         run: |
-          GITHUB_LOWERCASE_REPO=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`
-          GITHUB_TAG=`echo "${{ github.ref }}" | cut -d / -f 3`
-          echo "::set-env name=github_lowercase_repo::${GITHUB_LOWERCASE_REPO}"
-          echo "::set-env name=tag_name::${GITHUB_TAG}"
+          echo "github_lowercase_repo=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`" >> $GITHUB_ENV
+
+      - uses: whoan/docker-build-with-cache-action@v5
+        with:
+          image_name: ${{ env.IMAGE_NAME }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.DEPLOY_TOKEN }}
+          registry: docker.pkg.github.com/${{ env.github_lowercase_repo }}
+          image_tag: dev
+          dockerfile: docker/darwin
+          build_extra_args: --target darwin_full_build --cpuset-cpus 0,1 --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg YARA_VERSION=${{ env.YARA_VERSION }}
+
+      - name: push image to docker hub
+        run: |
+          echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
+          docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:dev ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:dev
+          docker push ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:dev
+          docker logout
+
+
+  darwin-docker-release:
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'release'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare build
+        run: |
+          echo "github_lowercase_repo=`echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]'`" >> $GITHUB_ENV
+          echo "tag_name=`echo "${{ github.ref }}" | cut -d / -f 3`" >> $GITHUB_ENV
 
       - uses: whoan/docker-build-with-cache-action@v5
         with:
@@ -40,7 +72,7 @@ jobs:
           dockerfile: docker/darwin
           build_extra_args: --target darwin --cpuset-cpus 0,1 --build-arg FAUP_VERSION=${{ env.FAUP_VERSION }} --build-arg BOOST_VERSION=${{ env.BOOST_VERSION }} --build-arg ARMADILLO_VERSION=${{ env.ARMADILLO_VERSION }} --build-arg MLPACK_VERSION=${{ env.MLPACK_VERSION }} --build-arg TF_VERSION=${{ env.TF_VERSION }} --build-arg YARA_VERSION=${{ env.YARA_VERSION }}
 
-      - name: push image to docker hub
+      - name: push release image to docker hub
         run: |
           echo ${{secrets.DOCKER_USER_TOKEN}} | docker login -u ${{ env.DOCKER_USER }} --password-stdin
           docker tag docker.pkg.github.com/${{ env.github_lowercase_repo }}/${{ env.IMAGE_NAME }}:${{ env.tag_name }} ${{ env.DOCKER_REPO }}/${{ env.IMAGE_NAME }}:${{ env.tag_name }}
