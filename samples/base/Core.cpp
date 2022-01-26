@@ -117,7 +117,7 @@ namespace darwin {
                 case 'l':
                     log_level.assign(optarg);
                     if(!Core::SetLogLevel(log_level)){
-                        std::clog << "Unknown log-level " << optarg << std::endl << std::endl;
+                        std::cerr << "Unknown log-level " << optarg << std::endl << std::endl;
                         Core::Usage();
                         return false;
                     }
@@ -126,11 +126,11 @@ namespace darwin {
                     Core::Usage();
                     return false;
                 case ':':
-                    std::clog << "Missing an option argument for -" << (char)optopt << std::endl << std::endl;
+                    std::cerr << "Missing an option argument for -" << (char)optopt << std::endl << std::endl;
                     Core::Usage();
                     return false;
                 case '?':
-                    std::clog << "Unknown option -" << (char)optopt << std::endl << std::endl;
+                    std::cerr << "Unknown option -" << (char)optopt << std::endl << std::endl;
                     Core::Usage();
                     return false;
             }
@@ -138,7 +138,7 @@ namespace darwin {
 
         // After options we need 10 mandatory arguments
         if (ac-optind < 10) {
-            std::clog << "Missing some parameters" << std::endl << std::endl;
+            std::cerr << "Missing some parameters" << std::endl << std::endl;
             Core::Usage();
             return false;
         }
