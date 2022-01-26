@@ -67,9 +67,8 @@ namespace darwin {
             if (not _file.is_open() and not this->openLogFile()) {
                 std::clog << fmt.str() << std::endl;
             } else {
-                _fileMutex.lock();
+                std::lock_guard lock(_fileMutex);
                 _file << fmt.str().c_str() << std::endl;
-                _fileMutex.unlock();
             }
         }
 
@@ -109,14 +108,11 @@ namespace darwin {
                 _file.swap(testfile);
             }
 
-            if (testfile.is_open())
-                testfile.close();
-
             return ret;
         }
 
         void Logger::RotateLogs() {
-            _fileMutex.lock();
+            std::lock_guard lock(_fileMutex);
 
             if (_file.is_open())
                 _file.close();
@@ -126,7 +122,6 @@ namespace darwin {
             if (!_file.is_open()) {
                 std::clog << "Can't open log file " << _filepath << std::endl;
             }
-            _fileMutex.unlock();
         }
     }
 }
