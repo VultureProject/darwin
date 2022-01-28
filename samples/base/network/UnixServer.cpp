@@ -31,7 +31,7 @@ namespace darwin {
 
     void UnixServer::Clean() {
         DARWIN_LOGGER;
-        DARWIN_LOG_DEBUG("Server::Clean:: Cleaning server...");
+        DARWIN_LOG_DEBUG("UnixServer::Clean:: Cleaning server...");
         _manager.StopAll();
         unlink(_socket_path.c_str());
     }
@@ -43,7 +43,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::stopping);
-        DARWIN_LOG_DEBUG("Server::Handle:: Closing acceptor");
+        DARWIN_LOG_DEBUG("UnixServer::HandleStop:: Closing acceptor");
         _acceptor.close();
         _io_context.stop();
     }
@@ -58,19 +58,19 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if (!_acceptor.is_open()) {
-            DARWIN_LOG_INFO("Server::HandleAccept:: Acceptor closed, closing server...");
+            DARWIN_LOG_INFO("UnixServer::HandleAccept:: Acceptor closed, closing server...");
             return;
         }
 
         if (!e) {
-            DARWIN_LOG_DEBUG("Server::HandleAccept:: New connection accepted");
+            DARWIN_LOG_DEBUG("UnixServer::HandleAccept:: New connection accepted");
             auto sess = std::make_shared<UnixSession>(_new_connection, _manager, _generator);
             sess->SetOutputType(_output);
             sess->SetThreshold(_threshold);
             _manager.Start(sess);
             Accept();
         } else {
-            DARWIN_LOG_ERROR("Server::HandleAccept:: Error accepting connection, no longer accepting");
+            DARWIN_LOG_ERROR("UnixServer::HandleAccept:: Error accepting connection, no longer accepting");
         }
     }
     

@@ -29,7 +29,6 @@ if (NOT DEFINED FILTER)
         CONTENT_INSPECTION
         BUFFER
         YARA
-        TEST
     )
 else (NOT DEFINED FILTER)
     set(

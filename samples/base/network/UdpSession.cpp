@@ -27,7 +27,7 @@ namespace darwin {
         DARWIN_LOGGER;
 
         if(size < sizeof(_header)){
-            DARWIN_LOG_ERROR("Error parsing header, buffer is less than expected : " + std::to_string(size));
+            DARWIN_LOG_ERROR("UdpSession::ReadBody: Error parsing header, buffer is less than expected : " + std::to_string(size));
             return;
         }
 
@@ -36,7 +36,7 @@ namespace darwin {
         //The header can hold one certitude, if there are more, we have to parsed them accordingly
         size_t cert_size = _header.certitude_size * sizeof(unsigned int);
         if(size != sizeof(_header) + _header.body_size + cert_size){
-            DARWIN_LOG_ERROR("Error parsing header sizes, expected " + std::to_string(sizeof(_header) + _header.body_size + cert_size) + " but buffer is " + std::to_string(size));
+            DARWIN_LOG_ERROR("UdpSession::ReadBody: Error parsing header sizes, expected " + std::to_string(sizeof(_header) + _header.body_size + cert_size) + " but buffer is " + std::to_string(size));
             return;
         }
 
