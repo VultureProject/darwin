@@ -31,7 +31,6 @@ if (NOT DEFINED FILTER)
         YARA
         PCR
         NSIGMA
-        TEST
     )
 else (NOT DEFINED FILTER)
     set(
