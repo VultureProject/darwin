@@ -54,8 +54,8 @@ class Filter():
         else:
             raise NotImplementedError("Unrecognized protocol : '{}'".format(self.socket_type))
 
-    def get_darwin_api(self, verbose=False):
-        return DarwinApi(socket_type=self.socket_type, socket_path=self.socket, socket_host=self.host, socket_port=self.port, verbose=verbose)
+    def get_darwin_api(self, verbose=False, timeout=None):
+        return DarwinApi(socket_type=self.socket_type, socket_path=self.socket, socket_host=self.host, socket_port=self.port, verbose=verbose, timeout=timeout)
 
     def prepare_log_file(self):
         # TODO variabilize once path can be changed
