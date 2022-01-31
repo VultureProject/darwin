@@ -16,7 +16,6 @@
 #include "Generator.hpp"
 #include "ASession.hpp"
 #include "AlertManager.hpp"
-#include "tensorflow/core/framework/graph.pb.h"
 
 Generator::Generator(size_t nb_task_threads) 
     : AGenerator(nb_task_threads) 
@@ -144,21 +143,15 @@ bool Generator::LoadTokenMap(const std::string &token_map_path) {
 bool Generator::LoadModel(const std::string &model_path) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Generator:: LoadModel:: Loading model...");
-    tensorflow::GraphDef graph_def;
-    tensorflow::Status load_graph_status = ReadBinaryProto(tensorflow::Env::Default(), model_path, &graph_def);
 
-    if (!load_graph_status.ok()) {
-        DARWIN_LOG_ERROR("Generator:: LoadModel:: Failed to load graph at " + model_path + ". Status: " + load_graph_status.ToString());
+    _model = tflite::FlatBufferModel::BuildFromFile(model_path.c_str(), DarwinTfLiteErrorReporter::GetInstance());
+
+    if (_model == nullptr) {
+        DARWIN_LOG_ERROR("Generator:: LoadModel:: Failed to load graph at " + model_path);
         return false;
     }
 
-    _session.reset(tensorflow::NewSession(tensorflow::SessionOptions()));
-    tensorflow::Status session_create_status = _session->Create(graph_def);
-
-    if (!session_create_status.ok()) {
-        DARWIN_LOG_ERROR("Generator:: LoadModel:: Failed to create a new session. Status: " + session_create_status.ToString());
-        return false;
-    }
+    _interpreter_factory.SetModel(_model);
 
     return true;
 }
@@ -180,21 +173,9 @@ std::shared_ptr<darwin::ATask> Generator::CreateTask(darwin::session_ptr_t s) no
     return std::static_pointer_cast<darwin::ATask>(
             std::make_shared<DGATask>(_cache, _cache_mutex, s, 
                 s->_packet,
-                _session, _faup_options, _token_map, _max_tokens
+                _interpreter_factory, _faup_options, _token_map, _max_tokens
                 )
             );
 }
 
-long Generator::GetFilterCode() const {
-    return DARWIN_FILTER_DGA;
-}
-
-Generator::~Generator() {
-    if (_session) {
-        tensorflow::Status s = _session->Close();
-        if (not s.ok()) {
-            DARWIN_LOGGER;
-            DARWIN_LOG_DEBUG("DGA:: Generator:: Unable to close the Tensorflow Session");
-        }
-    }
-}
+Generator::~Generator() {}

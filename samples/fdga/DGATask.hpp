@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "tensorflow/lite/interpreter.h"
 #include <boost/token_functions.hpp>
 #include <faup/faup.h>
 #include <map>
@@ -17,7 +18,7 @@
 #include "ATask.hpp"
 #include "DarwinPacket.hpp"
 #include "ASession.fwd.hpp"
-#include "tensorflow/core/public/session.h"
+#include "TfLiteHelper.hpp"
 
 #define DARWIN_FILTER_DGA 0x64676164
 #define DARWIN_FILTER_NAME "dga"
@@ -34,7 +35,7 @@ public:
                      std::mutex& cache_mutex,
                      darwin::session_ptr_t s,
                      darwin::DarwinPacket& packet,
-                     std::shared_ptr<tensorflow::Session> &session,
+                     DarwinTfLiteInterpreterFactory& interpreter_factory,
                      faup_options_t *faup_options,
                      std::map<std::string, unsigned int> &token_map, const unsigned int max_tokens = 50);
     ~DGATask() override;
@@ -59,7 +60,7 @@ private:
     /// Classify the parsed request.
     ///
     /// \return true on success, false otherwise.
-    unsigned int Predict();
+    unsigned int Predict(std::shared_ptr<tflite::Interpreter> interpreter);
 
     /// Parse a line in the body.
     bool ParseLine(rapidjson::Value &line) final;
@@ -72,10 +73,10 @@ private:
 
 
 private:
-    unsigned int _max_tokens = 75;
     boost::char_separator<char> _separator {" ());,:-~?!{}/[]"};
-    std::shared_ptr<tensorflow::Session> _session = nullptr; // The tensorflow session to use
-    std::map<std::string, unsigned int> _token_map; // The token map to help classifying domains
+    DarwinTfLiteInterpreterFactory& _interpreter_factory;
     faup_options_t *_faup_options = nullptr;
+    std::map<std::string, unsigned int> _token_map; // The token map to help classifying domains
+    unsigned int _max_tokens = 75;
     std::string _domain; // The current domain to check
 };

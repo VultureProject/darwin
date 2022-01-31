@@ -401,7 +401,7 @@ namespace darwin {
                 success = false;
             }
             else if(not reply){
-                DARWIN_LOG_WARNING("RedisManager::SendPing:: could not send ping");
+                DARWIN_LOG_DEBUG("RedisManager::SendPing:: no reply");
                 success = false;
             }
 
