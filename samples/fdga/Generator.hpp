@@ -27,8 +27,6 @@ public:
 
     virtual std::shared_ptr<darwin::ATask> CreateTask(darwin::session_ptr_t s) noexcept override final;
 
-    virtual long GetFilterCode() const;
-
 private:
     virtual bool LoadConfig(const rapidjson::Document &configuration) override final;
     virtual bool ConfigureAlerting(const std::string& tags) override final;
