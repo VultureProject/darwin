@@ -115,19 +115,20 @@ bool SumConnector::REDISPopLogs(long long int len __attribute__((unused)), std::
     redis_reply = redis.Query(std::vector<std::string>{"GETSET", sum_name, "0"}, result, true);
     if (redis_reply == REDIS_REPLY_NIL) {
         DARWIN_LOG_DEBUG("SumConnector:: REDISPopLogs:: key '" + sum_name + "' did not exist");
-        result = std::string("0");
+        result_string = "0";
     }
     else if(redis_reply != REDIS_REPLY_STRING) {
         DARWIN_LOG_ERROR("SumConnector::REDISPopLogs:: Not the expected Redis response");
         return false;
     }
-
-    try {
-        result_string = std::any_cast<std::string>(result);
-    }
-    catch (const std::bad_any_cast&) {
-        DARWIN_LOG_ERROR("SumConnector:REDISPopLogs:: Impossible to cast redis response into a string.");
-        return false;
+    else {
+        try {
+            result_string = std::any_cast<std::string>(result);
+        }
+        catch (const std::bad_any_cast&) {
+            DARWIN_LOG_ERROR("SumConnector:REDISPopLogs:: Impossible to cast redis response into a string.");
+            return false;
+        }
     }
 
     DARWIN_LOG_DEBUG("SumConnector::REDISPopLogs:: Got '" + result_string + "' from Redis");
