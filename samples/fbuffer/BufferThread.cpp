@@ -45,7 +45,9 @@ bool BufferThread::Main() {
 
         // Set an expiration on the redis key, to purge if threads/filters are stopped or configuration is modified
         // The expiration MUST be over the interval period
-        this->_connector->REDISSetExpiry(redis_list, this->_interval + 60);
+        if (not this->_connector->REDISSetExpiry(redis_list, this->_interval + 60)) {
+            DARWIN_LOG_WARNING("BufferThread::Main:: Could not set an expiration on key '" + redis_list + "'");
+        }
     }
 
     return true;
