@@ -147,13 +147,13 @@ bool AConnector::REDISSetExpiry(const std::string &key, unsigned int expiry) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("AConnector::REDISSetExpiry:: reseting expiration for key " + key);
 
-    long long int result;
+    long long int result = 0;
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
 
     if(redis.Query(std::vector<std::string>{"EXPIRE", key, std::to_string(expiry)}, result, true) != REDIS_REPLY_INTEGER) {
         DARWIN_LOG_ERROR("AConnector::REDISSetExpiry:: not the expected Redis response");
-        return -1;
+        return false;
     }
     return result == 1;
 }
