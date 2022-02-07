@@ -1,9 +1,9 @@
+import logging
+import json
+import tempfile
+import venv
 from tools.filter import Filter
 from tools.output import print_result
-import pandas as pd
-import json
-import datetime
-import logging
 
 class PythonFilter(Filter):
     alert_file='/tmp/python_alerts.log'
@@ -11,21 +11,22 @@ class PythonFilter(Filter):
     def __init__(self):
         super().__init__(filter_name="python")
 
-    def configure(self, content=None):
+    def configure(self, content=None, venv='', other_conf=''):
         if not content:
             content = '{{\n' \
                         '"python_script_path": "{python_path}",\n' \
                         '"shared_library_path": "{so_path}",\n' \
                         '"log_file_path": "{alert_file}",\n' \
-                        '"python_venv_folder": "/home/myadvens.lan/tcartegnie/workspace/darwin/.venv/",' \
+                        '"python_venv_folder": "{venv}",\n' \
                         '"dummy":"",\n' \
+                        '{other_conf}' \
                         '"threshold":{threshold}\n' \
-                    '}}'.format(python_path='samples/fpython/example.py',
+                    '}}'.format(python_path='tests/filters/data/example.py',
                                 alert_file=self.alert_file,
                                 threshold=self.threshold,
+                                venv=venv,
+                                other_conf=other_conf,
                                 so_path='')
-                                # so_path='/home/myadvens.lan/tcartegnie/workspace/pycpp/build/libfpython.so')
-        print(content)
         super(PythonFilter, self).configure(content)
 
 
@@ -33,17 +34,148 @@ class PythonFilter(Filter):
 
 def run():
     tests = [
+        test_bad_config_no_script,
+        test_bad_config_no_shared_obj,
+        test_bad_config_nothing,
+        test_bad_config_no_venv,
+        test_wrong_config_missing_method,
+        test_wrong_python_missing_requirement,
+        test_wrong_python_exception_during_conf,
+        test_wrong_python_exception_during_steps,
+        test_venv,
         full_python_functional_test,
-        # test_ueba
     ]
 
     for i in tests:
         print_result("Python: " + i.__name__, i)
 
+def test_bad_config_no_script():
+    f = PythonFilter()
+
+    f.configure('{"python_script_path":"/tmp/no_script_there.bad_ext", "shared_library_path":""}')
+    if f.valgrind_start():
+        logging.error('test_bad_config_no_script: Filter should not start')
+        return False
+    if not f.check_line_in_filter_log('Generator::LoadPythonScript : Error loading the python script : failed to open'):
+        logging.error('test_bad_config_no_script: Filter should have failed with a log')
+        return False
+    return True
+
+def test_bad_config_no_shared_obj():
+    f = PythonFilter()
+
+    f.configure('{"shared_library_path":"/tmp/no_script_there.bad_ext", "python_script_path":""}')
+    if f.valgrind_start():
+        logging.error('test_bad_config_no_shared_obj: Filter should not start')
+        return False
+    if not f.check_line_in_filter_log('Generator::LoadSharedLibrary : Error loading the shared library : failed to open'):
+        logging.error('test_bad_config_no_shared_obj: Filter should have failed with a log')
+        return False
+    return True
+
+def test_bad_config_nothing():
+    f = PythonFilter()
+
+    f.configure('{"shared_library_path":"", "python_script_path":""}')
+    if f.valgrind_start():
+        logging.error('test_bad_config_nothing: Filter should not start')
+        return False
+    if not f.check_line_in_filter_log('Generator::CheckConfig : Mandatory methods were not found in the python script or the shared library'):
+        logging.error('test_bad_config_nothing: Filter should have failed with a log')
+        return False
+    return True
+
+def test_bad_config_no_venv():
+    f = PythonFilter()
+        
+    f.configure(venv='/tmp/VenvPythonFilterDoesNotExist')
+    if f.valgrind_start():
+        logging.error('test_bad_config_no_venv: Filter should not start')
+        return False
+    
+    if not f.check_line_in_filter_log('Generator::LoadPythonScript : Virtual Env does not exist : '):
+        logging.error('test_bad_config_no_venv: Filter should have failed with a log')
+        return False
+    return True
+
+def test_wrong_config_missing_method():
+    f = PythonFilter()
+        
+    f.configure('{"python_script_path":"tests/filters/data/bad_example.py", "shared_library_path":""}')
+    if f.valgrind_start():
+        logging.error('test_wrong_config_missing_method: Filter should not start')
+        return False
+    
+    if not f.check_line_in_filter_log('Generator::CheckConfig : Mandatory methods were not found in the python script or the shared library'):
+        logging.error('test_wrong_config_missing_method: Filter should have failed with a log')
+        return False
+    return True
+
+def test_wrong_python_missing_requirement():
+    f = PythonFilter()
+        
+    f.configure('{"python_script_path":"tests/filters/data/bad_example_bad_import.py", "shared_library_path":""}')
+    if f.valgrind_start():
+        logging.error('test_wrong_python_missing_requirement: Filter should not start')
+        return False
+    
+    if not f.check_line_in_filter_log('Generator::'):
+        logging.error('test_wrong_python_missing_requirement: Filter should have failed with a log')
+        return False
+    return True
+
+def test_wrong_python_exception_during_conf():
+    f = PythonFilter()
+        
+    f.configure(other_conf='"fail_conf":"yes",\n')
+    if f.valgrind_start():
+        logging.error('test_wrong_python_exception_during_conf: Filter should not start')
+        return False
+    
+    if not f.check_line_in_filter_log('FAILED PYTHON SCRIPT CONFIGURATION'):
+        logging.error('test_wrong_python_exception_during_conf: Filter should have failed with a log')
+        return False
+    return True
+
+def test_wrong_python_exception_during_steps():
+    f = PythonFilter()
+        
+    f.configure()
+    if not f.valgrind_start():
+        logging.error('test_wrong_python_exception_during_steps: Filter should start')
+        return False
+    # Error: line too long
+    res = f.send_single("fail"*25)
+    if res != 101:
+        logging.error('test_wrong_python_exception_during_steps: Filter should fail with an error cerittude (101), but we received: ' + str(res))
+        return False
+
+    if not f.check_run():
+        logging.error('test_wrong_python_exception_during_steps: Filter should still be running')
+        return False
+
+    return True
+
+def test_venv():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        e = venv.EnvBuilder(with_pip=True)
+        e.create(tmpdir)
+        
+        f = PythonFilter()
+        f.configure(venv=tmpdir)
+        if not f.valgrind_start():
+            logging.error('test_venv: Filter should start')
+            return False
+        
+        if not f.check_line_in_filter_log('WE ARE IN VIRTUAL ENV'):
+            logging.error('test_venv: Filter should have logged')
+            return False
+
+    return True
+
 # Functional test with exemple.py, it should go through all python steps
 def full_python_functional_test():
     f = PythonFilter()
-    print(' '.join(f.cmd))
     f.threshold=5
     f.configure()
     f.valgrind_start()
@@ -118,33 +250,4 @@ def full_python_functional_test():
 
     if not is_test_ok:
         return False
-    return True
-
-def test_ueba():
-    f = PythonFilter()
-    f.configure('{{\n' \
-                        '"python_script_path": "{python_path}",\n' \
-                        '"shared_library_path": "{so_path}",\n' \
-                        '"log_file_path": "/tmp/python_alerts.log",\n' \
-                        '"model_path": "/tmp/aggro.pkl",\n' \
-                        '"data_path": "/tmp/anomalies.csv"\n'
-                    '}}'.format(python_path='/home/myadvens.lan/tcartegnie/workspace/ueba_poc-feature-ueba_bootstrap/aggro_ueba.py',
-                                # so_path='/home/myadvens.lan/tcartegnie/workspace/ueba_aggro_rs/target/debug/libueba_aggro_rs.so'))
-                                so_path=''))
-    
-    f.valgrind_start()
-    # sleep(60)
-    api = f.get_darwin_api(verbose=False)
-
-    df_raw = pd.read_csv('/home/myadvens.lan/tcartegnie/workspace/ueba_poc-feature-ueba_bootstrap/samples/win_ad_hashed.csv')
-
-    for day in pd.date_range(datetime.date.fromisoformat(df_raw.date.min()), datetime.date.fromisoformat(df_raw.date.max())):
-        batch = df_raw[df_raw.date == str(day.strftime('%Y-%m-%d'))].copy()
-        payload = [json.loads(batch.to_json())]
-        
-        start = datetime.datetime.now()
-        ret = api.bulk_call(payload, response_type="back")
-        end = datetime.datetime.now()
-
-        print(day, ret, end-start, len(batch))
     return True

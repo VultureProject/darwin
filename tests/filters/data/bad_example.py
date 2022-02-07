@@ -5,6 +5,8 @@ from enum import IntEnum
 from typing import List, Union
 from dataclasses import dataclass
 
+# DOES NOT WORK , Used in tests to check if missing methods are detected by the filter
+
 # This import will be resolved in the darwin python runtime
 try:
     import darwin_logger
@@ -55,13 +57,6 @@ def filter_config(config: dict) -> bool:
         return False
     if 'threshold' in config:
         threshold = int(config['threshold'])
-    if config.get('fail_conf', '') == 'yes':
-        raise Exception('FAILED PYTHON SCRIPT CONFIGURATION')
-    venv = config.get('python_venv_folder', '')
-    if len(venv) != 0:
-        import setuptools
-        if venv in str(setuptools):
-            darwin_log(DarwinLogLevel.Debug, 'WE ARE IN VIRTUAL ENV')
     return True
 
 def parse_body(body: str) -> Union[list, CustomData]:
@@ -76,23 +71,7 @@ def filter_pre_process(parsed_data: Union[list, CustomData]) -> Union[list, Cust
         d = d.lower()
     return parsed_data
 
-def filter_process(pre_processed_data: Union[list, CustomData]) -> Union[list, CustomData, PythonFilterResponse]:
-    resp = PythonFilterResponse('', [], [])
-    for line in pre_processed_data:
-        if isinstance(line, str):
-            s = len(line)
-            if s < 80:
-                resp.certitudes.append(s)
-                resp.body += line + os.linesep
-                write_context(line)
-            else:
-                darwin_log(DarwinLogLevel.Warning, 'Line too long, skipping it, returning 101')
-                resp.certitudes.append(101)
-            if 'alert:' in line:
-                alert = line.replace('alert:', '')
-                resp.alerts.append(alert)
-
-    return resp
+# MISSING METHOD filter_process
 
 def filter_contextualize(processed_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
     new_body = ''

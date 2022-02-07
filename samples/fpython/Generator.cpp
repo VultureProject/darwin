@@ -312,7 +312,7 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
     }
 
     std::ifstream f(python_script_path.c_str());
-    if(f.bad()) {
+    if(! f.is_open()) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error loading the python script : failed to open " + python_script_path);
         return false;
     }
@@ -358,13 +358,13 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
     }
 
     if (PyRun_SimpleString("import sys") != 0) {
-        DARWIN_LOG_DEBUG("Generator::LoadPythonScript : An error occurred while loading the 'sys' module");
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : An error occurred while loading the 'sys' module");
         return false;
     }
 
     std::string command = "sys.path.append(\"" + folders + "\")";
     if (PyRun_SimpleString(command.c_str()) != 0) {
-        DARWIN_LOG_DEBUG(
+        DARWIN_LOG_CRITICAL(
                 "Generator::LoadPythonScript : An error occurred while appending the custom path '" +
                 folders +
                 "' to the Python path"
@@ -375,10 +375,15 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
     if(!python_venv_folder.empty()){
         std::filesystem::path venv_path(python_venv_folder);
         venv_path /= std::filesystem::path("lib") / (std::string("python") + PYTHON_VERSION) / "site-packages";
+        std::error_code _ec;
+        if(!std::filesystem::exists(venv_path, _ec)) {
+            DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Virtual Env does not exist : " + venv_path.string());
+            return false;
+        }
         command = "sys.path.insert(0, \"" + venv_path.string() + "\")";
         // PyRun_SimpleString("sys.path.insert(0, \"/home/myadvens.lan/tcartegnie/workspace/darwin/.venv/lib/python3.8/site-packages\")");
         if (PyRun_SimpleString(command.c_str()) != 0) {
-            DARWIN_LOG_DEBUG(
+            DARWIN_LOG_CRITICAL(
                     "Generator::LoadPythonScript : An error occurred while inserting the custom venv '" +
                     venv_path.string() +
                     "' to the Python path"

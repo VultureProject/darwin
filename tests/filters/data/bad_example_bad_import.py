@@ -5,6 +5,10 @@ from enum import IntEnum
 from typing import List, Union
 from dataclasses import dataclass
 
+# DOES NOT WORK , Used in tests to check if bad imports are detected by the filter
+import trucmuche
+
+
 # This import will be resolved in the darwin python runtime
 try:
     import darwin_logger
@@ -55,13 +59,6 @@ def filter_config(config: dict) -> bool:
         return False
     if 'threshold' in config:
         threshold = int(config['threshold'])
-    if config.get('fail_conf', '') == 'yes':
-        raise Exception('FAILED PYTHON SCRIPT CONFIGURATION')
-    venv = config.get('python_venv_folder', '')
-    if len(venv) != 0:
-        import setuptools
-        if venv in str(setuptools):
-            darwin_log(DarwinLogLevel.Debug, 'WE ARE IN VIRTUAL ENV')
     return True
 
 def parse_body(body: str) -> Union[list, CustomData]:
