@@ -4,8 +4,10 @@ set(PYTHON_NAME darwin_python)
 # FILTER DEPENDENCIES #
 #######################
 
-include_directories(SYSTEM /usr/include/python3.8)
-link_directories(/usr/lib/python3.8/config-3.8-x86)
+find_package(Python3 REQUIRED COMPONENTS Development)
+
+include_directories(SYSTEM ${Python3_INCLUDE_DIRS})
+link_directories(${Python3_LIBRARY_DIRS})
 
 ###################
 #    EXECUTABLE   #
@@ -22,12 +24,9 @@ add_executable(
 target_link_libraries(
     ${PYTHON_NAME}
     ${DARWIN_LIBRARIES}
-    python3.8
-    crypt
-    pthread
-    dl
-    util
-    m
+    ${Python3_LIBRARIES}
+    # DL libs are used for loading shared objects
+    ${CMAKE_DL_LIBS}
 )
 
 target_include_directories(${PYTHON_NAME} PUBLIC samples/fpython/)

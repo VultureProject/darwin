@@ -6,6 +6,7 @@
 /// \brief    Copyright (c) 2019 Advens. All rights reserved.
 
 #include <fstream>
+#include <filesystem>
 #include <dlfcn.h>
 
 #include "../../toolkit/lru_cache.hpp"
@@ -110,7 +111,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("Python:: Generator:: Loading configuration...");
 
-    std::string python_script_path, shared_library_path;
+    std::string python_script_path, shared_library_path, python_venv_folder;
 
     if (!configuration.HasMember("python_script_path")) {
         DARWIN_LOG_CRITICAL("Python:: Generator:: Missing parameter: 'python_script_path'");
@@ -135,9 +136,19 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     }
 
     shared_library_path = configuration["shared_library_path"].GetString();
+
+    if(configuration.HasMember("python_venv_folder")){
+        if (!configuration["python_venv_folder"].IsString()) {
+            DARWIN_LOG_CRITICAL("Python:: Generator:: 'python_venv_folder' needs to be a string");
+            return false;
+        } else {
+            python_venv_folder = configuration["python_venv_folder"].GetString();
+        }
+    }
+
     DARWIN_LOG_DEBUG("Python:: Generator:: Loading configuration...");
 
-    bool pythonLoad = LoadPythonScript(python_script_path);
+    bool pythonLoad = LoadPythonScript(python_script_path, python_venv_folder);
 
     if(Py_IsInitialized() != 0) {
         // Release the GIL, This is safe to call because we just initialized the python interpreter
@@ -292,7 +303,7 @@ PythonThread& Generator::GetPythonThread(){
     return thread;
 }
 
-bool Generator::LoadPythonScript(const std::string& python_script_path) {
+bool Generator::LoadPythonScript(const std::string& python_script_path, const std::string& python_venv_folder) {
     DARWIN_LOGGER;
 
     if(python_script_path.empty()){
@@ -361,20 +372,26 @@ bool Generator::LoadPythonScript(const std::string& python_script_path) {
         return false;
     }
 
+    if(!python_venv_folder.empty()){
+        std::filesystem::path venv_path(python_venv_folder);
+        venv_path /= std::filesystem::path("lib") / (std::string("python") + PYTHON_VERSION) / "site-packages";
+        command = "sys.path.insert(0, \"" + venv_path.string() + "\")";
+        // PyRun_SimpleString("sys.path.insert(0, \"/home/myadvens.lan/tcartegnie/workspace/darwin/.venv/lib/python3.8/site-packages\")");
+        if (PyRun_SimpleString(command.c_str()) != 0) {
+            DARWIN_LOG_DEBUG(
+                    "Generator::LoadPythonScript : An error occurred while inserting the custom venv '" +
+                    venv_path.string() +
+                    "' to the Python path"
+            );
+            return false;
+        }
+    }
+
     if((pModule = PyImport_Import(*pName)) == nullptr) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
     pName.Decref();
-    // DARWIN_LOG_DEBUG("yes");
-    // DARWIN_LOG_DEBUG("after log");
-    // int a = 0;
-    // if((a=PyModule_AddFunctions(*pModule, logMethod)) != 0) {
-    //     DARWIN_LOG_DEBUG("error func" + std::to_string(a));
-    //     PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while adding 'darwin_log' function to the module : ");
-    //     return false;
-    // }
-    // DARWIN_LOG_DEBUG("after addfunc");
 
     if( ! LoadFunctionFromPython(*pModule, functions.configPyFunc, "filter_config")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_config' : ");

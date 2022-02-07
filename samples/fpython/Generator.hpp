@@ -19,6 +19,11 @@
 #include "PythonThread.hpp"
 #include "PythonObject.hpp"
 
+// Preprocessor hack to extract the major and minor version of python
+#define PY_VER_STR_(maj, min) #maj "." #min
+#define PY_VER_STR(maj, min) PY_VER_STR_(maj, min)
+#define PYTHON_VERSION PY_VER_STR(PY_MAJOR_VERSION,PY_MINOR_VERSION)
+
 ///
 /// \brief Tag for the FunctionPySo struct
 ///        It is declared outside the struct to stay unaffected by the template grammar
@@ -111,11 +116,12 @@ private:
     ///        If the path is not empty, a python interpreter will be initialized (by a call to Py_Initiliaze())
     /// 
     /// \param python_script_path 
+    /// \param python_venv_folder
     /// \return true if the script was correctly loaded or if the path is empty
     /// \return false if the path can't be read, if loading the module triggered an error 
     ///               or if a symbol with the name of a defined function is found but not callable
     ///
-    bool LoadPythonScript(const std::string& python_script_path);
+    bool LoadPythonScript(const std::string& python_script_path, const std::string& python_venv_folder);
 
     ///
     /// \brief loads the shared library which path is given and attempts to load all defined functions

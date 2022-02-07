@@ -1,6 +1,25 @@
 import json
+import os
+import datetime
+from enum import IntEnum
 from typing import List, Union
 from dataclasses import dataclass
+
+import darwin_logger
+
+
+
+class DarwinLogLevel(IntEnum):
+    Debug=0
+    Info=1
+    Notice=2
+    Warning=3
+    Error=4
+    Critical=5
+
+def darwin_log(level: DarwinLogLevel, msg:str):
+    darwin_logger.log(int(level), msg)
+
 
 class PythonFilterError(Exception):
     pass
@@ -22,45 +41,93 @@ class CustomData:
     """
     pass
 
+threshold = 3
+
 def filter_config(config: dict) -> bool:
+    import numpy
+    print(numpy)
+    darwin_log(DarwinLogLevel.Critical, 'version:' + numpy.__version__)
+    global threshold
     if 'dummy' not in config:
+        darwin_log(DarwinLogLevel.Critical, 'The field \\"dummy\\" is not in the config')
         return False
+    if 'threshold' in config:
+        threshold = int(config['threshold'])
     return True
 
 def parse_body(body: str) -> Union[list, CustomData]:
     parsed = json.loads(body)
     if not isinstance(parsed, list):
+        darwin_log(DarwinLogLevel.Error, 'input body is not a list')
         raise PythonFilterError("Parse Body: Wrong type")
     return parsed
 
 def filter_pre_process(parsed_data: Union[list, CustomData]) -> Union[list, CustomData]:
+    for d in parsed_data:
+        d = d.lower()
     return parsed_data
 
 def filter_process(pre_processed_data: Union[list, CustomData]) -> Union[list, CustomData, PythonFilterResponse]:
     resp = PythonFilterResponse('', [], [])
     for line in pre_processed_data:
         if isinstance(line, str):
-            resp.certitudes.append(101)
-            resp.alerts.append(line)
-            resp.body += line
+            s = len(line)
+            if s < 80:
+                resp.certitudes.append(s)
+                resp.body += line + os.linesep
+                write_context(line)
+            else:
+                darwin_log(DarwinLogLevel.Warning, 'Line too long, skipping it, returning 101')
+                resp.certitudes.append(101)
+            if 'alert:' in line:
+                alert = line.replace('alert:', '')
+                resp.alerts.append(alert)
 
-    print('py ret')
     return resp
 
 def filter_contextualize(processed_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
+    new_body = ''
+    for line in processed_data.body.splitlines():
+        new_body += str(query_context(line)) + ':' + line + os.linesep
+    processed_data.body = new_body
     return processed_data
 
-def alert_contextualization(contextualized_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
+def alert_contextualize(contextualized_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
+    for alert in contextualized_data.alerts:
+        if query_context('alert:' + alert) < threshold:
+            darwin_log(DarwinLogLevel.Info, 'alert below threshold, skipping it')
+            contextualized_data.alerts.remove(alert)
     return contextualized_data
 
 def alert_formating(contextualized_data: PythonFilterResponse) -> List[str]:
-    print('alert')
-    return contextualized_data.alerts
+    formated_alerts = []
+    for alert in contextualized_data.alerts:
+        date = datetime.datetime.now()
+        formated_alerts.append('{{"date":"{date}","alert":"{alert}"}}'.format(date=str(date), alert=alert))
+    return formated_alerts
 
-def output_formating(contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
-    print('output')
-    return contextualized_data
 
 def response_formating(contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
-    print('output')
     return contextualized_data
+
+
+# WIP unused for now
+def output_formating(contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
+    return contextualized_data
+
+
+context = {}
+
+def write_context(key:str, value=None):
+    """Writes an information about the current task performed"""
+    if key in context:
+        context[key] += 1
+    else:
+        context[key] = 1
+
+def query_context(key: str) -> int:
+    """Query information about the current task performed"""
+    if key in context:
+        return context[key]
+    else:
+        return 0
