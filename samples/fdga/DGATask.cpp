@@ -22,19 +22,17 @@
 #include "Logger.hpp"
 #include "Stats.hpp"
 #include "protocol.h"
-#include "tensorflow/core/framework/tensor.h"
 #include "AlertManager.hpp"
 
 DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
                  darwin::Manager& manager,
                  std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                  std::mutex& cache_mutex,
-                 std::shared_ptr<tensorflow::Session> &session,
+                 DarwinTfLiteInterpreterFactory& interpreter_factory,
                  faup_options_t *faup_options,
                  std::map<std::string, unsigned int> &token_map,
                  const unsigned int max_tokens)
-        : Session{"dga", socket, manager, cache, cache_mutex}, _max_tokens{max_tokens}, _session{session}, _token_map{token_map},
-          _faup_options(faup_options) {
+        : Session{"dga", socket, manager, cache, cache_mutex}, _interpreter_factory{interpreter_factory}, _faup_options{faup_options}, _token_map{token_map}, _max_tokens{max_tokens} {
     _is_cache = _cache != nullptr;
 }
 
@@ -52,7 +50,15 @@ void DGATask::operator()() {
 
     // Should not fail, as the Session body parser MUST check for validity !
     rapidjson::GenericArray<false, rapidjson::Value> array = _body.GetArray();
-
+    std::shared_ptr<tflite::Interpreter> interpreter = _interpreter_factory.GetInterpreter();
+    if(! interpreter) {
+        // Error in the configuration stage, cannot happen in the actual workflow, the program will kill itself, 
+        // see DarwinTfLiteInterpreterFactory::GetInterpreter for more information
+        DARWIN_LOG_ERROR("DGATask:: TFLite Interpreter is null, the filter cannot process data");
+        STAT_PARSE_ERROR_INC;
+        _certitudes.push_back(DARWIN_ERROR_RETURN);
+        return;
+    }
     for (rapidjson::Value &value : array) {
         STAT_INPUT_INC;
         SetStartingTime();
@@ -85,7 +91,7 @@ void DGATask::operator()() {
                 }
             }
 
-            certitude = Predict();
+            certitude = Predict(interpreter);
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
                 DARWIN_ALERT_MANAGER.Alert(_domain, certitude, Evt_idToString());
@@ -192,7 +198,7 @@ void DGATask::DomainTokenizer(std::vector<std::size_t> &domain_tokens, const std
     }
 }
 
-unsigned int DGATask::Predict() {
+unsigned int DGATask::Predict(std::shared_ptr<tflite::Interpreter> interpreter) {
     std::string to_predict;
 
     if (!ExtractRegisteredDomain(to_predict)) {
@@ -205,36 +211,28 @@ unsigned int DGATask::Predict() {
     std::vector<std::size_t> domain_tokens(_max_tokens, 0);
     DomainTokenizer(domain_tokens, to_predict);
 
-    tensorflow::Tensor input_tensor(tensorflow::DT_FLOAT, tensorflow::TensorShape({1, _max_tokens}));
-    auto input_tensor_mapped = input_tensor.tensor<float, 2>();
-    std::size_t index = 0;
+    TfLiteStatus status = interpreter->AllocateTensors();
 
-    for (const auto &domain_token : domain_tokens) {
-        input_tensor_mapped(index++) = domain_token;
-    }
-
-    std::vector<tensorflow::Tensor> output_tensors;
-
-    try
-    {
-        tensorflow::Status run_status = _session->Run({{"embedding_1_input", input_tensor}},
-                                                    {"activation_1/Sigmoid"},
-                                                    {},
-                                                    &output_tensors);
-        if (!run_status.ok()) {
-            DARWIN_LOG_ERROR("Predict:: Error: Running model failed: " + run_status.ToString());
-            return DARWIN_ERROR_RETURN;
-        }
-    }
-    catch(const std::exception& e)
-    {
-        DARWIN_LOG_ERROR("Predict:: Error: Running model exception: " + std::string(e.what()));
+    if(status != TfLiteStatus::kTfLiteOk) {
+        DARWIN_LOG_ERROR("DGATask::Predict:: Tflite Error while allocating tensors : " + std::to_string(static_cast<int>(status)));
         return DARWIN_ERROR_RETURN;
     }
 
-    std::map<std::string, float> result;
+    float* input_tensor_mapped = interpreter->typed_input_tensor<float>(0);
+    size_t index = 0;
+    for (const auto &domain_token : domain_tokens) {
+        input_tensor_mapped[index++] = domain_token;
+    }
 
-    unsigned int certitude = round(output_tensors[0].tensor<float, 2>()(0) * 100);
+    status = interpreter->Invoke();
+    if(status != TfLiteStatus::kTfLiteOk) {
+        DARWIN_LOG_ERROR("DGATask::Predict:: Tflite Error while predicting : " + std::to_string(static_cast<int>(status)));
+        return DARWIN_ERROR_RETURN;
+    }
+    
+    float* output_tensor = interpreter->typed_output_tensor<float>(0);
+
+    unsigned int certitude = round(output_tensor[0] * 100);
     DARWIN_LOG_DEBUG("Predict:: DGA score obtained: " + std::to_string(certitude));
 
     return certitude;

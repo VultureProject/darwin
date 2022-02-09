@@ -29,3 +29,7 @@ def darwin_configure(conf, path="{}/darwin.conf".format(TEST_FILES_DIR)):
 
 def darwin_remove_configuration(path="{}/darwin.conf".format(TEST_FILES_DIR)):
     os.remove(path)
+
+def count_file_lines(filepath):
+    with open(filepath, 'r') as file:
+        return len(file.readlines())

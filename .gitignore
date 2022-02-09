@@ -140,6 +140,9 @@ fabric.properties
 
 .vscode/
 
+# VsCode Cmake Build files
+CMakeFiles/
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/

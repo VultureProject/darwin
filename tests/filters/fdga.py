@@ -1,18 +1,29 @@
+import json
 import logging
 import os
+import math
+from darwin import DarwinApi, darwinexceptions
 
 from tools.filter import Filter
 from tools.output import print_result
-from darwin import DarwinApi
 
-MODEL_PATH = "/tmp/model.pb"
-TOKEN_MAP_PATH = "/tmp/tokens.csv"
-MAX_TOKENS = 150
+TEST_FILTERS_FOLDER_PATH = os.path.dirname(__file__)
+
+PASSING_TESTS_DATA = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_domains_score.json"
+MODEL_PATH = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_model.tflite"
+TOKEN_MAP_PATH = f"{TEST_FILTERS_FOLDER_PATH}/data/dga_tokens.csv"
+
+TMP_TOKEN_MAP_PATH = f"{TOKEN_MAP_PATH}.tmp"
+MAX_TOKENS = 80
 
 class DGA(Filter):
-    def __init__(self):
+    def __init__(self, tokens=None):
         super().__init__(filter_name="dga")
-        self.token_map_path = TOKEN_MAP_PATH
+        if tokens is None:
+            self.token_map_path = TOKEN_MAP_PATH
+        else:
+            self.token_map_path = TMP_TOKEN_MAP_PATH
+            self.init_tokens(tokens)
 
     def configure(self):
         content = '{{\n' \
@@ -31,13 +42,15 @@ class DGA(Filter):
         super(DGA, self).clean_files()
 
         try:
-            os.remove(self.token_map_path)
+            os.remove(TMP_TOKEN_MAP_PATH)
         except:
             pass
 
 
 def run():
     tests = [
+        passing_tests_bulk,
+        passing_tests_singles,
         good_format_tokens_test,
         bad_format_tokens_test,
     ]
@@ -45,12 +58,88 @@ def run():
     for i in tests:
         print_result("dga: " + i.__name__, i)
 
+def passing_tests_bulk():
+    dga_filter = DGA()
+    dga_filter.configure()
+
+    if not os.path.exists(PASSING_TESTS_DATA):
+        logging.error(f"passing_tests_bulk Test : no data to test, file {PASSING_TESTS_DATA} does not exist")
+        return False
+    
+    with open(PASSING_TESTS_DATA, 'r') as f:
+        data = json.load(f)
+
+    if not dga_filter.valgrind_start():
+        logging.error("DGA passing_tests_bulk Test : filter did not start")
+        return False
+    
+    darwin_api = DarwinApi(socket_path=dga_filter.socket,
+                           socket_type="unix",
+                           # This timeout is arbitrary, you may have to increase it on slow systems
+                           timeout=40)
+    try:
+        results = darwin_api.bulk_call(
+            [[domain] for domain in data.keys()],
+            response_type="back"
+        )
+    except darwinexceptions.DarwinTimeoutError as e:
+        logging.error(f"DGA passing_tests_bulk Test : Timeout error, it is a long operation, you may have to increase the timeout set in the darwinapi",
+                    exc_info=e)
+        return False
+    
+    # VERIFY RESULTS
+    certitudes = results.get('certitude_list', None)
+    if certitudes is None:
+        logging.error("DGA passing_tests_bulk Test : No certitude list found in result")
+        return False
+
+    expected_values = list(data.values())
+
+    if len(certitudes) != len(expected_values):
+        logging.error(f"DGA passing_tests_bulk Test : Unexpected certitude size of {len(certitudes)} instead of {len(expected_values)}")
+        return False
+    ret = True
+    for result, expected in zip(certitudes, expected_values):
+        expected_percent = expected*100
+        if not math.isclose(result, expected_percent, rel_tol=0.01, abs_tol=1):
+            ret = False
+            logging.error(f"DGA passing_tests_bulk Test : Unexpected certitude of {result} instead of {expected_percent}")
+
+    return ret
+
+def passing_tests_singles():
+    dga_filter = DGA()
+    dga_filter.configure()
+
+    if not os.path.exists(PASSING_TESTS_DATA):
+        logging.error(f"passing_tests_singles Test : no data to test, file {PASSING_TESTS_DATA} does not exist")
+        return False
+    
+    with open(PASSING_TESTS_DATA, 'r') as f:
+        data = json.load(f)
+
+    if not dga_filter.valgrind_start():
+        logging.error("DGA passing_tests_singles Test : filter did not start")
+        return False
+    
+    darwin_api = DarwinApi(socket_path=dga_filter.socket,
+                           socket_type="unix")
+    ret = True
+    for domain, expected_value in data.items():
+        expected_percent = expected_value*100
+        result = darwin_api.call([domain], response_type='back')
+
+        if not math.isclose(result, expected_percent, rel_tol=0.01, abs_tol=1):
+            ret = False
+            logging.error(f"DGA passing_tests_singles Test : Unexpected certitude of {result} instead of {expected_percent}")
+    return ret
+
+
 def good_format_tokens_test():
     ret = True
 
     # CONFIG
-    dga_filter = DGA()
-    dga_filter.init_tokens(["a,1",
+    dga_filter = DGA(tokens=["a,1",
                             "b,2",
                             "c,3",
                             "d,4"])
@@ -63,16 +152,13 @@ def good_format_tokens_test():
     if not dga_filter.stop():
         ret = False
 
-    dga_filter.clean_files()
-
     return ret
 
 def bad_format_tokens_test():
     ret = True
 
     # CONFIG
-    dga_filter = DGA()
-    dga_filter.init_tokens(["a,1",
+    dga_filter = DGA(tokens=["a,1",
                             "b2",
                             "c,3",
                             "d,4"])
@@ -85,7 +171,5 @@ def bad_format_tokens_test():
     if os.path.exists(dga_filter.pid):
         logging.error("DGA test : Filter crash when token map given is not well formatted")
         ret = False
-
-    dga_filter.clean_files()
 
     return ret
