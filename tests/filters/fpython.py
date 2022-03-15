@@ -35,13 +35,15 @@ class PythonFilter(Filter):
 def run():
     tests = [
         test_bad_config_no_script,
-        test_bad_config_no_shared_obj,
+        test_bad_config_empty_python_script_path,
         test_bad_config_nothing,
         test_bad_config_no_venv,
         test_wrong_config_missing_method,
         test_wrong_python_missing_requirement,
         test_wrong_python_exception_during_conf,
+        test_wrong_python_exception_during_init,
         test_wrong_python_exception_during_steps,
+        test_wrong_python_exception_during_delete,        
         test_venv,
         full_python_functional_test,
     ]
@@ -61,14 +63,14 @@ def test_bad_config_no_script():
         return False
     return True
 
-def test_bad_config_no_shared_obj():
+def test_bad_config_empty_python_script_path():
     f = PythonFilter()
 
     f.configure('{"shared_library_path":"/tmp/no_script_there.bad_ext", "python_script_path":""}')
     if f.valgrind_start():
         logging.error('test_bad_config_no_shared_obj: Filter should not start')
         return False
-    if not f.check_line_in_filter_log('Generator::LoadSharedLibrary : Error loading the shared library : failed to open'):
+    if not f.check_line_in_filter_log('Generator::LoadPythonScript : No python script to load'):
         logging.error('test_bad_config_no_shared_obj: Filter should have failed with a log')
         return False
     return True
@@ -80,7 +82,7 @@ def test_bad_config_nothing():
     if f.valgrind_start():
         logging.error('test_bad_config_nothing: Filter should not start')
         return False
-    if not f.check_line_in_filter_log('Generator::CheckConfig : Mandatory methods were not found in the python script or the shared library'):
+    if not f.check_line_in_filter_log('Generator::LoadPythonScript : No python script to load'):
         logging.error('test_bad_config_nothing: Filter should have failed with a log')
         return False
     return True
@@ -155,6 +157,41 @@ def test_wrong_python_exception_during_steps():
         return False
 
     return True
+
+def test_wrong_python_exception_during_init():
+    f = PythonFilter()
+        
+    f.configure('{"python_script_path":"tests/filters/data/bad_example_fail_init.py", "shared_library_path":"", "dummy":""}')
+    if not f.valgrind_start():
+        logging.error('test_wrong_python_exception_during_init: Filter should start')
+        return False
+    # Error: exception raised on third init
+    is_test_ok = True
+    for i in range(5):
+        line = 'hello'
+        res = f.send_single(line)
+        if i == 3 and res != None:
+            is_test_ok = False
+            logging.error('test_wrong_python_exception_during_init: Filter should fail with an error cerittude (101), but we received: ' + str(res))
+        if i == 3 and not f.check_line_in_filter_log("PythonTask:: PythonTask:: Error creating Execution object: Python error '<class 'Exception'>' : Fail at init"):
+            is_test_ok = False
+            logging.error('test_wrong_python_exception_during_init: Filter should fail with a specific log, but was not found')
+        if i != 3 and res != len(line):
+            is_test_ok = False
+            logging.error(f'test_wrong_python_exception_during_init: Filter should succced with a certitude of ({str(len(line))}), but we received: {str(res)}')
+
+    if not f.check_run():
+        logging.error('test_wrong_python_exception_during_init: Filter should still be running')
+        return False
+
+    return is_test_ok
+
+def test_wrong_python_exception_during_delete():
+    """
+    Cannot be tested as exceptions during __del__ are ignored by the python interpreter
+    """
+    return True
+
 
 def test_venv():
     with tempfile.TemporaryDirectory() as tmpdir:

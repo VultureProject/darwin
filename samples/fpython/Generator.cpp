@@ -307,8 +307,8 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
     DARWIN_LOGGER;
 
     if(python_script_path.empty()){
-        DARWIN_LOG_INFO("Generator::LoadPythonScript : No python script to load");
-        return true;
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : No python script to load");
+        return false;
     }
 
     std::ifstream f(python_script_path.c_str());
@@ -398,46 +398,55 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
     }
     pName.Decref();
 
-    if( ! LoadFunctionFromPython(*pModule, functions.configPyFunc, "filter_config")){
+    pClass = PyObject_GetAttrString(*pModule, "Execution");
+    if (PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python class 'Execution' : ")){
+        return false;
+    }
+    if(*pClass == nullptr || ! PyType_Check(*pClass)) {
+        DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error while attempting to load the python class 'Execution' : Not a Class");
+        return false;
+    }
+
+    if( ! LoadFunctionFromPython(*pClass, functions.configPyFunc, "filter_config")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_config' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.parseBodyFunc, "parse_body")){
+    if( ! LoadFunctionFromPython(*pClass, functions.parseBodyFunc, "parse_body")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'parse_body' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.preProcessingFunc, "filter_pre_process")){
+    if( ! LoadFunctionFromPython(*pClass, functions.preProcessingFunc, "filter_pre_process")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_pre_process' : ");
         return false;
     }
-    if( ! LoadFunctionFromPython(*pModule, functions.processingFunc, "filter_process")){
+    if( ! LoadFunctionFromPython(*pClass, functions.processingFunc, "filter_process")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_process' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.contextualizeFunc, "filter_contextualize")){
+    if( ! LoadFunctionFromPython(*pClass, functions.contextualizeFunc, "filter_contextualize")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_contextualize' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.alertContextualizeFunc, "alert_contextualize")){
+    if( ! LoadFunctionFromPython(*pClass, functions.alertContextualizeFunc, "alert_contextualize")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'alert_contextualize' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.alertFormatingFunc, "alert_formating")){
+    if( ! LoadFunctionFromPython(*pClass, functions.alertFormatingFunc, "alert_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'alert_formating' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.outputFormatingFunc, "output_formating")){
+    if( ! LoadFunctionFromPython(*pClass, functions.outputFormatingFunc, "output_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'output_formating' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pModule, functions.responseFormatingFunc, "response_formating")){
+    if( ! LoadFunctionFromPython(*pClass, functions.responseFormatingFunc, "response_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'response_formating' : ");
         return false;
     }
@@ -446,9 +455,9 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
 }
 
 template<typename F>
-inline bool Generator::LoadFunctionFromPython(PyObject* pModule, FunctionPySo<F>& function_holder, const std::string& function_name){
+inline bool Generator::LoadFunctionFromPython(PyObject* pClass, FunctionPySo<F>& function_holder, const std::string& function_name){
     DARWIN_LOGGER;
-    function_holder.py = PyObject_GetAttrString(pModule, function_name.c_str());
+    function_holder.py = PyObject_GetAttrString(pClass, function_name.c_str());
     if(function_holder.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No '" + function_name + "' method in the python script");
     } else if (! PyCallable_Check(function_holder.py)){
@@ -464,7 +473,7 @@ std::shared_ptr<darwin::ATask>
 Generator::CreateTask(darwin::session_ptr_t s) noexcept {
     return std::static_pointer_cast<darwin::ATask>(
             std::make_shared<PythonTask>(_cache, _cache_mutex, s, s->_packet,
-            *pModule, functions)
+            *pClass, functions)
         );
 }
 

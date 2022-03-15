@@ -16,10 +16,13 @@
 PythonTask::PythonTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                         std::mutex& cache_mutex,
                         darwin::session_ptr_t s,
-                        darwin::DarwinPacket& packet, PyObject* pModule, FunctionHolder& functions)
-        : ATask{DARWIN_FILTER_NAME, cache, cache_mutex, s, packet}, _pModule{pModule}, _functions{functions}
+                        darwin::DarwinPacket& packet, PyObject* pClass, FunctionHolder& functions)
+        : ATask{DARWIN_FILTER_NAME, cache, cache_mutex, s, packet}, _pClass{pClass}, _functions{functions}
 {
     _is_cache = _cache != nullptr;
+    PythonLock lock;
+    _pSelf = PyObject_CallObject(_pClass, nullptr);
+    Generator::PyExceptionCheckAndLog("PythonTask:: PythonTask:: Error creating Execution object: ", darwin::logger::Error);
 }
 
 long PythonTask::GetFilterCode() noexcept{
@@ -33,19 +36,22 @@ bool PythonTask::ParseLine(rapidjson::Value& line __attribute((unused))) {
 void PythonTask::operator()() {
     DARWIN_LOGGER;
     PyObjectOwner preProc_res, proc_res, context_res, alert_context_res;
-
+    if (*_pSelf == nullptr) {
+        DARWIN_LOG_ERROR("No Execution object was created, Lines skipped.");
+        return;
+    }
     switch(_functions.preProcessingFunc.origin) {
         case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.py, *_parsed_body, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Preprocess: ");
+            if ((preProc_res = PyObject_CallFunctionObjArgs(_functions.preProcessingFunc.py, *_pSelf, *_parsed_body, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Preprocess: ", darwin::logger::Error);
                 return;
             }
             break;
         }
         case FunctionOrigin::shared_library:{
             try {
-                if ((preProc_res = _functions.preProcessingFunc.so(_pModule, *_parsed_body)) == nullptr) {
+                if ((preProc_res = _functions.preProcessingFunc.so(_pClass, *_pSelf, *_parsed_body)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_pre_process function");
                     return;
                 }
@@ -62,15 +68,15 @@ void PythonTask::operator()() {
     switch(_functions.processingFunc.origin) {
         case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.py, *preProc_res, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Process: ");
+            if ((proc_res = PyObject_CallFunctionObjArgs(_functions.processingFunc.py, *_pSelf, *preProc_res, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Process: ", darwin::logger::Error);
                 return;
             }
             break;
         }
         case FunctionOrigin::shared_library:{
             try{
-                if ((proc_res = _functions.processingFunc.so(_pModule, *preProc_res)) == nullptr) {
+                if ((proc_res = _functions.processingFunc.so(_pClass, *_pSelf, *preProc_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_process function");
                     return;
                 }
@@ -87,15 +93,15 @@ void PythonTask::operator()() {
     switch(_functions.contextualizeFunc.origin) {
         case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((context_res = PyObject_CallFunctionObjArgs(_functions.contextualizeFunc.py, *proc_res, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Contextualize: ");
+            if ((context_res = PyObject_CallFunctionObjArgs(_functions.contextualizeFunc.py, *_pSelf, *proc_res, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Contextualize: ", darwin::logger::Error);
                 return;
             }
             break;
         }
         case FunctionOrigin::shared_library:{
             try{
-                if ((context_res = _functions.contextualizeFunc.so(_pModule, *proc_res)) == nullptr) {
+                if ((context_res = _functions.contextualizeFunc.so(_pClass, *_pSelf, *proc_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO filter_contextualize function");
                     return;
                 }
@@ -112,15 +118,15 @@ void PythonTask::operator()() {
     switch(_functions.alertContextualizeFunc.origin) {
         case FunctionOrigin::python_module:{
             PythonLock pylock;
-            if ((alert_context_res = PyObject_CallFunctionObjArgs(_functions.alertContextualizeFunc.py, *context_res, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Alert Contextualize: ");
+            if ((alert_context_res = PyObject_CallFunctionObjArgs(_functions.alertContextualizeFunc.py, *_pSelf, *context_res, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: Operator:: Alert Contextualize: ", darwin::logger::Error);
                 return;
             }
             break;
         }
         case FunctionOrigin::shared_library:{
             try{
-                if ((alert_context_res = _functions.alertContextualizeFunc.so(_pModule, *context_res)) == nullptr) {
+                if ((alert_context_res = _functions.alertContextualizeFunc.so(_pClass, *_pSelf, *context_res)) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: An error occurred while calling the SO alert_contextualize function");
                     return;
                 }
@@ -161,6 +167,12 @@ void PythonTask::operator()() {
 bool PythonTask::ParseBody() {
     DARWIN_LOGGER;
     PyObjectOwner raw_body;
+
+    if (*_pSelf == nullptr) {
+        DARWIN_LOG_ERROR("No Execution object was created, Lines skipped.");
+        return false;
+    }
+
     bool ret = false;
     switch(_functions.parseBodyFunc.origin){
         case FunctionOrigin::none:{
@@ -170,7 +182,7 @@ bool PythonTask::ParseBody() {
             }
             PythonLock pylock;
             if((_parsed_body = PyList_New(_body.Size())) == nullptr){
-                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                 return false;
             }
 
@@ -178,11 +190,11 @@ bool PythonTask::ParseBody() {
                 PyObject *str; // This reference is "stolen" by PyList_SetItem, we don't have to DECREF it
                 if((str = PyUnicode_DecodeFSDefault(_body.GetArray()[i].GetString())) == nullptr) {
                     DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_packet.GetBody());
-                    Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
+                    Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                     return false;
                 }
                 if(PyList_SetItem(*_parsed_body, i, str) != 0){
-                    Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
+                    Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                     return false;
                 }
             }
@@ -195,13 +207,13 @@ bool PythonTask::ParseBody() {
             // We must switch to PythonThread utility class
             PythonLock pylock;
             if((raw_body = PyUnicode_DecodeFSDefault(_packet.GetBody().c_str())) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                 return false;
             }
 
-            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.py, *raw_body, nullptr)) == nullptr) {
+            if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.py, *_pSelf, *raw_body, nullptr)) == nullptr) {
                 DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the Python function");
-                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                 return false;
             }
 
@@ -209,7 +221,7 @@ bool PythonTask::ParseBody() {
         }
         case FunctionOrigin::shared_library:{
             try{
-                if((_parsed_body = _functions.parseBodyFunc.so(_pModule, _packet.GetBody()))== nullptr){
+                if((_parsed_body = _functions.parseBodyFunc.so(_pClass, *_pSelf, _packet.GetBody()))== nullptr){
                     DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                     return false;
                 }  
@@ -235,8 +247,8 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
         case FunctionOrigin::python_module:{
             PythonLock pylock;
             PyObjectOwner pyRes;
-            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, processedData, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ");
+            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, *_pSelf, processedData, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error);
                 return ret;
             }
             if(PyList_Check(*pyRes) == 0){
@@ -244,18 +256,18 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
                 return ret;
             }
             pySize = PyList_Size(*pyRes);
-            if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ")) {
+            if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error)) {
                 return ret;
             }
 
             for(ssize_t i = 0; i < pySize; i++) {
                 // str is a borrowed reference, we don't have to DECREF it
                 PyObject* str = PyList_GetItem(*pyRes, i);
-                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ")){
+                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error)){
                     continue;
                 }
                 out = PyUnicode_AsUTF8AndSize(str, &strSize);
-                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ")){
+                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error)){
                     continue;
                 }
                 ret.push_back(std::string(out, strSize));
@@ -264,7 +276,7 @@ std::vector<std::string> PythonTask::GetFormatedAlerts(FunctionPySo<FunctionHold
         }
         case FunctionOrigin::shared_library:{
             try{
-                return func.so(_pModule, processedData);
+                return func.so(_pClass, *_pSelf, processedData);
             } catch(std::exception const& e){
                 DARWIN_LOG_ERROR("PythonTask:: GetFormatedAlerts:: Error while calling the SO alert_format function : " + std::string(e.what()));
                 return ret;
@@ -287,12 +299,12 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
 
             PyObjectOwner pBody, pCertitudes, pyRes;
             ssize_t certSize = 0;
-            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, processedData, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ");
+            if ((pyRes = PyObject_CallFunctionObjArgs(func.py, *_pSelf, processedData, nullptr)) == nullptr) {
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error);
                 return ret;
             }
             if((pBody = PyObject_GetAttrString(*pyRes, "body")) == nullptr){
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.body :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.body :", darwin::logger::Error);
                 return ret;
             }
 
@@ -300,13 +312,13 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
             ssize_t bodySize = 0;
 
             if((cBody = PyUnicode_AsUTF8AndSize(*pBody, &bodySize)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: str(data.body) :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: str(data.body) :", darwin::logger::Error);
                 return ret;
             }
 
             ret.body = std::string(cBody, bodySize);
             if((pCertitudes = PyObject_GetAttrString(*pyRes, "certitudes")) == nullptr){
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.certitudes :");
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: data.certitudes :", darwin::logger::Error);
                 return ret;
             }
 
@@ -316,14 +328,14 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
             }
 
             certSize = PyList_Size(*pCertitudes);
-            if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ")) {
+            if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ", darwin::logger::Error)) {
                 return ret;
             }
 
             for(ssize_t i = 0; i < certSize; i++) {
                 PyObject* cert = nullptr; // cert is a borrowed reference, no need to DECREF it
                 if((cert = PyList_GetItem(*pCertitudes, i)) == nullptr) {
-                    Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ");
+                    Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ", darwin::logger::Error);
                     continue;
                 }
 
@@ -332,7 +344,7 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
                     continue;
                 }
                 long lCert = PyLong_AS_LONG(cert);
-                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ")) {
+                if(Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ", darwin::logger::Error)) {
                     continue;
                 }
                 if (lCert < 0 || lCert > UINT_MAX) {
@@ -345,7 +357,7 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
         }
         case FunctionOrigin::shared_library:{
             try {
-                return func.so(_pModule, processedData);
+                return func.so(_pClass, *_pSelf, processedData);
             } catch(std::exception const& e){
                 DARWIN_LOG_ERROR("PythonTask:: GetFormatedResponse:: Error while calling the SO response_format function : " + std::string(e.what()));
                 return ret;
@@ -354,5 +366,15 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
         }
         default:
             return ret;
-    }    
+    }
+}
+
+PythonTask::~PythonTask() {
+    /**
+     * The next lines are not necessaray as exception in destructors are normally ignored by the python interpreter
+     * Just in case they are not we may avoid crashes
+     */
+    PythonLock lock;
+    _pSelf.Decref();
+    Generator::PyExceptionCheckAndLog("PythonTask::~PythonTask : Erreur while calling 'Execution' destructor", darwin::logger::Error);
 }

@@ -2,12 +2,9 @@ import json
 import os
 import datetime
 from enum import IntEnum
+from random import randint
 from typing import List, Union
 from dataclasses import dataclass
-
-# DOES NOT WORK , Used in tests to check if bad imports are detected by the filter
-import trucmuche
-
 
 # This import will be resolved in the darwin python runtime
 try:
@@ -15,8 +12,11 @@ try:
 except ImportError:
     class darwin_logger:
         @staticmethod
-        def log(level, msg):
-            print(level, msg)
+        def log(level: int, msg: str):
+            import sys
+            outpipe = sys.stderr if level >= 4 else sys.stdout
+            print(DarwinLogLevel(level).name, msg,file=outpipe)
+
 
 class DarwinLogLevel(IntEnum):
     Debug=0
@@ -51,7 +51,17 @@ class CustomData:
     pass
 
 threshold = 3
+nb = 0 # Fail at 3
 class Execution:
+
+    def __init__(self) -> None:
+        global nb
+        if nb == 3:
+            nb += 1
+            raise Exception("Fail at init")
+        nb += 1
+
+
     @staticmethod
     def filter_config(config: dict) -> bool:
         global threshold
@@ -60,6 +70,13 @@ class Execution:
             return False
         if 'threshold' in config:
             threshold = int(config['threshold'])
+        if config.get('fail_conf', '') == 'yes':
+            raise Exception('FAILED PYTHON SCRIPT CONFIGURATION')
+        venv = config.get('python_venv_folder', '')
+        if len(venv) != 0:
+            import setuptools
+            if venv in str(setuptools):
+                darwin_log(DarwinLogLevel.Debug, 'WE ARE IN VIRTUAL ENV')
         return True
 
     def parse_body(self, body: str) -> Union[list, CustomData]:

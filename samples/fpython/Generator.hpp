@@ -72,10 +72,10 @@ struct FunctionHolder{
     FunctionHolder& operator=(FunctionHolder &&) = delete;
 
     typedef bool(*config_t)(rapidjson::Document const &);
-    typedef PyObject*(*parse_body_t)(PyObject*, const std::string&);
-    typedef PyObject*(*process_t)(PyObject*, PyObject*);
-    typedef std::vector<std::string>(*alert_format_t)(PyObject*, PyObject*);
-    typedef DarwinResponse(*resp_format_t)(PyObject*, PyObject*);
+    typedef PyObject*(*parse_body_t)(PyObject*, PyObject*, const std::string&);
+    typedef PyObject*(*process_t)(PyObject*, PyObject*, PyObject*);
+    typedef std::vector<std::string>(*alert_format_t)(PyObject*, PyObject*, PyObject*);
+    typedef DarwinResponse(*resp_format_t)(PyObject*, PyObject*, PyObject*);
     
     // There are 2 config functions as we accept to pass informations to both the python module and the shared library
     // Note that the shared library has a direct access to the python module
@@ -162,9 +162,10 @@ private:
     inline void LoadFunctionFromSO(void* lib_handle, FunctionPySo<F>& function_holder, const std::string& function_name);
 
     template<typename F>
-    inline bool LoadFunctionFromPython(PyObject* pModule, FunctionPySo<F>& function_holder, const std::string& function_name);
+    inline bool LoadFunctionFromPython(PyObject* pClass, FunctionPySo<F>& function_holder, const std::string& function_name);
 
     PyObjectOwner pModule;
+    PyObjectOwner pClass;
     FunctionHolder functions;
     
 };

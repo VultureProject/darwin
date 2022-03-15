@@ -30,10 +30,10 @@ public:
                             std::mutex& cache_mutex,
                             darwin::session_ptr_t s,
                             darwin::DarwinPacket& packet,
-                            PyObject * pModule, 
+                            PyObject * pClass, 
                             FunctionHolder& functions);
 
-    ~PythonTask() override = default;
+    ~PythonTask() override;
 
 public:
     // You need to override the functor to compile and be executed by the thread
@@ -55,8 +55,9 @@ private:
     DarwinResponse GetFormatedResponse(FunctionPySo<FunctionHolder::resp_format_t>& func, PyObject* processedData);
 
 private:
-    PyObject* _pModule;
+    PyObject* _pClass;
     FunctionHolder& _functions;
 
+    PyObjectOwner _pSelf;
     PyObjectOwner _parsed_body;
 };

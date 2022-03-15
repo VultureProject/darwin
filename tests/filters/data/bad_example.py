@@ -49,59 +49,60 @@ class CustomData:
     pass
 
 threshold = 3
+class Execution:
+    @staticmethod
+    def filter_config(config: dict) -> bool:
+        global threshold
+        if 'dummy' not in config:
+            darwin_log(DarwinLogLevel.Critical, 'The field \\"dummy\\" is not in the config')
+            return False
+        if 'threshold' in config:
+            threshold = int(config['threshold'])
+        return True
 
-def filter_config(config: dict) -> bool:
-    global threshold
-    if 'dummy' not in config:
-        darwin_log(DarwinLogLevel.Critical, 'The field \\"dummy\\" is not in the config')
-        return False
-    if 'threshold' in config:
-        threshold = int(config['threshold'])
-    return True
+    def parse_body(self, body: str) -> Union[list, CustomData]:
+        parsed = json.loads(body)
+        if not isinstance(parsed, list):
+            darwin_log(DarwinLogLevel.Error, 'input body is not a list')
+            raise PythonFilterError("Parse Body: Wrong type")
+        return parsed
 
-def parse_body(body: str) -> Union[list, CustomData]:
-    parsed = json.loads(body)
-    if not isinstance(parsed, list):
-        darwin_log(DarwinLogLevel.Error, 'input body is not a list')
-        raise PythonFilterError("Parse Body: Wrong type")
-    return parsed
+    def filter_pre_process(self, parsed_data: Union[list, CustomData]) -> Union[list, CustomData]:
+        for d in parsed_data:
+            d = d.lower()
+        return parsed_data
 
-def filter_pre_process(parsed_data: Union[list, CustomData]) -> Union[list, CustomData]:
-    for d in parsed_data:
-        d = d.lower()
-    return parsed_data
+    # MISSING METHOD filter_process
 
-# MISSING METHOD filter_process
+    def filter_contextualize(self, processed_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
+        new_body = ''
+        for line in processed_data.body.splitlines():
+            new_body += str(query_context(line)) + ':' + line + os.linesep
+        processed_data.body = new_body
+        return processed_data
 
-def filter_contextualize(processed_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
-    new_body = ''
-    for line in processed_data.body.splitlines():
-        new_body += str(query_context(line)) + ':' + line + os.linesep
-    processed_data.body = new_body
-    return processed_data
+    def alert_contextualize(self, contextualized_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
+        for alert in contextualized_data.alerts:
+            if query_context('alert:' + alert) < threshold:
+                darwin_log(DarwinLogLevel.Info, 'alert below threshold, skipping it')
+                contextualized_data.alerts.remove(alert)
+        return contextualized_data
 
-def alert_contextualize(contextualized_data: Union[list, CustomData, PythonFilterResponse]) -> Union[CustomData, PythonFilterResponse]:
-    for alert in contextualized_data.alerts:
-        if query_context('alert:' + alert) < threshold:
-            darwin_log(DarwinLogLevel.Info, 'alert below threshold, skipping it')
-            contextualized_data.alerts.remove(alert)
-    return contextualized_data
-
-def alert_formating(contextualized_data: PythonFilterResponse) -> List[str]:
-    formated_alerts = []
-    for alert in contextualized_data.alerts:
-        date = datetime.datetime.now()
-        formated_alerts.append('{{"date":"{date}","alert":"{alert}"}}'.format(date=str(date), alert=alert))
-    return formated_alerts
-
-
-def response_formating(contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
-    return contextualized_data
+    def alert_formating(self, contextualized_data: PythonFilterResponse) -> List[str]:
+        formated_alerts = []
+        for alert in contextualized_data.alerts:
+            date = datetime.datetime.now()
+            formated_alerts.append('{{"date":"{date}","alert":"{alert}"}}'.format(date=str(date), alert=alert))
+        return formated_alerts
 
 
-# WIP unused for now
-def output_formating(contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
-    return contextualized_data
+    def response_formating(self, contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
+        return contextualized_data
+
+
+    # WIP unused for now
+    def output_formating(self, contextualized_data: Union[CustomData, PythonFilterResponse]) -> PythonFilterResponse:
+        return contextualized_data
 
 
 context = {}
