@@ -95,6 +95,13 @@ namespace darwin {
             /// \return true if success, false otherwise.
             bool setLevel(std::string level);
 
+            ///
+            /// \brief Get the Log Level
+            /// 
+            /// \return log_type 
+            ///
+            log_type getLevel() const;
+
             /// Set the name of the module in the logger.
             ///
             /// \param name The name to set as the module name.

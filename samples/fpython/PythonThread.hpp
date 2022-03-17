@@ -2,10 +2,10 @@
 
 class PythonThread {
 public:
-    PythonThread(): _init{false}, pThreadState{nullptr} {}
+    PythonThread(): _init{false}, _pThreadState{nullptr} {}
     void Init(PyInterpreterState * interp) {
         if (! _init){
-            pThreadState = PyThreadState_New(interp);
+            _pThreadState = PyThreadState_New(interp);
             _init = true;
         }
     }
@@ -14,17 +14,17 @@ public:
     }
 
     PyThreadState* GetThreadState(){
-        return pThreadState;
+        return _pThreadState;
     }
 
     void SetThreadState(PyThreadState* state){
-        pThreadState = state;
+        _pThreadState = state;
     }
 
     ~PythonThread() {
-        if(pThreadState != nullptr){
-            PyThreadState_Clear(pThreadState);
-            PyThreadState_Delete(pThreadState);
+        if(_pThreadState != nullptr){
+            PyThreadState_Clear(_pThreadState);
+            PyThreadState_Delete(_pThreadState);
         }
     }
 
@@ -45,19 +45,19 @@ public:
 private:
 
     bool _init;
-    PyThreadState * pThreadState;
+    PyThreadState * _pThreadState;
 
 };
 
 class PythonLock {
 public:
     PythonLock(){
-        lock = PyGILState_Ensure();
+        _lock = PyGILState_Ensure();
     }
     ~PythonLock(){
-        PyGILState_Release(lock);
+        PyGILState_Release(_lock);
     }
 private:
-    PyGILState_STATE lock;
+    PyGILState_STATE _lock;
 
 };

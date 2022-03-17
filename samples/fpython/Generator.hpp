@@ -113,7 +113,7 @@ private:
 
     ///
     /// \brief loads the python script which path is given and attempts to load all defined functions
-    ///        If the path is not empty, a python interpreter will be initialized (by a call to Py_Initiliaze())
+    ///        If the path is not empty, a python interpreter will be initialized (by a call to Py_Initialize())
     /// 
     /// \param python_script_path 
     /// \param python_venv_folder
@@ -154,7 +154,7 @@ private:
     /// \brief Sends the configuration to the Python module
     /// 
     /// \param config 
-    /// \return false an error occured whil calling the python function or it sent back false
+    /// \return false an error occurred while calling the python function or it sent back false
     ///
     bool SendPythonConfig(rapidjson::Document const& config);
 
@@ -164,8 +164,8 @@ private:
     template<typename F>
     inline bool LoadFunctionFromPython(PyObject* pClass, FunctionPySo<F>& function_holder, const std::string& function_name);
 
-    PyObjectOwner pModule;
-    PyObjectOwner pClass;
-    FunctionHolder functions;
+    PyObjectOwner _pModule;
+    PyObjectOwner _pClass;
+    FunctionHolder _functions;
     
 };

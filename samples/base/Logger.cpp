@@ -84,6 +84,10 @@ namespace darwin {
             return false;
         }
 
+        log_type Logger::getLevel() const {
+            return this->_logLevel;
+        }
+
         void Logger::setName(std::string const& name) {
             _name = name;
         }

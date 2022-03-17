@@ -12,6 +12,7 @@
 #include "Logger.hpp"
 #include "AlertManager.hpp"
 #include "PythonObject.hpp"
+#include "Stats.hpp"
 
 PythonTask::PythonTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                         std::mutex& cache_mutex,
@@ -151,12 +152,11 @@ void PythonTask::operator()() {
         }
     }
     for(auto cert: resp.certitudes) {
+        if(cert > _threshold) {
+            STAT_MATCH_INC;
+        }
         _packet.AddCertitude(cert);
     }
-    // if( ! output.body.empty()) {
-    //     _response_body.clear();
-    //     _response_body.append(output.body);
-    // }
 
     if( ! resp.body.empty()){
         _response_body.clear();
@@ -188,8 +188,12 @@ bool PythonTask::ParseBody() {
 
             for(ssize_t i = 0; i < _body.Size(); i++){
                 PyObject *str; // This reference is "stolen" by PyList_SetItem, we don't have to DECREF it
+                if(! _body.GetArray()[i].IsString()){
+                    DARWIN_LOG_ERROR("PythonTask::ParseBody: Item on the list is not a string : " + std::to_string(i));
+                    return false;
+                }
                 if((str = PyUnicode_DecodeFSDefault(_body.GetArray()[i].GetString())) == nullptr) {
-                    DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while raw body:"+_packet.GetBody());
+                    DARWIN_LOG_ERROR("PythonTask:: ParseBody:: An error occurred while raw body:"+_packet.GetBody());
                     Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                     return false;
                 }
@@ -212,7 +216,7 @@ bool PythonTask::ParseBody() {
             }
 
             if ((_parsed_body = PyObject_CallFunctionObjArgs(_functions.parseBodyFunc.py, *_pSelf, *raw_body, nullptr)) == nullptr) {
-                DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the Python function");
+                DARWIN_LOG_ERROR("PythonTask:: ParseBody:: An error occurred while calling the Python function");
                 Generator::PyExceptionCheckAndLog("PythonTask:: ParseBody:: An error occurred while parsing body :", darwin::logger::Error);
                 return false;
             }
@@ -222,7 +226,7 @@ bool PythonTask::ParseBody() {
         case FunctionOrigin::shared_library:{
             try{
                 if((_parsed_body = _functions.parseBodyFunc.so(_pClass, *_pSelf, _packet.GetBody()))== nullptr){
-                    DARWIN_LOG_DEBUG("PythonTask:: ParseBody:: An error occurred while calling the SO function");
+                    DARWIN_LOG_ERROR("PythonTask:: ParseBody:: An error occurred while calling the SO function");
                     return false;
                 }  
             } catch(std::exception const& e){
@@ -300,7 +304,7 @@ DarwinResponse PythonTask::GetFormatedResponse(FunctionPySo<FunctionHolder::resp
             PyObjectOwner pBody, pCertitudes, pyRes;
             ssize_t certSize = 0;
             if ((pyRes = PyObject_CallFunctionObjArgs(func.py, *_pSelf, processedData, nullptr)) == nullptr) {
-                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedAlerts:: ", darwin::logger::Error);
+                Generator::PyExceptionCheckAndLog("PythonTask:: GetFormatedResponse:: ", darwin::logger::Error);
                 return ret;
             }
             if((pBody = PyObject_GetAttrString(*pyRes, "body")) == nullptr){

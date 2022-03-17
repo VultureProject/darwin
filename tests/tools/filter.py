@@ -123,10 +123,7 @@ class Filter():
                    '--errors-for-leak-kinds=definite',
                    '-q', # Quiet mode so it doesn't pollute the output
                    '--error-exitcode={}'.format(self.error_code), #If valgrind reports error(s) during the run, return this exit code.
-                   '--suppressions=/home/myadvens.lan/tcartegnie/workspace/darwin/tests/valgrind-python.supp',
-                   '--log-file=valgrind.log',
                    ] + self.cmd
-        print(' '.join(command))
         self.process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sleep(3)
         return self.check_start()

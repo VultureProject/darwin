@@ -38,6 +38,11 @@ bool Generator::PyExceptionCheckAndLog(std::string const& prefix_log, darwin::lo
     std::string errString, typeString;
     PyErr_Fetch(&errType, &err, &tb);
 
+    // Early return if we don't have to log
+    if (log_type < log.getLevel()) {
+        return true;
+    }
+
     if((pErrStr = PyObject_Str(err)) != nullptr){
         if((pErrChars = PyUnicode_AsUTF8AndSize(*pErrStr, &errCharsLen)) != nullptr) {
             errString = std::string(pErrChars, errCharsLen);
@@ -161,7 +166,7 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
 bool Generator::SendConfig(rapidjson::Document const& config) {
     DARWIN_LOGGER;
     bool pyConfigRes = false, soConfigRes = false;
-    switch(functions.configPyFunc.origin) {
+    switch(_functions.configPyFunc.origin) {
         case FunctionOrigin::none:
             DARWIN_LOG_INFO("Python:: Generator:: SendConfig: No configuration function found in python script");
             pyConfigRes = true;
@@ -174,7 +179,7 @@ bool Generator::SendConfig(rapidjson::Document const& config) {
             return false;
     }
 
-    switch(functions.configSoFunc.origin) {
+    switch(_functions.configSoFunc.origin) {
         case FunctionOrigin::none:
             DARWIN_LOG_INFO("Python:: Generator:: SendConfig: No configuration function found in shared object");
             soConfigRes = true;
@@ -184,7 +189,7 @@ bool Generator::SendConfig(rapidjson::Document const& config) {
             return false;
         case FunctionOrigin::shared_library:
             try{
-                soConfigRes = functions.configSoFunc.so(config);
+                soConfigRes = _functions.configSoFunc.so(config);
             } catch(std::exception const& e){
                 DARWIN_LOG_CRITICAL("Python:: Generator:: SendConfig: error while sending config :" + std::string(e.what()));
                 soConfigRes = false;
@@ -212,14 +217,14 @@ bool Generator::SendPythonConfig(rapidjson::Document const& config) {
     std::string cmd = "json.loads(\"\"\"";
     cmd += buffer.GetString();
     cmd += "\"\"\")";
-    PyObject* globalDictionary = PyModule_GetDict(*pModule);
+    PyObject* globalDictionary = PyModule_GetDict(*_pModule);
 
     PyObjectOwner pConfig = PyRun_StringFlags(cmd.c_str(), Py_eval_input, globalDictionary, globalDictionary, nullptr);
     if(Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: Converting config to Py Object :")){
         return false;
     }
     PyObjectOwner res;
-    if ((res  = PyObject_CallFunctionObjArgs(functions.configPyFunc.py, *pConfig, nullptr)) == nullptr) {
+    if ((res  = PyObject_CallFunctionObjArgs(_functions.configPyFunc.py, *pConfig, nullptr)) == nullptr) {
         Generator::PyExceptionCheckAndLog("Python:: Generator:: SendPythonConfig: ");
         return false;
     }
@@ -253,15 +258,15 @@ bool Generator::LoadSharedLibrary(const std::string& shared_library_path) {
         return false;
     }
 
-    LoadFunctionFromSO(handle, functions.configSoFunc,           "filter_config");
-    LoadFunctionFromSO(handle, functions.parseBodyFunc,          "parse_body");
-    LoadFunctionFromSO(handle, functions.preProcessingFunc,      "filter_pre_process");
-    LoadFunctionFromSO(handle, functions.processingFunc,         "filter_process");
-    LoadFunctionFromSO(handle, functions.contextualizeFunc,      "filter_contextualize");
-    LoadFunctionFromSO(handle, functions.alertContextualizeFunc, "alert_contextualize");
-    LoadFunctionFromSO(handle, functions.alertFormatingFunc,     "alert_formating");
-    LoadFunctionFromSO(handle, functions.outputFormatingFunc,    "output_formating");
-    LoadFunctionFromSO(handle, functions.responseFormatingFunc,  "response_formating");
+    LoadFunctionFromSO(handle, _functions.configSoFunc,           "filter_config");
+    LoadFunctionFromSO(handle, _functions.parseBodyFunc,          "parse_body");
+    LoadFunctionFromSO(handle, _functions.preProcessingFunc,      "filter_pre_process");
+    LoadFunctionFromSO(handle, _functions.processingFunc,         "filter_process");
+    LoadFunctionFromSO(handle, _functions.contextualizeFunc,      "filter_contextualize");
+    LoadFunctionFromSO(handle, _functions.alertContextualizeFunc, "alert_contextualize");
+    LoadFunctionFromSO(handle, _functions.alertFormatingFunc,     "alert_formating");
+    LoadFunctionFromSO(handle, _functions.outputFormatingFunc,    "output_formating");
+    LoadFunctionFromSO(handle, _functions.responseFormatingFunc,  "response_formating");
 
     return true;
 }
@@ -278,13 +283,13 @@ inline void Generator::LoadFunctionFromSO(void * lib_handle, FunctionPySo<F> &fu
 }
 
 bool Generator::CheckConfig() const {
-    if(functions.preProcessingFunc.origin == FunctionOrigin::none
-        || functions.processingFunc.origin == FunctionOrigin::none
-        || functions.contextualizeFunc.origin == FunctionOrigin::none
-        || functions.alertContextualizeFunc.origin == FunctionOrigin::none
-        || functions.alertFormatingFunc.origin == FunctionOrigin::none
-        || functions.outputFormatingFunc.origin == FunctionOrigin::none
-        || functions.responseFormatingFunc.origin == FunctionOrigin::none) 
+    if(_functions.preProcessingFunc.origin == FunctionOrigin::none
+        || _functions.processingFunc.origin == FunctionOrigin::none
+        || _functions.contextualizeFunc.origin == FunctionOrigin::none
+        || _functions.alertContextualizeFunc.origin == FunctionOrigin::none
+        || _functions.alertFormatingFunc.origin == FunctionOrigin::none
+        || _functions.outputFormatingFunc.origin == FunctionOrigin::none
+        || _functions.responseFormatingFunc.origin == FunctionOrigin::none) 
     {
         DARWIN_LOGGER;
         DARWIN_LOG_CRITICAL("Generator::CheckConfig : Mandatory methods were not found in the python script or the shared library");
@@ -392,61 +397,61 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
         }
     }
 
-    if((pModule = PyImport_Import(*pName)) == nullptr) {
+    if((_pModule = PyImport_Import(*pName)) == nullptr) {
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python script module '" + filename + "' : ");
         return false;
     }
     pName.Decref();
 
-    pClass = PyObject_GetAttrString(*pModule, "Execution");
+    _pClass = PyObject_GetAttrString(*_pModule, "Execution");
     if (PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python class 'Execution' : ")){
         return false;
     }
-    if(*pClass == nullptr || ! PyType_Check(*pClass)) {
+    if(*_pClass == nullptr || ! PyType_Check(*_pClass)) {
         DARWIN_LOG_CRITICAL("Generator::LoadPythonScript : Error while attempting to load the python class 'Execution' : Not a Class");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.configPyFunc, "filter_config")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.configPyFunc, "filter_config")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_config' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.parseBodyFunc, "parse_body")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.parseBodyFunc, "parse_body")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'parse_body' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.preProcessingFunc, "filter_pre_process")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.preProcessingFunc, "filter_pre_process")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_pre_process' : ");
         return false;
     }
-    if( ! LoadFunctionFromPython(*pClass, functions.processingFunc, "filter_process")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.processingFunc, "filter_process")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_process' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.contextualizeFunc, "filter_contextualize")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.contextualizeFunc, "filter_contextualize")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'filter_contextualize' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.alertContextualizeFunc, "alert_contextualize")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.alertContextualizeFunc, "alert_contextualize")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'alert_contextualize' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.alertFormatingFunc, "alert_formating")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.alertFormatingFunc, "alert_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'alert_formating' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.outputFormatingFunc, "output_formating")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.outputFormatingFunc, "output_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'output_formating' : ");
         return false;
     }
 
-    if( ! LoadFunctionFromPython(*pClass, functions.responseFormatingFunc, "response_formating")){
+    if( ! LoadFunctionFromPython(*_pClass, _functions.responseFormatingFunc, "response_formating")){
         PyExceptionCheckAndLog("Generator::LoadPythonScript : Error while attempting to load the python function 'response_formating' : ");
         return false;
     }
@@ -455,9 +460,9 @@ bool Generator::LoadPythonScript(const std::string& python_script_path, const st
 }
 
 template<typename F>
-inline bool Generator::LoadFunctionFromPython(PyObject* pClass, FunctionPySo<F>& function_holder, const std::string& function_name){
+inline bool Generator::LoadFunctionFromPython(PyObject* _pClass, FunctionPySo<F>& function_holder, const std::string& function_name){
     DARWIN_LOGGER;
-    function_holder.py = PyObject_GetAttrString(pClass, function_name.c_str());
+    function_holder.py = PyObject_GetAttrString(_pClass, function_name.c_str());
     if(function_holder.py == nullptr) {
         DARWIN_LOG_INFO("Generator::LoadPythonScript : No '" + function_name + "' method in the python script");
     } else if (! PyCallable_Check(function_holder.py)){
@@ -473,7 +478,7 @@ std::shared_ptr<darwin::ATask>
 Generator::CreateTask(darwin::session_ptr_t s) noexcept {
     return std::static_pointer_cast<darwin::ATask>(
             std::make_shared<PythonTask>(_cache, _cache_mutex, s, s->_packet,
-            *pClass, functions)
+            *_pClass, _functions)
         );
 }
 
