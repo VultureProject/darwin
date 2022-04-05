@@ -30,6 +30,7 @@ def run():
         check_start_outbound_threshold_num,
         check_write_logs,
         check_rotate_logs,
+        check_rotate_logs_new_file_already_created,
         check_rotate_alerts,
         check_no_alerts_file_rotate_ok,
     ]
@@ -333,6 +334,56 @@ def check_rotate_logs():
 
     if filter.stop() is not True:
         logging.error("check_rotate_logs: Process {} not stopping: {}".format(filter.process.pid, e))
+        return False
+
+    return True
+
+def check_rotate_logs_new_file_already_created():
+    """
+    Same test as above, but test behaviour when file was already recreated after rotation
+    (logrotate behaviour with 'create' option)
+    """
+    error = ""
+    filter = Filter(filter_name="test")
+
+    filter.configure(FTEST_CONFIG)
+
+    filter.valgrind_start()
+
+    # rename file to simulate log rotation
+    rename(DEFAULT_LOG_FILE, DEFAULT_LOG_FILE + ".moved")
+    # create new empty file
+    f = open(DEFAULT_LOG_FILE, 'w')
+    f.close()
+    # send rotate signal to filter
+    kill(filter.process.pid, SIGHUP)
+
+    lines_after_rotate = count_file_lines(DEFAULT_LOG_FILE + ".moved")
+
+    # send a line to filter to trigger writting to logfile
+    filter.send_single("test")
+
+    if count_file_lines(DEFAULT_LOG_FILE + ".moved") > lines_after_rotate:
+        error += "check_rotate_logs_new_file_already_created: new lines appended to old logfile"
+
+    if count_file_lines(DEFAULT_LOG_FILE) == 0:
+        error += "check_rotate_logs_new_file_already_created: no new lines written to new logfile"
+
+    remove(DEFAULT_LOG_FILE + ".moved")
+
+    if error:
+        logging.error(error)
+        return False
+
+    try:
+        # Test if filter is still running (did it crash ?)
+        kill(filter.process.pid, 0)
+    except OSError as e:
+        logging.error("check_rotate_logs_new_file_already_created: Process {} not running: {}".format(filter.process.pid, e))
+        return False
+
+    if filter.stop() is not True:
+        logging.error("check_rotate_logs_new_file_already_created: Process {} not stopping: {}".format(filter.process.pid, e))
         return False
 
     return True
