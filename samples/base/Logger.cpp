@@ -89,15 +89,13 @@ namespace darwin {
         }
 
         void Logger::RotateLogs() {
-            if (access(DARWIN_LOG_FILE, F_OK) != 0) {
-                _fileMutex.lock();
-                _file.close();
-                _file = std::ofstream(DARWIN_LOG_FILE, std::ios::out | std::ios::app);
-                if (!_file.is_open())
-                    std::clog << "Can't open log file " << DARWIN_LOG_FILE
-                              << std::endl;
-                _fileMutex.unlock();
-            }
+            _fileMutex.lock();
+            _file.close();
+            _file = std::ofstream(DARWIN_LOG_FILE, std::ios::out | std::ios::app);
+            if (!_file.is_open())
+                std::clog << "Can't open log file " << DARWIN_LOG_FILE
+                            << std::endl;
+            _fileMutex.unlock();
         }
     }
 }
