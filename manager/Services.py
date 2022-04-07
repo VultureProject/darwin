@@ -108,7 +108,7 @@ class Services:
                 cmd.append(filt['log_level'])
         except KeyError:
             pass
-        
+
         cmd += [
             filt['name'],
             filt['network']['address_path'],
@@ -378,7 +378,7 @@ class Services:
                     prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
                 )
-                # TODO Handle TCP case?
+
                 if new[n]['network']['socket_type'] == 'UNIX':
                     new[n]['network']['address_path'] = new[n]['socket']
 
