@@ -12,12 +12,14 @@
 
 #include "../../toolkit/RedisManager.hpp"
 #include "BufferThreadManager.hpp"
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 
 #define DARWIN_FILTER_BUFFER 0x62756672 // Made from: bufr
+#define DARWIN_FILTER_NAME "buffer"
 
-class BufferTask final : public darwin::Session {
+class BufferTask final : public darwin::ATask {
     /// This class inherits from Session (see Session.hpp)
     /// This class handles Tasks for Buffer Filter.
     /// It parses the body of incoming messages and splits data into several REDIS lists depending on
@@ -34,10 +36,10 @@ class BufferTask final : public darwin::Session {
     ///\param cache_mutex Transfered to Session constructor
     ///\param inputs This vector holds the name and types of data in input (in the correct order)
     ///\param connectors This vector holds all the Connectors needed depending on the output Filters in config file.
-    BufferTask(boost::asio::local::stream_protocol::socket& socket,
-                     darwin::Manager& manager,
-                     std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
-                     std::mutex& cache_mutex,
+    BufferTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+                    std::mutex& cache_mutex,
+                    darwin::session_ptr_t s,
+                    darwin::DarwinPacket& packet,
                      std::vector<std::pair<std::string, darwin::valueType>> &inputs,
                      std::vector<std::shared_ptr<AConnector>> &connectors);
 

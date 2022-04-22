@@ -7,7 +7,6 @@ from tools.redis_utils import RedisServer
 from tools.filter import Filter
 from tools.output import print_result
 from conf import TEST_FILES_DIR
-from darwin import DarwinApi
 
 REDIS_SOCKET = f"{TEST_FILES_DIR}/redis_session.sock"
 
@@ -143,8 +142,7 @@ def _input_tests(test_name, data, expected_certitudes, populate_redis=None, expe
                 return False
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=session_filter.socket,
-                           socket_type="unix")
+    darwin_api = session_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         data,
@@ -346,8 +344,7 @@ def no_timeout_no_refresh():
     sleep(3)
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=session_filter.socket,
-                           socket_type="unix")
+    darwin_api = session_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [
@@ -411,8 +408,7 @@ def timeout_but_no_change_to_ttl():
     sleep(3)
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=session_filter.socket,
-                           socket_type="unix")
+    darwin_api = session_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [
@@ -477,8 +473,7 @@ def set_new_ttl():
     sleep(3)
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=session_filter.socket,
-                           socket_type="unix")
+    darwin_api = session_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [
@@ -543,8 +538,7 @@ def timeout_with_change_to_ttl():
     sleep(3)
 
     # SEND TEST
-    darwin_api = DarwinApi(socket_path=session_filter.socket,
-                           socket_type="unix")
+    darwin_api = session_filter.get_darwin_api()
 
     results = darwin_api.bulk_call(
         [

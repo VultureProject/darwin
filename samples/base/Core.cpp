@@ -15,16 +15,23 @@
 
 #include "Generator.hpp"
 #include "Logger.hpp"
-#include "Server.hpp"
+#include "UnixServer.hpp"
+#include "TcpServer.hpp"
+#include "UdpServer.hpp"
 #include "Core.hpp"
 #include "Stats.hpp"
+#include "StringUtils.hpp"
+#include "UnixNextFilterConnector.hpp"
+#include "TcpNextFilterConnector.hpp"
+#include "UdpNextFilterConnector.hpp"
+
+#include <boost/asio.hpp>
 
 namespace darwin {
 
     Core::Core()
-            : _name{}, _socketPath{}, _modConfigPath{}, _monSocketPath{},
-              _pidPath{}, _nbThread{0},
-              _threadpool{}, daemon{true} {}
+            : _name{}, _modConfigPath{}, _monSocketPath{},
+              _pidPath{}, _nbThread{0}, _socketPath{}, daemon{true} {}
 
     int Core::run() {
         DARWIN_LOGGER;
@@ -32,47 +39,76 @@ namespace darwin {
 
         SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::starting);
 
+        std::unique_ptr<AServer> server;
+
         try {
             Monitor monitor{_monSocketPath};
             std::thread t{std::bind(&Monitor::Run, std::ref(monitor))};
+            std::thread t_nextfilter;
+            if(_next_filter_connector){
+                t_nextfilter = std::thread{std::bind(&ANextFilterConnector::Run, std::ref(*_next_filter_connector))};
+            }
 
             SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::configuring);
-            Generator gen{};
+            Generator gen{_nbThread};
             if (not gen.Configure(_modConfigPath, _cacheSize)) {
                 DARWIN_LOG_CRITICAL("Core:: Run:: Unable to configure the filter");
                 raise(SIGTERM);
-                t.join();
+                if(t_nextfilter.joinable()) 
+                    t_nextfilter.join();
+                if(t.joinable()) 
+                    t.join();
                 return 1;
             }
             DARWIN_LOG_DEBUG("Core::run:: Configured generator");
 
-            try {
-                Server server{_socketPath, _output, _nextFilterUnixSocketPath, _threshold, gen};
-                if (not gen.ConfigureNetworkObject(server.GetIOContext())) {
+            switch(_net_type) {
+                case network::NetworkSocketType::Unix:
+                    DARWIN_LOG_DEBUG("Core::run:: Unix socket configured on path " + _socketPath);
+                    server = std::make_unique<UnixServer>(_socketPath, _output, _threshold, gen);
+                    break;
+                case network::NetworkSocketType::Tcp:
+                    DARWIN_LOG_DEBUG("Core::run:: TCP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
+                    server = std::make_unique<TcpServer>(_net_address, _net_port, _output, _threshold, gen);
+                    break;
+                case network::NetworkSocketType::Udp:
+                    DARWIN_LOG_DEBUG("Core::run:: UDP configured on address " + _net_address.to_string() + ":" + std::to_string(_net_port));
+                    server = std::make_unique<UdpServer>(_net_address, _net_port, _output, _threshold, gen);
+                    break;
+                default:
+                    DARWIN_LOG_CRITICAL("Core:: Run:: Network Configuration problem");
                     raise(SIGTERM);
-                    t.join();
+                    if(t_nextfilter.joinable()) 
+                        t_nextfilter.join();
+                    if (t.joinable())
+                        t.join();
+                    return 1;
+            }
+
+            try {
+                if (not gen.ConfigureNetworkObject(server->GetIOContext())) {
+                    raise(SIGTERM);
+                    if(t_nextfilter.joinable())
+                        t_nextfilter.join();
+                    if (t.joinable())
+                        t.join();
                     return 1;
                 }
                 SET_FILTER_STATUS(darwin::stats::FilterStatusEnum::running);
 
-                DARWIN_LOG_DEBUG("Core::run:: Creating threads...");
-                // Starting from 1 because the current process will run
-                // the io_context too.
-                for (std::size_t i = 1; i < _nbThread; ++i) {
-                    _threadpool.CreateThread(
-                        std::bind(&Server::Run, std::ref(server))
-                    );
-                }
-                server.Run();
+                DARWIN_LOG_DEBUG("Core::run:: Launching server...");
+                server->Run();
                 DARWIN_LOG_DEBUG("Core::run:: Joining threads...");
-                _threadpool.JoinAll();
-                server.Clean();
+
+                server->Clean();
             } catch (const std::exception& e) {
                 DARWIN_LOG_CRITICAL(std::string("Core::run:: Cannot open unix socket: ") + e.what());
                 ret = 1;
                 raise(SIGTERM);
             }
             DARWIN_LOG_DEBUG("Core::run:: Joining monitoring thread...");
+            if(t_nextfilter.joinable())
+                t_nextfilter.join();
             if (t.joinable())
                 t.join();
         } catch (const std::exception& e) {
@@ -101,12 +137,16 @@ namespace darwin {
         int opt;
         std::string log_level;
 
+        bool is_udp = false;
+        bool is_next_filter_udp = false;
         // OPTIONS
         log.setLevel(logger::Warning); // Log level by default
         opt = -1;
-        while((opt = getopt(ac, av, ":l:h")) != -1)
+        // Flags MUST be before positional arguments as the parsing on HardenedBSD is not done on all the arguments
+        // On BSD getopt stops at the first argument which is not in the specified flags
+        while((opt = getopt(ac, av, ":l:huv")) != -1)
         {
-            DARWIN_LOG_DEBUG("OPT : " + std::to_string(opt));
+            DARWIN_LOG_DEBUG(std::string("OPT : ") + (char)opt);
             DARWIN_LOG_DEBUG("OPTIND : " + std::to_string(optind));
             switch(opt)
             {
@@ -130,6 +170,12 @@ namespace darwin {
                     DARWIN_LOG_ERROR("Core:: Program Arguments:: Unknown option");
                     Core::Usage();
                     return false;
+                case 'u':
+                    is_udp = true;
+                    break;
+                case 'v':
+                    is_next_filter_udp = true;
+                    break;
             }
         }
 
@@ -143,12 +189,15 @@ namespace darwin {
         // MANDATORY ARGUMENTS
         log.setName(av[optind]);
         _name = av[optind];
-        _socketPath = av[optind + 1];
+        if (! network::ParseSocketAddress(std::string(av[optind + 1]), is_udp, _net_type, _net_address, _net_port, _socketPath))
+            return false;
         _modConfigPath = av[optind + 2];
         _monSocketPath = av[optind + 3];
         _pidPath = av[optind + 4];
         _output = av[optind + 5];
-        _nextFilterUnixSocketPath = av[optind + 6];
+
+        if (!SetNextFilterConnector(std::string(av[optind + 6]), is_next_filter_udp))
+            return false;
         if (!GetULArg(_nbThread, av[optind + 7]))
             return false;
         if (!GetULArg(_cacheSize, av[optind + 8]))
@@ -157,6 +206,39 @@ namespace darwin {
             return false;
 
         return true;
+    }
+
+    bool Core::SetNextFilterConnector(std::string const& path_address, bool is_udp) {
+        DARWIN_LOGGER;
+        if(path_address == "no"){
+            DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: No Next Filter set");
+            return true;
+        }
+        network::NetworkSocketType net_type;
+        std::string path;
+        int port;
+        boost::asio::ip::address addr;
+        if (! network::ParseSocketAddress(path_address, is_udp, net_type, addr, port, path))
+            return false;
+
+        switch(net_type) {
+            case network::NetworkSocketType::Unix:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter UNIX set on " + path);
+                _next_filter_connector = std::make_unique<UnixNextFilterConnector>(path);
+                return true;
+            case network::NetworkSocketType::Tcp:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter TCP set on " + addr.to_string() + ":" + std::to_string(port));
+                _next_filter_connector = std::make_unique<TcpNextFilterConnector>(addr, port);
+                return true;
+            case network::NetworkSocketType::Udp:
+                DARWIN_LOG_DEBUG("Core::SetNextFilterConnector :: Next Filter UDP set on " + addr.to_string() + ":" + std::to_string(port));
+                _next_filter_connector = std::make_unique<UdpNextFilterConnector>(addr, port);
+                return true;
+            default:
+                DARWIN_LOG_CRITICAL("Core:: SetNextFilterConnector:: Next Filter Configuration error : unrecognized type");
+                return false;
+        }
+        return false;
     }
 
     void Core::Usage() {
@@ -244,6 +326,18 @@ namespace darwin {
     }
 
     const std::string& Core::GetFilterName() {
+        return this->_name;
+    }
+
+    bool Core::IsDaemon() const {
+        return this->daemon;
+    }
+
+    ANextFilterConnector* Core::GetNextFilterconnector() {
+        return _next_filter_connector.get();
+    }
+
+    const std::string& Core::GetName() const {
         return this->_name;
     }
 

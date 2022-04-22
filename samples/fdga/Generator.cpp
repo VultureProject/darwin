@@ -14,7 +14,14 @@
 #include "base/Logger.hpp"
 #include "DGATask.hpp"
 #include "Generator.hpp"
+#include "ASession.hpp"
 #include "AlertManager.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
@@ -161,12 +168,14 @@ bool Generator::LoadFaupOptions() {
     }
     return true;
 }
-
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<DGATask>(socket, manager, _cache, _cache_mutex, _interpreter_factory, _faup_options, _token_map, _max_tokens));
+// Method is friend with ASession
+std::shared_ptr<darwin::ATask> Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<DGATask>(_cache, _cache_mutex, s, 
+                s->_packet,
+                _interpreter_factory, _faup_options, _token_map, _max_tokens
+                )
+            );
 }
 
 Generator::~Generator() {}

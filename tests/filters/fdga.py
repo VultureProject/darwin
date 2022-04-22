@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import math
-from darwin import DarwinApi, darwinexceptions
+from darwin import darwinexceptions
 
 from tools.filter import Filter
 from tools.output import print_result
@@ -73,10 +73,8 @@ def passing_tests_bulk():
         logging.error("DGA passing_tests_bulk Test : filter did not start")
         return False
     
-    darwin_api = DarwinApi(socket_path=dga_filter.socket,
-                           socket_type="unix",
-                           # This timeout is arbitrary, you may have to increase it on slow systems
-                           timeout=40)
+    # This timeout is arbitrary, you may have to increase it on slow systems
+    darwin_api = dga_filter.get_darwin_api(timeout=40)
     try:
         results = darwin_api.bulk_call(
             [[domain] for domain in data.keys()],
@@ -122,8 +120,8 @@ def passing_tests_singles():
         logging.error("DGA passing_tests_singles Test : filter did not start")
         return False
     
-    darwin_api = DarwinApi(socket_path=dga_filter.socket,
-                           socket_type="unix")
+    darwin_api = dga_filter.get_darwin_api()
+
     ret = True
     for domain, expected_value in data.items():
         expected_percent = expected_value*100

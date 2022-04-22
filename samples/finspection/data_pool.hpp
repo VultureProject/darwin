@@ -101,7 +101,7 @@ uint32_t deleteDataObjectFromPool(DataObject *, DataPool *);
 void setObjectAvailable(DataObject *);
 void updateDataObjectSize(DataObject *, int);
 DataObject *getOrCreateAvailableObject(DataPool *);
-DataPool *createPool(char *, constructor_t, destructor_t, resetor_t, uint32_t);
+DataPool *createPool(const char *, constructor_t, destructor_t, resetor_t, uint32_t);
 void destroyPool(DataPool *);
 PoolStorage *initPoolStorage();
 void deletePoolStorage(PoolStorage *);

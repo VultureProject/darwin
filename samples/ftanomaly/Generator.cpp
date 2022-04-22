@@ -13,8 +13,15 @@
 #include "base/Core.hpp"
 #include "Generator.hpp"
 #include "TAnomalyTask.hpp"
+#include "ASession.hpp"
 #include "TAnomalyThreadManager.hpp"
 #include "AlertManager.hpp"
+
+Generator::Generator(size_t nb_task_threads) 
+    : AGenerator(nb_task_threads) 
+{
+
+}
 
 bool Generator::ConfigureAlerting(const std::string& tags) {
     DARWIN_LOGGER;
@@ -92,10 +99,15 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     return true;
 }
 
-darwin::session_ptr_t
-Generator::CreateTask(boost::asio::local::stream_protocol::socket& socket,
-                      darwin::Manager& manager) noexcept {
-    return std::static_pointer_cast<darwin::Session>(
-            std::make_shared<AnomalyTask>(socket, manager, _cache, _cache_mutex,
-                                          _anomaly_thread_manager, _redis_internal));
+std::shared_ptr<darwin::ATask>
+Generator::CreateTask(darwin::session_ptr_t s) noexcept {
+    return std::static_pointer_cast<darwin::ATask>(
+            std::make_shared<AnomalyTask>(_cache, _cache_mutex, s, s->_packet, 
+            _anomaly_thread_manager, _redis_internal
+            )
+        );
+}
+
+long Generator::GetFilterCode() const {
+    return DARWIN_FILTER_TANOMALY;
 }

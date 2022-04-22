@@ -19,20 +19,21 @@
 #include "../../toolkit/xxhash.hpp"
 #include "../toolkit/rapidjson/document.h"
 #include "DGATask.hpp"
+#include "ASession.hpp"
 #include "Logger.hpp"
 #include "Stats.hpp"
-#include "protocol.h"
 #include "AlertManager.hpp"
 
-DGATask::DGATask(boost::asio::local::stream_protocol::socket& socket,
-                 darwin::Manager& manager,
-                 std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+DGATask::DGATask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                  std::mutex& cache_mutex,
+                 darwin::session_ptr_t s,
+                 darwin::DarwinPacket& packet,
                  DarwinTfLiteInterpreterFactory& interpreter_factory,
                  faup_options_t *faup_options,
                  std::map<std::string, unsigned int> &token_map,
                  const unsigned int max_tokens)
-        : Session{"dga", socket, manager, cache, cache_mutex}, _interpreter_factory{interpreter_factory}, _faup_options{faup_options}, _token_map{token_map}, _max_tokens{max_tokens} {
+        : ATask(DARWIN_FILTER_NAME, cache, cache_mutex, s, packet), _interpreter_factory{interpreter_factory}, _faup_options{faup_options},
+        _token_map{token_map}, _max_tokens{max_tokens} {
     _is_cache = _cache != nullptr;
 }
 
@@ -46,8 +47,8 @@ long DGATask::GetFilterCode() noexcept {
 
 void DGATask::operator()() {
     DARWIN_LOGGER;
-    bool is_log = GetOutputType() == darwin::config::output_type::LOG;
-
+    bool is_log = _s->GetOutputType() == darwin::config::output_type::LOG;
+    auto logs = _packet.GetMutableLogs();
     // Should not fail, as the Session body parser MUST check for validity !
     rapidjson::GenericArray<false, rapidjson::Value> array = _body.GetArray();
     std::shared_ptr<tflite::Interpreter> interpreter = _interpreter_factory.GetInterpreter();
@@ -56,7 +57,7 @@ void DGATask::operator()() {
         // see DarwinTfLiteInterpreterFactory::GetInterpreter for more information
         DARWIN_LOG_ERROR("DGATask:: TFLite Interpreter is null, the filter cannot process data");
         STAT_PARSE_ERROR_INC;
-        _certitudes.push_back(DARWIN_ERROR_RETURN);
+        _packet.AddCertitude(DARWIN_ERROR_RETURN);
         return;
     }
     for (rapidjson::Value &value : array) {
@@ -77,14 +78,14 @@ void DGATask::operator()() {
                 if (GetCacheResult(hash, certitude)) {
                     if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                         STAT_MATCH_INC;
-                        DARWIN_ALERT_MANAGER.Alert(_domain, certitude, Evt_idToString());
+                        DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _packet.Evt_idToString());
                         if (is_log) {
-                            std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                            std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                     R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
-                            _logs += alert_log + '\n';
+                            logs += alert_log + '\n';
                         }
                     }
-                    _certitudes.push_back(certitude);
+                    _packet.AddCertitude(certitude);
                     DARWIN_LOG_DEBUG("DGATask:: processed entry in "
                                     + std::to_string(GetDurationMs()) + "ms, certitude: " + std::to_string(certitude));
                     continue;
@@ -94,14 +95,14 @@ void DGATask::operator()() {
             certitude = Predict(interpreter);
             if (certitude >= _threshold and certitude < DARWIN_ERROR_RETURN){
                 STAT_MATCH_INC;
-                DARWIN_ALERT_MANAGER.Alert(_domain, certitude, Evt_idToString());
+                DARWIN_ALERT_MANAGER.Alert(_domain, certitude, _packet.Evt_idToString());
                 if (is_log) {
-                    std::string alert_log = R"({"evt_id": ")" + Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
+                    std::string alert_log = R"({"evt_id": ")" + _packet.Evt_idToString() + R"(", "time": ")" + darwin::time_utils::GetTime() +
                                     R"(", "filter": ")" + GetFilterName() + "\", \"domain\": \""+ _domain + "\", \"dga_prob\": " + std::to_string(certitude) + "}";
-                    _logs += alert_log + '\n';
+                    logs += alert_log + '\n';
                 }
             }
-            _certitudes.push_back(certitude);
+            _packet.AddCertitude(certitude);
             if (_is_cache) {
                 SaveToCache(hash, certitude);
             }
@@ -110,7 +111,7 @@ void DGATask::operator()() {
         }
         else {
             STAT_PARSE_ERROR_INC;
-            _certitudes.push_back(DARWIN_ERROR_RETURN);
+            _packet.AddCertitude(DARWIN_ERROR_RETURN);
         }
 
     }

@@ -189,10 +189,35 @@ conf_v2_schema = {
                         "enum": ["NONE", "RAW", "LOG", "PARSED"],
                         "default": "NONE"
                         },
-                    "next_filter": {"type": "string"},
+                    "next_filter": {
+                        "OneOf":[
+                            {"type": "string"},
+                            {"type": "object",
+                            "properties": {
+                                "socket_type":{
+                                    "type":"string",
+                                    "enum": ["NONE", "UNIX", "TCP", "UDP"],
+                                    "default":"NONE"
+                                    },
+                                "address_path": {"type": "string"}
+                                }
+                            }
+                        ]
+                    },
                     "threshold": {
                         "type": "integer",
                         "default": 100
+                        },
+                    "network": {
+                        "type": "object",
+                        "properties": {
+                            "socket_type":{
+                                "type":"string",
+                                "enum": ["UNIX", "TCP", "UDP"],
+                                "default":"UNIX"
+                                },
+                            "address_path": {"type": "string"}
+                            }
                         }
                 },
                 "required": ["name", "exec_path", "config_file"],
@@ -268,19 +293,34 @@ def complete_filters_conf(prefix, suffix):
         filter['failures'] = 0
         filter['extension'] = '.1'
         filter['pid_file'] = '{prefix}/run{suffix}/{filter}{extension}.pid'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
-
-        if not filter['next_filter']:
-            filter['next_filter_unix_socket'] = 'no'
-        else:
-            filter['next_filter_unix_socket'] = '{prefix}/sockets{suffix}/{next_filter}.sock'.format(
-                prefix=prefix, suffix=suffix,
-                next_filter=filter['next_filter']
-            )
-
+                
         filter['socket'] = '{prefix}/sockets{suffix}/{filter}{extension}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'], extension=filter['extension'])
         filter['socket_link'] = '{prefix}/sockets{suffix}/{filter}.sock'.format(prefix=prefix, suffix=suffix, filter=filter['name'])
 
+        if 'network' not in filter:
+            filter['network'] = { "socket_type":"UNIX", "address_path":filter['socket'] }
+        elif filter['network']['socket_type'] == "UNIX":
+            filter['network']['address_path'] = filter['socket']
+        
         filter['monitoring'] = '{prefix}/sockets{suffix}/{filter}_mon{extension}.sock'.format(
             prefix=prefix, suffix=suffix,
             filter=filter['name'], extension=filter['extension']
         )
+    
+    # Next filter is setup with a second loop (we need network information already setup)
+    for _, filter in filters.items():
+        if 'next_filter' not in filter or filter['next_filter'] == '':
+            filter['next_filter_network'] = { "socket_type":"NONE", "address_path":"no" }
+        else:
+            if isinstance(filter['next_filter'], str):
+                #check other filters
+                modified = False
+                for _, other_filter in filters.items():
+                    if filter['next_filter'] == other_filter['name']:
+                        filter['next_filter_network'] = other_filter['network']
+                        modified = True
+                if not modified:
+                    raise ConfParseError("Filter '{}' had next_filter configured to '{}' but it was not found in the configuration"
+                                        .format(filter['name'], filter['next_filter']))
+            else:
+                filter['next_filter_network'] = filter['next_filter']

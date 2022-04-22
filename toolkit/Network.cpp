@@ -20,7 +20,9 @@ extern "C" {
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <boost/asio/ip/address.hpp>
 #include "Logger.hpp"
+#include "StringUtils.hpp"
 
 #include "Network.hpp"
 
@@ -91,5 +93,53 @@ namespace darwin {
 
             return str;
         }
+
+        bool ParsePort(const std::string& str_port, int& out_port) {
+            DARWIN_LOGGER;
+
+            long port = 0;
+            if(!darwin::strings::StrToLong(str_port.c_str(), port)){
+                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number, unrecognized number: '" + str_port+ "'");
+                return false;
+            }
+
+            if (port < 0 || port > 65535) {
+                DARWIN_LOG_ERROR("Network::ParsePort:: Error while parsing the port number : out of bounds [0; 65535]: '" + str_port + "'");
+                return false;
+            }
+
+            out_port = static_cast<int>(port);
+
+            return true;
+        }
+
+        bool ParseSocketAddress(const std::string& path_address, bool is_udp, 
+            NetworkSocketType& out_net_type, boost::asio::ip::address& out_net_address, int& out_port, std::string& out_unix_path) 
+        {
+            DARWIN_LOGGER;
+            size_t colon = path_address.rfind(':');
+            if (colon != std::string::npos) {
+                boost::system::error_code e;
+                std::string addr = path_address.substr(0, colon);
+                if(addr.find('[') != std::string::npos && addr.rfind(']') != std::string::npos) {
+                    addr.pop_back();
+                    addr.erase(0, 1);
+                }
+                std::string port = path_address.substr(colon+1, path_address.length()-1);
+                bool portRes = ParsePort(port.c_str(), out_port);
+
+                if( ! portRes || e.failed()) {
+                    DARWIN_LOG_CRITICAL("Network::ParseSocketAddress::Error while parsing the ip address: " + path_address);
+                    return false;
+                }
+                out_net_address = boost::asio::ip::make_address(addr, e); 
+                out_net_type= is_udp ? NetworkSocketType::Udp : NetworkSocketType::Tcp;
+            } else {
+                out_net_type = NetworkSocketType::Unix;
+                out_unix_path = path_address;
+            }
+            return true;
+        }
+
     }
 }

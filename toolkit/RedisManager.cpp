@@ -171,18 +171,30 @@ namespace darwin {
             // rate limit
             if(std::time(nullptr) > threadData->_lastDiscovery + this->_healthCheckInterval) {
                 std::time(&(threadData->_lastDiscovery));
+                threadData->_retryAttempts = 1; // this is the first attempt
                 /*  try first to connect to current active connection (potentially updated),
                     then search master in case of failure */
-                if(this->Connect() and this->IsMaster())
+                if ((this->Connect() && this->IsMaster()) || this->FindAndConnect() || this->FindAndConnectWithRateLimiting()) {
+                    threadData->_retryAttempts = 0;
                     return true;
-                else
-                    return this->FindAndConnect();
+                } else {
+                    return false;
+                }
+            }
+            else if(threadData->_retryAttempts < this ->_maxRetryAttempts) {
+                // less than 8 seconds since last discovery, retrying
+                threadData->_retryAttempts++;
+                if ((this->Connect() && this->IsMaster()) || this->FindAndConnect() || this->FindAndConnectWithRateLimiting()) {
+                    threadData->_retryAttempts = 0;
+                    return true;
+                } else {
+                    return false;
+                }
             }
             else {
                 DARWIN_LOG_DEBUG("RedisManager::FindAndConnectWithRateLimiting:: Rate limiting applied");
+                return false;
             }
-
-            return false;
         }
 
 

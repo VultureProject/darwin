@@ -72,12 +72,13 @@ set(
 
 include_directories(
         toolkit
+        toolkit/thread-pool-cpp/include/
         samples/base
+        samples/base/network
         samples/
 	${HIREDIS_INCLUDE_DIRS}
 	${Boost_INCLUDE_DIRS}
 )
-
 
 ####################
 #   CORE SOURCES   #
@@ -96,9 +97,22 @@ set(
         samples/base/ThreadGroup.cpp samples/base/ThreadGroup.hpp
         samples/base/AlertManager.cpp samples/base/AlertManager.hpp
 
-        samples/base/Server.cpp samples/base/Server.hpp
+        samples/base/DarwinPacket.cpp samples/base/DarwinPacket.hpp
+        samples/base/network/ANextFilterConnector.cpp samples/base/network/ANextFilterConnector.hpp
+        samples/base/network/UnixNextFilterConnector.cpp samples/base/network/UnixNextFilterConnector.hpp
+        samples/base/network/TcpNextFilterConnector.cpp samples/base/network/TcpNextFilterConnector.hpp
+        samples/base/network/UdpNextFilterConnector.cpp samples/base/network/UdpNextFilterConnector.hpp
+
+        samples/base/network/AServer.cpp samples/base/network/AServer.hpp
+        samples/base/network/UnixServer.cpp samples/base/network/UnixServer.hpp
+        samples/base/network/TcpServer.cpp samples/base/network/TcpServer.hpp
+        samples/base/network/UdpServer.cpp samples/base/network/UdpServer.hpp
         samples/base/Manager.cpp samples/base/Manager.hpp
-        samples/base/Session.cpp samples/base/Session.hpp
+        samples/base/network/ASession.cpp samples/base/network/ASession.hpp
+        samples/base/network/UnixSession.cpp samples/base/network/UnixSession.hpp
+        samples/base/network/TcpSession.cpp samples/base/network/TcpSession.hpp
+        samples/base/network/UdpSession.cpp samples/base/network/UdpSession.hpp
+        samples/base/ATask.cpp samples/base/ATask.hpp
 
         toolkit/Network.cpp toolkit/Network.hpp
         toolkit/Validators.cpp toolkit/Validators.hpp

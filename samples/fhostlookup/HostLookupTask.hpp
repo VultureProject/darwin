@@ -10,8 +10,9 @@
 #include <string>
 
 #include "../../toolkit/lru_cache.hpp"
-#include "protocol.h"
-#include "Session.hpp"
+#include "ATask.hpp"
+#include "DarwinPacket.hpp"
+#include "ASession.fwd.hpp"
 #include "tsl/hopscotch_map.h"
 #include "tsl/hopscotch_set.h"
 
@@ -24,12 +25,12 @@
 // The code bellow show all what's necessary to have a working task.
 // For more information about Tasks, please refer to the class definition.
 
-class HostLookupTask : public darwin::Session {
+class HostLookupTask : public darwin::ATask {
 public:
-    explicit HostLookupTask(boost::asio::local::stream_protocol::socket& socket,
-                            darwin::Manager& manager,
-                            std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
+    explicit HostLookupTask(std::shared_ptr<boost::compute::detail::lru_cache<xxh::hash64_t, unsigned int>> cache,
                             std::mutex& cache_mutex,
+                            darwin::session_ptr_t s,
+                            darwin::DarwinPacket& packet,
                             tsl::hopscotch_map<std::string, std::pair<std::string, int>>& db,
                             const std::string& feed_name);
 

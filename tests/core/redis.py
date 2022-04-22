@@ -82,13 +82,13 @@ def master_replica():
     message = master.channel_get_message()
 
     if message is '':
-        logging.error("master_replica: expected to get a message in channel {} " +
-                        "but got nothing".format(REDIS_CHANNEL_NAME))
+        logging.error(("master_replica: expected to get a message in channel {} " +
+                        "but got nothing").format(REDIS_CHANNEL_NAME))
         return False
 
     if message != REDIS_CHANNEL_TRIGGER:
-        logging.error("master_replica: expected to get a message in channel {} saying '{}' " +
-                        "but got '{}' instead".format(REDIS_CHANNEL_NAME, REDIS_CHANNEL_TRIGGER, message))
+        logging.error(("master_replica: expected to get a message in channel {} saying '{}' " +
+                        "but got '{}' instead").format(REDIS_CHANNEL_NAME, REDIS_CHANNEL_TRIGGER, message))
         return False
 
     return True
@@ -143,8 +143,8 @@ def master_replica_master_temp_fail():
         num_list_entries = master_connection.llen(REDIS_LIST_NAME)
 
     if num_list_entries != 1:
-        logging.error("master_replica_master_temp_fail: wrong number of entries in the redis list {}: " +
-                        "expected 1 but got {}".format(REDIS_LIST_NAME, num_list_entries))
+        logging.error(("master_replica_master_temp_fail: wrong number of entries in the redis list {}: " +
+                        "expected 1 but got {}").format(REDIS_LIST_NAME, num_list_entries))
         return False
 
     return True
@@ -185,16 +185,14 @@ def master_replica_transfer(function_name, healthcheck):
         return False
 
     if return_code != 0:
-        logging.error("{}: Filter didn't return correct code, " +
-                        "waited for 0 but got {}".format(function_name, return_code))
+        logging.error("{}: Filter didn't return correct code, waited for 0 but got {}".format(function_name, return_code))
         return False
 
     with replica.connect() as new_master_connection:
         num_entries = new_master_connection.llen(REDIS_LIST_NAME)
 
     if num_entries != 2:
-        logging.error("{}: Wrong number of entries in {}, " +
-                        "expected 2 but got {}".format(function_name, REDIS_LIST_NAME, num_entries))
+        logging.error("{}: Wrong number of entries in {}, expected 2 but got {}".format(function_name, REDIS_LIST_NAME, num_entries))
         return False
 
     return True
@@ -242,16 +240,14 @@ def master_replica_failover(function_name, healthcheck):
         return False
 
     if return_code != 0:
-        logging.error("{}: Filter didn't return correct code, " +
-                        "waited for 0 but got {}".format(function_name, return_code))
+        logging.error("{}: Filter didn't return correct code, waited for 0 but got {}".format(function_name, return_code))
         return False
 
     with replica.connect() as new_master_connection:
         num_entries = new_master_connection.llen(REDIS_LIST_NAME)
 
     if num_entries != 2:
-        logging.error("{}: Wrong number of entries in {}, " +
-                        "expected 2 but got {}".format(function_name, REDIS_LIST_NAME, num_entries))
+        logging.error("{}: Wrong number of entries in {}, expected 2 but got {}".format(function_name, REDIS_LIST_NAME, num_entries))
         return False
 
     return True
@@ -275,7 +271,7 @@ def multi_thread_master():
 
     thread_list = []
     def thread_brute(filter, count_log):
-        for count in range(0, count_log):
+        for _ in range(0, count_log):
             try:
                 filter.send_single(REDIS_LIST_TRIGGER)
             except:
@@ -283,7 +279,7 @@ def multi_thread_master():
         return True
 
 
-    for num in range(0, 5):
+    for _ in range(0, 5):
         thread_list.append(threading.Thread(target=thread_brute, args=(filter, 500)))
 
     for thread in thread_list:
@@ -296,9 +292,9 @@ def multi_thread_master():
 
     number = master.get_number_of_connections()
 
-    # 5 threads
-    if number != 5:
-        logging.error("multi_thread_master: wrong number of active connections: expected 5 but got " + str(number))
+    # 6 threads : 5 task threads + the main thread for configuring the redis socket
+    if number != 6:
+        logging.error("multi_thread_master: wrong number of active connections: expected 6 but got {}".format(number))
         return False
 
     return True
@@ -317,7 +313,7 @@ def master_replica_discovery_rate_limiting():
         # success
         filter.send_single(REDIS_LIST_TRIGGER)
     except Exception as e:
-        logging.error("master_replica_discovery_rate_limiting: Could not connect to test filter: {}".format(function_name, e))
+        logging.error("master_replica_discovery_rate_limiting: Could not connect to test filter: {}".format(e))
         return False
 
     # master shuts down
@@ -337,7 +333,7 @@ def master_replica_discovery_rate_limiting():
 
     thread_list = []
 
-    for num in range(0, 5):
+    for _ in range(0, 5):
         thread_list.append(threading.Thread(target=thread_brute_time, args=(filter, 9)))
 
     # ought to crash if command fails
@@ -352,9 +348,14 @@ def master_replica_discovery_rate_limiting():
     # new generated connections generated, minus the one generated by the call to get it
     new_connections = replica.connect().info()['total_connections_received'] - initial_connections_num - 1
 
-    if new_connections > 10:
+    # In darwin::RedisManager, there is at most 2 connections attempts per 8 seconds per thread
+    # We try de post something in a stopped redis and expect a controlled number of connection attempts
+    # The limit is calculated as :
+    # 20 connections : 5 threads * 2 attempts * 2 (the 9 seconds span let the discover happen twice)
+    # We measure generally only 19 because there was usually already one attempt done in the first part of the test
+    if new_connections > 20:
         logging.error("master_replica_discovery_rate_limiting: Wrong number of new connection attempts, " +
-                        "was supposed to have 10 new at most, but got ".format(new_connections))
+                        "was supposed to have 10 new at most, but got {}".format(new_connections))
         return False
 
     return True

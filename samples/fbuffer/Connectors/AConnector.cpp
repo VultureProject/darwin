@@ -215,14 +215,13 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     }
 
     // Prepare packet
-    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: " + data + ", data size: " + std::to_string(data.size()));
+    DARWIN_LOG_DEBUG("AConnector::SendToFilter:: data to send: size:" + std::to_string(data.size()) + ", data : " + data);
     /*
      * Allocate the header +
-     * the size of the certitude -
-     * DEFAULT_CERTITUDE_LIST_SIZE certitude already in header size
+     * the size of the certitude 
      */
     std::size_t certitude_size = 1;
-    std::size_t packet_size = sizeof(darwin_filter_packet_t) + data.size();
+    std::size_t packet_size = sizeof(darwin_filter_packet_t) + data.size() + certitude_size*sizeof(unsigned int);
 
     DARWIN_LOG_DEBUG("AConnector::SendToFilter:: Computed packet size: " + std::to_string(packet_size));
     darwin_filter_packet_t* packet;
@@ -240,7 +239,7 @@ bool AConnector::SendToFilter(std::vector<std::string> &logs) {
     if(data.size() != 0) {
         // TODO: set a proper pointer in protocol.h for the body
         // Yes We Hack...
-        memcpy(&packet->certitude_list[certitude_size + 1], data.c_str(), data.size());
+        memcpy(&packet->certitude_list[certitude_size], data.c_str(), data.size());
     }
     packet->type = DARWIN_PACKET_FILTER;
     packet->response = DARWIN_RESPONSE_SEND_DARWIN;

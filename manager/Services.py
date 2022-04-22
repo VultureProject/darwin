@@ -50,9 +50,10 @@ class Services:
                     self.stop_one(filter, no_lock=True)
                     self.clean_one(filter, no_lock=True)
                 else:
-                    logger.debug("Linking UNIX sockets...")
-                    filter['status'] = psutil.STATUS_RUNNING
-                    call(['ln', '-s', filter['socket'], filter['socket_link']])
+                    if filter['network']['socket_type'] == 'UNIX':
+                        logger.debug("Linking UNIX sockets...")
+                        filter['status'] = psutil.STATUS_RUNNING
+                        call(['ln', '-s', filter['socket'], filter['socket_link']])
 
     def rotate_logs_all(self):
         """
@@ -89,6 +90,14 @@ class Services:
 
         cmd = [filt['exec_path']]
 
+        # Flags MUST be before positional arguments as the parsing on HardenedBSD is not done on all the arguments
+        # On BSD getopt stops at the first argument which is not in the specified flags
+        if filt['network']['socket_type'] == 'UDP':
+            cmd.append('-u')
+        
+        if filt['next_filter_network']['socket_type'] == 'UDP':
+            cmd.append('-v')
+        
         try:
             if filt['log_level'] not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DEVELOPER"]:
                 logger.warning(
@@ -102,12 +111,12 @@ class Services:
 
         cmd += [
             filt['name'],
-            filt['socket'],
+            filt['network']['address_path'],
             filt['config_file'],
             filt['monitoring'],
             filt['pid_file'],
             filt['output'],
-            filt['next_filter_unix_socket'],
+            filt['next_filter_network']['address_path'],
             str(filt['nb_thread']),
             str(filt['cache_size']),
             str(filt['threshold']),
@@ -370,6 +379,9 @@ class Services:
                     name=n, extension=new[n]['extension']
                 )
 
+                if new[n]['network']['socket_type'] == 'UNIX':
+                    new[n]['network']['address_path'] = new[n]['socket']
+
                 new[n]['monitoring'] = '{prefix}/sockets{suffix}/{name}_mon{extension}.sock'.format(
                     prefix=prefix, suffix=suffix,
                     name=n, extension=new[n]['extension']
@@ -531,7 +543,7 @@ class Services:
                 status = "Process not running"
                 continue
 
-            if not HeartBeat.check_socket(content['monitoring']):
+            if not HeartBeat.check_unix_socket(content['monitoring']):
                 status = "Monitoring socket not created"
                 continue
 
@@ -550,7 +562,7 @@ class Services:
                 continue
 
             if "running" in resp:
-                if not HeartBeat.check_socket(content['socket']):
+                if not HeartBeat.check_network_socket(content['network']):
                     status = "Main socket not created"
                     continue
             else:
@@ -574,10 +586,10 @@ class Services:
             if not HeartBeat.check_process(pid):
                 raise Exception('Process not running')
 
-            if not HeartBeat.check_socket(filter['socket']):
+            if not HeartBeat.check_network_socket(filter['network']):
                 raise Exception('Socket not accessible')
 
-            if not HeartBeat.check_socket(filter['monitoring']):
+            if not HeartBeat.check_unix_socket(filter['monitoring']):
                 raise Exception('Monitoring socket not accessible')
 
         except Exception as e:
