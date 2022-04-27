@@ -78,18 +78,6 @@ bool SessionTask::ReadFromSession(const std::string &token, const std::vector<st
     return REDISLookup(token, repo_ids) == 1;
 }
 
-std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
-    std::string parsed_repo_ids;
-
-    for (auto it = repo_ids.begin(); it != repo_ids.end(); ++it) {
-        parsed_repo_ids += *it;
-
-        if (it != repo_ids.end() - 1) parsed_repo_ids += " ";
-    }
-
-    return parsed_repo_ids;
-}
-
 
 bool SessionTask::REDISResetExpire(const std::string &token, const std::string &repo_id) {
     DARWIN_LOGGER;

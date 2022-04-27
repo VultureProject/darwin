@@ -74,11 +74,6 @@ private:
     /// \return true on success, false otherwise.
     unsigned int REDISLookup(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
 
-    /// Concatenates our repository IDs into a string, separated with spaces.
-    ///
-    /// \return The concatenated string.
-    std::string JoinRepoIDs(const std::vector<std::string> &repo_ids);
-
     /// Parse a line of the body.
     bool ParseLine(rapidjson::Value &line) final;
 
