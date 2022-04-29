@@ -9,7 +9,6 @@
 
 extern "C" {
 #include <hiredis/hiredis.h>
-#include <openssl/sha.h>
 }
 
 #include <iostream>
@@ -47,20 +46,11 @@ public:
     // You need to override the functor to compile and be executed by the thread
     void operator()() override;
 
-    // The maximum length of the session key (SHA-256 = 64 chars)
-    static constexpr unsigned int TOKEN_SIZE = (2*SHA256_DIGEST_LENGTH);
-
 protected:
     /// Return filter code
     long GetFilterCode() noexcept override;
 
 private:
-    /// Read header from the session and
-    /// call the method appropriate to the data type received.
-    ///
-    /// \return true on success, false otherwise.
-    bool ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept;
-
     /// Reset the expiration of key(s) in Redis depending on cases
     /// will reset the expiration of key(s) <token>_<repo_id> with _expiration
     /// will reset the expiration of the key <token> with _expiration if current TTL is lower
