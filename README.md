@@ -52,7 +52,7 @@ make -j4
 ```
 
 The compiled filter will be named `darwin_filter_name` (*note: the name is displayed at the beginning of the compilation*).
-You will find compilation and dependencies informations for each filters in the [Wiki](https://github.com/VultureProject/darwin/wiki).
+You will find compilation and dependencies information for each filters in the [Wiki](https://github.com/VultureProject/darwin/wiki).
 
 ### Usage
 
@@ -128,7 +128,7 @@ You will find more information in the [Wiki](https://github.com/VultureProject/d
 
 ## The Service
 
-In the service directory is an rc script named `darwin` that is
+In the service directory is a rc script named `darwin` that is
 the service script. It handles the following commands: `start`, `stop`,
 `status` and `restart`.
 
