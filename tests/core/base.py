@@ -350,13 +350,15 @@ def check_rotate_logs_new_file_already_created():
 
     filter.valgrind_start()
 
-    # rename file to simulate log rotation
+    # rename/move file to simulate log rotation
     rename(DEFAULT_LOG_FILE, DEFAULT_LOG_FILE + ".moved")
     # create new empty file
     f = open(DEFAULT_LOG_FILE, 'w')
     f.close()
     # send rotate signal to filter
     kill(filter.process.pid, SIGHUP)
+    # Wait a bit for last lines to be written to current logfile
+    sleep(0.5)
 
     lines_after_rotate = count_file_lines(DEFAULT_LOG_FILE + ".moved")
 
