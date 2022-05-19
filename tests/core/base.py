@@ -50,7 +50,7 @@ def check_start_stop():
         logging.error("check_start_stop: Process {} not running: {}".format(filter.process.pid, e))
         return False
 
-    if filter.stop() is not True:
+    if not filter.stop():
         return False
 
     return True
@@ -286,8 +286,8 @@ def check_write_logs():
         logging.error("check_write_logs: Process {} not running: {}".format(filter.process.pid, e))
         return False
 
-    if filter.stop() is not True:
-        logging.error("check_write_logs: Process {} not stopping: {}".format(filter.process.pid, e))
+    if not filter.stop():
+        logging.error("check_write_logs: Process {} didn't stop".format(filter.process.pid))
         return False
 
     if init_lines == count_file_lines(DEFAULT_LOG_FILE):
@@ -332,8 +332,8 @@ def check_rotate_logs():
         logging.error("check_rotate_logs: Process {} not running: {}".format(filter.process.pid, e))
         return False
 
-    if filter.stop() is not True:
-        logging.error("check_rotate_logs: Process {} not stopping: {}".format(filter.process.pid, e))
+    if not filter.stop():
+        logging.error("check_rotate_logs: Process {} didn't stop".format(filter.process.pid))
         return False
 
     return True
@@ -384,8 +384,8 @@ def check_rotate_logs_new_file_already_created():
         logging.error("check_rotate_logs_new_file_already_created: Process {} not running: {}".format(filter.process.pid, e))
         return False
 
-    if filter.stop() is not True:
-        logging.error("check_rotate_logs_new_file_already_created: Process {} not stopping: {}".format(filter.process.pid, e))
+    if not filter.stop():
+        logging.error("check_rotate_logs_new_file_already_created: Process {} didn't stop".format(filter.process.pid))
         return False
 
     return True
@@ -426,8 +426,8 @@ def check_rotate_alerts():
         logging.error("check_rotate_alerts: Process {} not running: {}".format(filter.process.pid, e))
         return False
 
-    if filter.stop() is not True:
-        logging.error("check_rotate_alerts: Process {} not stopping: {}".format(filter.process.pid, e))
+    if not filter.stop():
+        logging.error("check_rotate_alerts: Process {} didn't stop".format(filter.process.pid))
         return False
 
     return True
@@ -448,8 +448,8 @@ def check_no_alerts_file_rotate_ok():
         logging.error("check_no_alerts_file_rotate_ok: Process {} crashed".format(filter.process.pid))
         return False
 
-    if filter.stop() is not True:
-        logging.error("check_no_alerts_file_rotate_ok: Process {} not stopping".format(filter.process.pid))
+    if not filter.stop():
+        logging.error("check_no_alerts_file_rotate_ok: Process {} didn't stop".format(filter.process.pid))
         return False
 
     return True
