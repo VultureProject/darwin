@@ -1,6 +1,6 @@
 import logging
 import socket
-from os import kill, remove, access, rename, F_OK
+from os import kill, remove, access, rename, path, F_OK
 from signal import SIGHUP
 from time import sleep
 from tools.filter import Filter, DEFAULT_LOG_FILE, DEFAULT_ALERTS_FILE
@@ -33,6 +33,7 @@ def run():
         check_rotate_logs_new_file_already_created,
         check_rotate_alerts,
         check_no_alerts_file_rotate_ok,
+        check_log_to_custom_file,
     ]
 
     for i in tests:
@@ -450,6 +451,34 @@ def check_no_alerts_file_rotate_ok():
 
     if filter.stop() is not True:
         logging.error("check_no_alerts_file_rotate_ok: Process {} not stopping".format(filter.process.pid))
+        return False
+
+    return True
+
+def check_log_to_custom_file():
+    outfilename = "/tmp/test_log_file.log"
+    filter = Filter(filter_name="test", log_filepath=outfilename)
+
+    if path.exists(outfilename):
+        try:
+            remove(outfilename)
+        except:
+            logging.error("check_log_to_custom_file: cannot remove file {} before launching filter".format(outfilename))
+            return False
+
+    filter.configure(FTEST_CONFIG)
+
+    if not filter.valgrind_start():
+        logging.error("check_log_to_custom_file: Process did not start correctly")
+        return False
+
+    try:
+        with open(outfilename, 'r') as outfile:
+            if outfile.buffer.peek() == b'':
+                logging.error("check_log_to_custom_file: no log line in file {}".format(outfilename))
+                return False
+    except:
+        logging.error("check_log_to_custom_file: logfile {} does not exist".format(outfilename))
         return False
 
     return True
