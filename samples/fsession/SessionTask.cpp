@@ -49,7 +49,7 @@ void SessionTask::operator()() {
             SetStartingTime();
             unsigned int certitude;
 
-            certitude = ReadFromSession(_token, _repo_ids);
+            certitude = (REDISLookup(this->_token, this->_repo_ids) == 1);
             if(certitude)
                 STAT_MATCH_INC;
             _certitudes.push_back(certitude);
@@ -62,32 +62,6 @@ void SessionTask::operator()() {
             _certitudes.push_back(DARWIN_ERROR_RETURN);
         }
     }
-}
-
-bool SessionTask::ReadFromSession(const std::string &token, const std::vector<std::string> &repo_ids) noexcept {
-    DARWIN_LOGGER;
-
-    //Check that the session value has the expected length
-    if (token.size() != TOKEN_SIZE) {
-        DARWIN_LOG_ERROR("SessionTask::ReadFromSession:: Invalid token size: " + std::to_string(token.size()) +
-                         ". Expected size: " + std::to_string(TOKEN_SIZE));
-
-        return false;
-    }
-
-    return REDISLookup(token, repo_ids) == 1;
-}
-
-std::string SessionTask::JoinRepoIDs(const std::vector<std::string> &repo_ids) {
-    std::string parsed_repo_ids;
-
-    for (auto it = repo_ids.begin(); it != repo_ids.end(); ++it) {
-        parsed_repo_ids += *it;
-
-        if (it != repo_ids.end() - 1) parsed_repo_ids += " ";
-    }
-
-    return parsed_repo_ids;
 }
 
 
@@ -166,15 +140,17 @@ unsigned int SessionTask::REDISLookup(const std::string &token, const std::vecto
 
 bool SessionTask::ParseLine(rapidjson::Value &line) {
     DARWIN_LOGGER;
+    std::string raw_repo_ids;
+
     _expiration = 0;
+    _token.clear();
+    _repo_ids.clear();
 
     if(not line.IsArray()) {
         DARWIN_LOG_ERROR("SessionTask:: ParseBody: The input line is not an array");
         return false;
     }
 
-    _token.clear();
-    _repo_ids.clear();
     auto values = line.GetArray();
 
     if (values.Size() <= 0) {
@@ -192,7 +168,7 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
     else if (values.Size() > 3) {
         DARWIN_LOG_ERROR(
                 "SessionTask:: ParseBody: You must provide at most three arguments per request: the token, "
-                "the repository ID and the expiration value to set to the token key"
+                "the repository ID and the expiration value to set to the key"
         );
 
         return false;
@@ -208,6 +184,14 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
                             "format: REPOSITORY1;REPOSITORY2;...");
         return false;
     }
+
+    _token = values[0].GetString();
+    if (_token.empty()) {
+        DARWIN_LOG_ERROR("SessionTask:: ParseBody: The token cannot be empty");
+        return false;
+    }
+    raw_repo_ids = values[1].GetString();
+    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';});
 
     if (values.Size() == 3) {
         if (values[2].IsString()) {
@@ -226,10 +210,6 @@ bool SessionTask::ParseLine(rapidjson::Value &line) {
             return false;
         }
     }
-
-    _token = values[0].GetString();
-    std::string raw_repo_ids = values[1].GetString();
-    boost::split(_repo_ids, raw_repo_ids, [](char c) {return c == ';';});
 
     DARWIN_LOG_DEBUG("SessionTask:: ParseBody: Parsed request: " + _token + " | " + raw_repo_ids);
 
