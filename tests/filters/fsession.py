@@ -192,7 +192,7 @@ def input_too_much_parameters():
     return _input_tests("input_too_much_parameters",
     data=[[1, 2, 3, 4]],
     expected_certitudes=[101],
-    expected_logs=["You must provide at most three arguments per request: the token, the repository ID and the expiration value to set to the token key"])
+    expected_logs=["You must provide at most three arguments per request: the token, the repository ID and the expiration value to set to the key"])
 
 def input_param1_wrong_type():
     return _input_tests("input_param1_wrong_type",
