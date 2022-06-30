@@ -38,7 +38,7 @@ def run():
         input_param2_wrong_type,
         input_param3_wrong_type,
         input_param3_invalid,
-        input_invalid_token_length,
+        input_empty_token_invalid,
         input_ok_no_param3,
         input_ok_param3_int,
         input_ok_param3_string,
@@ -227,11 +227,11 @@ def input_param3_invalid():
         "expiration should be a valid positive number"
     ])
 
-def input_invalid_token_length():
-    return _input_tests("input_invalid_token_length",
-    data=[["12", "2"]],
-    expected_certitudes=[0],
-    expected_logs=["Invalid token size: 2. Expected size: 64"])
+def input_empty_token_invalid():
+    return _input_tests("input_empty_token_invalid",
+    data=[["", "2"]],
+    expected_certitudes=[101],
+    expected_logs=["The token cannot be empty"])
 
 def input_ok_no_param3():
     return _input_tests("input_ok_no_param3",
