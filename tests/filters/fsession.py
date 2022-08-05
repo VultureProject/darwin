@@ -38,7 +38,9 @@ def run():
         input_param2_wrong_type,
         input_param3_wrong_type,
         input_param3_invalid,
-        input_invalid_token_length,
+        input_empty_token_invalid,
+        input_ok_token_length_12,
+        input_ok_token_length_80,
         input_ok_no_param3,
         input_ok_param3_int,
         input_ok_param3_string,
@@ -192,7 +194,7 @@ def input_too_much_parameters():
     return _input_tests("input_too_much_parameters",
     data=[[1, 2, 3, 4]],
     expected_certitudes=[101],
-    expected_logs=["You must provide at most three arguments per request: the token, the repository ID and the expiration value to set to the token key"])
+    expected_logs=["You must provide at most three arguments per request: the token, the repository ID and the expiration value to set to the key"])
 
 def input_param1_wrong_type():
     return _input_tests("input_param1_wrong_type",
@@ -227,11 +229,21 @@ def input_param3_invalid():
         "expiration should be a valid positive number"
     ])
 
-def input_invalid_token_length():
-    return _input_tests("input_invalid_token_length",
-    data=[["12", "2"]],
-    expected_certitudes=[0],
-    expected_logs=["Invalid token size: 2. Expected size: 64"])
+def input_empty_token_invalid():
+    return _input_tests("input_empty_token_invalid",
+    data=[["", "2"]],
+    expected_certitudes=[101],
+    expected_logs=["The token cannot be empty"])
+
+def input_ok_token_length_12():
+    return _input_tests("input_ok_token_length_12",
+    data=[["123456789012", "2"]],
+    expected_certitudes=[0])
+
+def input_ok_token_length_80():
+    return _input_tests("input_ok_token_length_80",
+    data=[["12345678901234567890123456789012345678901234567890123456789012345678901234567890", "2"]],
+    expected_certitudes=[0])
 
 def input_ok_no_param3():
     return _input_tests("input_ok_no_param3",

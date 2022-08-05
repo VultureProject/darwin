@@ -220,6 +220,7 @@ namespace darwin {
 
             if (!_body.IsArray()) {
                 DARWIN_LOG_ERROR("Session:: ParseBody: You must provide a list");
+                DARWIN_LOG_DEBUG("Session:: ParseBody: raw body is " + _raw_body);
                 return false;
             }
         } catch (...) {
