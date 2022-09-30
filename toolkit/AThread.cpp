@@ -10,7 +10,7 @@
 #include "AThread.hpp"
 #include "Logger.hpp"
 
-AThread::AThread(int interval) : 
+AThread::AThread(int interval) :
                 _interval(interval),
                 _thread(),
                 _is_stop(false) {}
@@ -21,14 +21,16 @@ void AThread::ThreadMain() {
     std::mutex mtx;
     std::unique_lock<std::mutex> lck(mtx);
 
-    while (!(this->_is_stop)) {
-        if (!this->Main()) {
-            DARWIN_LOG_DEBUG("AThread::ThreadMain:: Error in main function, stopping the thread");
-            _is_stop = true;
-            break;
-        }
+    while (not this->_is_stop) {
         // Wait for notification or until timeout
         this->_cv.wait_for(lck, std::chrono::seconds(_interval));
+        if (not _is_stop) {
+            if (not this->Main()) {
+                DARWIN_LOG_DEBUG("AThread::ThreadMain:: Error in main function, stopping the thread");
+                _is_stop = true;
+                break;
+            }
+        }
     }
 }
 
