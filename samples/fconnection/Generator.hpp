@@ -32,6 +32,8 @@ protected:
 
 private:
     bool ConfigRedis(const std::string &redis_socket_path,
+                     const std::string &redis_ip,
+                     unsigned int redis_port,
                      const std::string &init_data_path);
 
     unsigned int _redis_expire = 0;

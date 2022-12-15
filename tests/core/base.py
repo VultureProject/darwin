@@ -45,10 +45,9 @@ def check_start_stop():
 
     filter.configure(FTEST_CONFIG)
     filter.valgrind_start()
-    try:
-        kill(filter.process.pid, 0)
-    except OSError as e:
-        logging.error("check_start_stop: Process {} not running: {}".format(filter.process.pid, e))
+
+    if not filter.check_run():
+        logging.error("check_start_stop: Process {} not running".format(filter.process.pid))
         return False
 
     if filter.stop() is not True:

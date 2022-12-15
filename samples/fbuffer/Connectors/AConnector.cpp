@@ -69,7 +69,7 @@ bool AConnector::PrepareKeysInRedis(){
         DARWIN_LOG_DEBUG("AConnector::PrepareKeysInRedis:: key '"+ redis_list + "' is '" + reply + "'");
 
         if(reply != "none") {
-            if(reply != "list") {
+            if(reply != "set") {
                 DARWIN_LOG_ERROR("AConnector::PrepareKeysInRedis:: key '" + redis_list + "' is already present "
                                     "but seems to be used for something else, "
                                     "cannot start the filter and risk overriding data in Redis");

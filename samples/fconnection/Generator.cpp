@@ -35,20 +35,35 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
     DARWIN_LOGGER;
     DARWIN_LOG_DEBUG("ConnectionSupervision:: Generator:: Loading classifier...");
 
-    std::string redis_socket_path;
-    std::string init_data_path;
+    std::string redis_socket_path, redis_ip, init_data_path;
+    unsigned int redis_port = 6379;
 
-    if (!configuration.HasMember("redis_socket_path")) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: Missing parameter: 'redis_socket_path'");
-        return false;
+    if(configuration.HasMember("redis_socket_path")) {
+        if (not configuration["redis_socket_path"].IsString()) {
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_socket_path' needs to be a string");
+            return false;
+        } else {
+            redis_socket_path = configuration["redis_socket_path"].GetString();
+        }
     }
 
-    if (!configuration["redis_socket_path"].IsString()) {
-        DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_socket_path' needs to be a string");
-        return false;
+    if(configuration.HasMember("redis_ip")) {
+        if (not configuration["redis_ip"].IsString()) {
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_ip' needs to be a string");
+            return false;
+        } else {
+            redis_ip = configuration["redis_ip"].GetString();
+        }
     }
 
-    redis_socket_path = configuration["redis_socket_path"].GetString();
+    if(configuration.HasMember("redis_port")) {
+        if (not configuration["redis_port"].IsUint()) {
+            DARWIN_LOG_CRITICAL("ConnectionSupervision:: Generator:: 'redis_port' needs to be an unsigned integer");
+            return false;
+        } else {
+            redis_port = configuration["redis_port"].GetUint();
+        }
+    }
 
     if (configuration.HasMember("init_data_path")) {
         if (!configuration["init_data_path"].IsString()) {
@@ -70,10 +85,14 @@ bool Generator::LoadConfig(const rapidjson::Document &configuration) {
         _redis_expire = configuration["redis_expire"].GetUint();
     }
 
-    return ConfigRedis(redis_socket_path, init_data_path);
+    return ConfigRedis(redis_socket_path, redis_ip, redis_port, init_data_path);
 }
 
-bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::string &init_data_path) {
+bool Generator::ConfigRedis(
+        const std::string &redis_socket_path,
+        const std::string &redis_ip,
+        unsigned int redis_port,
+        const std::string &init_data_path) {
     DARWIN_LOGGER;
 
     std::ifstream init_data_stream;
@@ -82,7 +101,16 @@ bool Generator::ConfigRedis(const std::string &redis_socket_path, const std::str
 
     darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
     // Done in AlertManager before arriving here, but will allow better transition from redis singleton
-    redis.SetUnixConnection(redis_socket_path);
+    if (not redis_socket_path.empty()) {
+        redis.SetUnixConnection(redis_socket_path);
+    } else if (not redis_ip.empty()) {
+        redis.SetIpConnection(redis_ip, redis_port);
+    } else {
+        DARWIN_LOG_ERROR("ConnectionSupervision::Generator::ConfigureRedis:: no valid way to connect to Redis, "
+                            "please set 'redis_socket_path' or 'redis_ip' (and optionally 'redis_port').");
+        return false;
+    }
+
     if(not redis.FindAndConnect()) {
         DARWIN_LOG_ERROR("ConnectionSupervision::Generator::ConfigureRedis:: Could not configure Redis connection.");
         return false;

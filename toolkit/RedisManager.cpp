@@ -84,7 +84,7 @@ namespace darwin {
 
             if(ConnectAddress(ip, port, &context)) {
                 reply = GetContextRole(context);
-                if(reply and strncmp(reply->element[0]->str, "master", 6)) {
+                if(reply and strncmp(reply->element[0]->str, "master", 6) == 0) {
                     ret = true;
                 }
                 freeReplyObject(reply);
