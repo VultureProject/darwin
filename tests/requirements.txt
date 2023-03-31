@@ -1,2 +1,2 @@
 git+https://github.com/VultureProject/darwin-client-python.git
-redis==3.3.11
+redis==4.4.4
