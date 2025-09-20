@@ -43,24 +43,23 @@ bool fAnomalyConnector::FormatDataToSendToFilter(std::vector<std::string> &logs,
 }
 
 bool fAnomalyConnector::ParseInputForRedis(std::map<std::string, std::string> &input_line) {
-    this->_input_line = input_line;
-    this->_entry.clear();
+    std::string entry;
 
-    std::string source = this->GetSource();
+    std::string source = this->GetSource(input_line);
 
-    if (not this->ParseData("net_src_ip"))
+    if (not this->ParseData(input_line, "net_src_ip", entry))
         return false;
-    if (not this->ParseData("net_dst_ip"))
+    if (not this->ParseData(input_line, "net_dst_ip", entry))
         return false;
-    if (not this->ParseData("net_dst_port"))
+    if (not this->ParseData(input_line, "net_dst_port", entry))
         return false;
-    if (not this->ParseData("ip_proto"))
+    if (not this->ParseData(input_line, "ip_proto", entry))
         return false;
 
     for (const auto &redis_config : this->_redis_lists) {
         // If the source in the input is equal to the source in the redis list, or the redis list's source is ""
         if (not redis_config.first.compare(source) or redis_config.first.empty())
-                this->REDISAddEntry(this->_entry, redis_config.second);
+                this->REDISAddEntry(entry, redis_config.second);
     }
     return true;
 }

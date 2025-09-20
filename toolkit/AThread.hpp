@@ -22,7 +22,7 @@ class AThread {
     ///
     ///\class AThread
 
-    public:
+public:
     ///\brief Unique constructor, creates a thread and immediately calls ThreadMain.
     ///
     ///\param interval The interval in seconds between two calls of Main by ThreadMain
@@ -47,11 +47,11 @@ class AThread {
     ///\return Override MUST return true on success and false otherwise
     virtual bool Main() = 0;
 
-
-    private:
+protected:
     /// Interval, set by the ctor, between two calls of Main by ThreadMain
     int _interval;
 
+private:
     /// The actual thread
     std::thread _thread;
     
