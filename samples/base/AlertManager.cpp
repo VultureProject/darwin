@@ -24,12 +24,12 @@ namespace darwin {
         bool redis_status = false;
         bool logs_status = false;
 
-        _redis = configuration.HasMember("redis_socket_path");
+        _redis = configuration.HasMember("redis_socket_path") or configuration.HasMember("redis_ip");
         _log = configuration.HasMember("log_file_path");
 
         if (!_redis and !_log){
             DARWIN_LOG_WARNING("AlertManager:: Need at least one of these parameters to raise alerts: "
-                                "'redis_socket_path' or 'log_file_path'");
+                                "'redis_socket_path', 'redis_ip' or 'log_file_path'");
             return false;
         }
 
@@ -65,27 +65,42 @@ namespace darwin {
 
     bool AlertManager::LoadRedisConfig(const rapidjson::Document& configuration) {
         DARWIN_LOGGER;
-        std::string redis_socket_path;
+        std::string redis_socket_path, redis_ip;
+        unsigned int redis_port = 6379;
 
         GetStringField(configuration, "redis_socket_path", redis_socket_path);
-        if (redis_socket_path.empty()) {
-            DARWIN_LOG_WARNING("AlertManager:: 'redis_socket_path' needs to be a non-empty string. Ignoring REDIS configuration...");
-            _redis = false; // Error configuring redis, disabling...
-            return false;
-        }
+        GetStringField(configuration, "redis_ip", redis_ip);
+        GetUIntField(configuration, "redis_port", redis_port);
         GetStringField(configuration, "alert_redis_list_name", this->_redis_list_name);
         GetStringField(configuration, "alert_redis_channel_name", this->_redis_channel_name);
-        if(_redis_list_name.empty() and _redis_channel_name.empty()) {
+        
+        if(this->_redis_list_name.empty() and this->_redis_channel_name.empty()) {
             DARWIN_LOG_WARNING("AlertManager:: if 'redis_socket_path' is provided, you need to provide at least"
                                     " 'alert_redis_list_name' or 'alert_redis_channel_name'."
                                     "Unable to configure REDIS. Ignoring REDIS configuration...");
             _redis = false; // Error configuring redis, disabling...
             return false;
         }
-        if(!ConfigRedis(redis_socket_path)){
-            DARWIN_LOG_WARNING("AlertManager:: Error when configuring REDIS. Ignoring REDIS configuration...");
-            _redis = false; // Error configuring redis, disabling...
-            return false;
+        
+        if(not redis_socket_path.empty()){
+            if (not ConfigRedis(redis_socket_path)) {
+                DARWIN_LOG_WARNING("AlertManager:: Error when configuring REDIS using '" + redis_socket_path +
+                                    "', ignoring REDIS configuration.");
+                _redis = false; // Error configuring redis, disabling...
+                return false;
+            }
+        } else if (not redis_ip.empty()) {
+            if (not ConfigRedis(redis_ip, redis_port)) {
+                DARWIN_LOG_WARNING("AlertManager:: Error when configuring REDIS using '" + redis_ip + ":" +
+                                    std::to_string(redis_port) + "', ignoring REDIS configuration.");
+                _redis = false; // Error configuring redis, disabling...
+                return false;
+            }
+        } else {
+            DARWIN_LOG_WARNING("AlertManager:: No 'redis_socket_path' or 'redis_ip' in configuration, "
+                                "ignoring REDIS configuration.");
+                _redis = false; // Error configuring redis, disabling...
+                return false;
         }
         return true;
     }
@@ -101,19 +116,46 @@ namespace darwin {
                 DARWIN_LOG_INFO(std::string("AlertManager:: '") + field_name + "' set to " + var);
                 return true;
             } else {
-                DARWIN_LOG_WARNING(std::string("AlertManager:: '") + field_name + "' needs to be a non-empty string."
-                                    "Ignoring this field...");
+                DARWIN_LOG_WARNING(std::string("AlertManager:: '") + field_name + "' needs to be a non-empty string, "
+                                    "ignoring this field.");
             }
         }
         return false;
     }
 
-    bool AlertManager::ConfigRedis(std::string redis_socket_path) {
+    bool AlertManager::GetUIntField(const rapidjson::Document& configuration,
+                                      const char* const field_name,
+                                      unsigned int& var) {
+        DARWIN_LOGGER;
+
+        if (configuration.HasMember(field_name)){
+            if (configuration[field_name].IsUint()) {
+                var = configuration[field_name].GetUint();
+                DARWIN_LOG_INFO(std::string("AlertManager:: '") + field_name + "' set to " + std::to_string(var));
+                return true;
+            } else {
+                DARWIN_LOG_WARNING(std::string("AlertManager:: '") + field_name + "' needs to be an integer, "
+                                    "ignoring this field.");
+            }
+        }
+        return false;
+    }
+
+    bool AlertManager::ConfigRedis(const std::string redis_socket_path) {
         DARWIN_LOGGER;
         DARWIN_LOG_DEBUG("AlertManager:: Redis configuration...");
 
         darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
         redis.SetUnixConnection(redis_socket_path);
+        return redis.FindAndConnect();
+    }
+
+    bool AlertManager::ConfigRedis(const std::string redis_ip, const int redis_port) {
+        DARWIN_LOGGER;
+        DARWIN_LOG_DEBUG("AlertManager:: Redis configuration...");
+
+        darwin::toolkit::RedisManager& redis = darwin::toolkit::RedisManager::GetInstance();
+        redis.SetIpConnection(redis_ip, redis_port);
         return redis.FindAndConnect();
     }
 

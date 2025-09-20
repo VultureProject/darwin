@@ -112,16 +112,31 @@ namespace darwin {
         /// \brief Configure the RedisManager.
         /// \param redis_socket_path The path to the redis socket used for alerting
         /// \return True on success, false on error
-        bool ConfigRedis(std::string redis_socket_path);
+        bool ConfigRedis(const std::string redis_socket_path);
+
+        /// \brief Configure the RedisManager.
+        /// \param redis_ip The ip to the redis node used for alerting
+        /// \param redis_port The port to the redis node used for alerting
+        /// \return True on success, false on error
+        bool ConfigRedis(const std::string redis_ip, const int redis_port);
 
         /// \brief Check and extract `field_name' of `configuration'. `field_name' *MUST* be a string.
         /// \param configuration The configurations a json object.
         /// \param field_name The field name. Creating a string here would be pointless.
-        /// \param var The string object ot fill with the extracted value. Initial value is not modified on error.
+        /// \param var The string object to fill with the extracted value. Initial value is not modified on error.
         /// \return False on error, true on success. Logs appropriately.
         static bool GetStringField(const rapidjson::Document& configuration,
                                    const char* const field_name,
                                    std::string& var);
+
+        /// \brief Check and extract `field_name' of `configuration'. `field_name' *MUST* be an unsigned integer.
+        /// \param configuration The configurations a json object.
+        /// \param field_name The field name. Creating a string here would be pointless.
+        /// \param var The unsigned integer object to fill with the extracted value. Initial value is not modified on error.
+        /// \return False on error, true on success. Logs appropriately.
+        static bool GetUIntField(const rapidjson::Document& configuration,
+                                   const char* const field_name,
+                                   unsigned int& var);
 
         /// \brief Write the logs in file
         /// \return True on success, false on error
